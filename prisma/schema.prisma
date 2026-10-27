@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id             String         @id @default(uuid())
+  name           String
+  phone          String
+  email          String         @unique
+  city           String
+  role           String         @default("USER") // USER, ADMIN, CS
+  phoneVerified  Boolean        @default(false)
+  kycStatus      String         @default("UNVERIFIED") // UNVERIFIED, PENDING_REVIEW, VERIFIED, REJECTED
+  createdAt      DateTime       @default(now())
+  kycDocument    KycDocument?
+  addresses      Address[]
+  orders         Order[]
+  consignments   ConsignmentItem[]
+}
+
+model KycDocument {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullNameKtp     String
+  maskedNik       String
+  ktpFileName     String
+  ktpFileSize     String
+  selfieFileName  String
+  selfieFileSize  String
+  uploadedAt      DateTime @default(now())
+  status          String   @default("PENDING_REVIEW") // PENDING_REVIEW, APPROVED, NEEDS_REVISION
+}
+
+model Address {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label         String
+  isPrimary     Boolean  @default(false)
+  recipientName String
+  phone         String
+  fullAddress   String
+  city          String
+  orders        Order[]
+}
+
+model Product {
+  id                String   @id @default(uuid())
+  code              String   @unique
+  slug              String   @unique
+  brand             String
+  name              String
+  category          String   // KEYBOARD, MOUSE, HEADSET, MONITOR, ACCESSORIES
+  subtitle          String
+  condition         String   // SANGAT_BAIK, BAIK
+  usageDuration     String
+  switchOrVariant   String
+  completeness      String
+  description       String
+  defectNotes       String
+  price             Int
+  originalNewPrice  Int
+  rating            Float    @default(5.0)
+  soldCount         Int      @default(0)
+  stock             Int      @default(1)
+  location          String
+  isVerifiedByTeam  Boolean  @default(true)
+  images            String   // JSON string array
+  createdAt         DateTime @default(now())
+  orders            Order[]
+}
+
+model ConsignmentItem {
+  id                           String                @id @default(uuid())
+  code                         String                @unique
+  sellerId                     String
+  seller                       User                  @relation(fields: [sellerId], references: [id])
+  category                     String
+  brandModel                   String
+  variantSpec                  String
+  usageDuration                String
+  additionalSpecs              String
+  currentCondition             String
+  defectDetails                String
+  completeness                 String
+  photos                       String                // JSON array
+  expectedPrice                Int
+  proposedPriceAfterInspection Int?
+  consignmentFee               Int?
+  estimatedNetPayout           Int?
+  actualNetPayout              Int?
+  originCity                   String
+  handoverMethod               String
+  inboundCourier               String?
+  inboundTrackingNumber        String?
+  stage                        String                // ONLINE_CHECK, REVISION_NEEDED, etc.
+  actionActor                  String                // SELLER, HINGO, SELLER_AND_HINGO, COMPLETED
+  badgeLabel                   String
+  statusSummary                String
+  inspectionReport             String?               // JSON string
+  updatedAt                    DateTime              @updatedAt
+  timeline                     ConsignmentTimeline[]
+}
+
+model ConsignmentTimeline {
+  id             String          @id @default(uuid())
+  consignmentId  String
+  consignment    ConsignmentItem @relation(fields: [consignmentId], references: [id], onDelete: Cascade)
+  stepOrder      Int
+  title          String
+  timestampText  String
+  description    String
+  state          String          // COMPLETED, CURRENT, UPCOMING
+}
+
+model Order {
+  id                  String   @id @default(uuid())
+  orderCode           String   @unique
+  buyerId             String
+  buyer               User     @relation(fields: [buyerId], references: [id])
+  productId           String
+  product             Product  @relation(fields: [productId], references: [id])
+  addressId           String
+  address             Address  @relation(fields: [addressId], references: [id])
+  itemPrice           Int
+  shippingCourier     String
+  shippingCost        Int
+  shippingProtection  Int
+  serviceFee          Int
+  totalAmount         Int
+  paymentMethod       String   // BCA_VA, QRIS
+  buyerNote           String?
+  trackingNumber      String
+  escrowStatus        String   // HELD_BY_HINGO, RELEASED_TO_SELLER, DISPUTED
+  orderStatus         String   // AWAITING_PAYMENT, PACKING, SHIPPED, DELIVERED_CHECKING, COMPLETED, ISSUE_REPORTED
+  inspectionDeadline  String
+  createdAt           DateTime @default(now())
+}
+
+model ChatThread {
+  id                String        @id @default(uuid())
+  type              String        // PRODUCT_ADMIN, CS_SUPPORT, SYSTEM_INFO
+  title             String
+  agentName         String?
+  ticketCode        String?
+  relatedProductId  String?
+  relatedOrderId    String?
+  updatedAt         DateTime      @updatedAt
+  messages          ChatMessage[]
+}
+
+model ChatMessage {
+  id          String      @id @default(uuid())
+  threadId    String
+  thread      ChatThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderRole  String      // USER, ADMIN, CS
+  content     String
+  timeLabel   String
+  isRead      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+}
