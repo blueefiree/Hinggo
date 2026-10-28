@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,15 @@ export async function POST(req: Request) {
       await prisma.wishlist.delete({
         where: { id: existing.id },
       });
+      // Sinkronkan ke Supabase
+      try {
+        await supabase
+          .from("wishlists")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("product_id", productId);
+      } catch (e) {}
+
       const count = await prisma.wishlist.count({ where: { userId: user.id } });
       return NextResponse.json({ success: true, isWishlisted: false, count, productId });
     }
@@ -35,6 +45,13 @@ export async function POST(req: Request) {
     await prisma.wishlist.create({
       data: { userId: user.id, productId },
     });
+    // Sinkronkan ke Supabase
+    try {
+      await supabase
+        .from("wishlists")
+        .insert({ user_id: user.id, product_id: productId });
+    } catch (e) {}
+
     const count = await prisma.wishlist.count({ where: { userId: user.id } });
 
     return NextResponse.json({ success: true, isWishlisted: true, count, productId });
@@ -42,4 +59,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

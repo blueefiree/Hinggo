@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
@@ -85,6 +86,16 @@ export async function POST(req: Request) {
       },
     });
 
+    // Sinkronkan ke Supabase
+    try {
+      await supabase.from("cart_items").insert({
+        user_id: user.id,
+        product_id: productId,
+        quantity: 1,
+        selected: true,
+      });
+    } catch (e) {}
+
     return NextResponse.json({
       success: true,
       alreadyInCart: false,
@@ -163,6 +174,15 @@ export async function DELETE(req: Request) {
         where: { userId: user.id },
       });
     }
+
+    // Sync delete to Supabase
+    try {
+      if (productId) {
+        await supabase.from("cart_items").delete().eq("user_id", user.id).eq("product_id", productId);
+      } else {
+        await supabase.from("cart_items").delete().eq("user_id", user.id);
+      }
+    } catch (e) {}
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/utils/supabase/middleware";
 
 const PROTECTED_PREFIXES = [
   "/cart",
@@ -12,19 +13,25 @@ const PROTECTED_PREFIXES = [
 
 const AUTH_PAGES = ["/auth/login", "/auth/verify-otp"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const sessionCookie =
-    request.cookies.get("hingo_session")?.value ||
-    request.cookies.get("hingo_user_id")?.value;
 
-  // Auto-redirect already logged-in users away from /auth/login and /auth/verify-otp
+  // Initialize Supabase client for cookie refresh
+  const { supabase, supabaseResponse } = createClient(request);
+  const { data: { user: supabaseUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+
+  const sessionCookie =
+    request.cookies.get("hingo_user_id")?.value ||
+    request.cookies.get("hingo_session")?.value ||
+    supabaseUser?.id;
+
+  // Auto-redirect logged-in users away from auth pages
   const isAuthPage = AUTH_PAGES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   if (isAuthPage && sessionCookie) {
     return NextResponse.redirect(new URL("/account", request.url));
   }
 
-  // Protect private pages
+  // Check if route is protected
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
@@ -38,7 +45,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {

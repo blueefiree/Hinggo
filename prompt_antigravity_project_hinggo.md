@@ -1,127 +1,385 @@
-# Master Prompt & Panduan Google Antigravity — Modul Profil Pengguna, Real OTP (WhatsApp & Email) & Persistent Login Supabase
+# Master Prompt All-in-One Google Antigravity — Proyek Hingo (`obdczozspvkdebhtyhoh.supabase.co`)
 
-Dokumen ini berisi:
-1. **Bagian 1 (Langsung Copy-Paste ke Antigravity)**: **Prompt Implementasi Real OTP (WA & Email), Persistent Session (Sekali Login Langsung Tersimpan di Supabase & Cookie 30 Hari), dan Halaman Profil Pengguna Lengkap (`/account`)**.
-2. **Bagian 2**: **Cara Mengisi `.env` (Supabase + Email OTP + Fonnte WhatsApp API)** supaya kode OTP benar-benar masuk ke aplikasi WhatsApp dan Inbox Email kamu.
+Seluruh instruksi sebelumnya (**Integrasi Supabase `@supabase/ssr`**, **Hapus Semua Data Dummy di Katalog & Seluruh Halaman**, **Strict Guest Mode Saat Belum Login**, **Login Page Awal Figma**, **Kirim OTP Beneran ke WhatsApp & Email**, **Redirect ke Halaman Profil `/account` Setelah Login**, **Persistent Session 30 Hari**, **Real-Time Wishlist & Keranjang**, serta **Chat Responsif Mulai dari 0**) sudah dijadikan **SATU BLOK PROMPT UTUH** di bawah ini.
 
 ---
 
-## 1. Prompt Antigravity: "Fokus Profil Pengguna, Real OTP ke WhatsApp & Email, serta Persistent Login di Database Supabase"
+## 1. SATU PROMPT GABUNGAN (TinggalKlik Copy 1 Kali & Paste ke Agent Chat Antigravity)
 
-Salin seluruh blok prompt di bawah ini dan tempelkan langsung ke **Agent Chat di Google Antigravity IDE**:
+````markdown
+# TASK: ALL-IN-ONE FULL SUPABASE INTEGRATION (`obdczozspvkdebhtyhoh`), WIPE ALL DUMMY DATA (CATALOG & USER START AT 0), STRICT GUEST-FIRST AUTH, ORIGINAL FIGMA LOGIN PAGE, REAL WHATSAPP/EMAIL OTP, REDIRECT TO `/account`, REAL-TIME WISHLIST/CART, AND RESPONSIVE ZERO-HISTORY CHAT
 
-```markdown
-# TASK: IMPLEMENT REAL OTP DELIVERY (WHATSAPP & EMAIL), PERSISTENT SUPABASE SESSION (STAY LOGGED IN), AND COMPLETE USER PROFILE MODULE (`/account`)
+Tolong jalankan refactoring dan integrasi menyeluruh untuk aplikasi **"Hingo — Titip Jual Gear, Kami yang Urus"** dengan menggabungkan seluruh instruksi wajib di bawah ini secara berurutan dan tuntas:
 
-Sekarang kita fokus memfinalisasi modul **Autentikasi OTP Nyata (WhatsApp & Email)**, **Persistent Login Session (agar kalau sudah login tidak perlu login ulang)**, dan **Halaman Profil Pengguna (`/account`)** yang 100% tersimpan di database **Supabase (PostgreSQL + Prisma ORM)**.
+====================================================================
+BAGIAN 1: INSTALL PACKAGES, SETUP `.env.local` & HELPER `@supabase/ssr`
+====================================================================
 
-Ikuti spesifikasi teknis berikut secara presisi:
+1. Jalankan perintah instalasi di terminal:
+   npm install @supabase/supabase-js @supabase/ssr @whiskeysockets/baileys qrcode pino
+   npm install -D @types/qrcode
+   npx skills add supabase/agent-skills
+
+2. Buat atau perbarui file `.env.local` di root project dengan kredensial resmi Supabase berikut:
+   NEXT_PUBLIC_SUPABASE_URL=https://obdczozspvkdebhtyhoh.supabase.co
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_qYJsxxD04jDxX2WXPPysTg_vf8IY1AN
+
+3. Buat 4 file helper Supabase berikut secara presisi:
+   a) File `utils/supabase/server.ts` (atau `src/utils/supabase/server.ts`):
+      import { createServerClient } from "@supabase/ssr";
+      import { cookies } from "next/headers";
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+
+      export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>) => {
+        return createServerClient(supabaseUrl, supabaseKey, {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll(cookiesToSet) {
+              try {
+                cookiesToSet.forEach(({ name, value, options }) =>
+                  cookieStore.set(name, value, options)
+                );
+              } catch {
+                // Ignored when called from a Server Component with middleware active
+              }
+            },
+          },
+        });
+      };
+
+   b) File `utils/supabase/client.ts`:
+      import { createBrowserClient } from "@supabase/ssr";
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+
+      export const createClient = () => createBrowserClient(supabaseUrl, supabaseKey);
+
+   c) File `utils/supabase/middleware.ts`:
+      import { createServerClient } from "@supabase/ssr";
+      import { type NextRequest, NextResponse } from "next/server";
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+
+      export const createClient = (request: NextRequest) => {
+        let supabaseResponse = NextResponse.next({
+          request: { headers: request.headers },
+        });
+
+        const supabase = createServerClient(supabaseUrl, supabaseKey, {
+          cookies: {
+            getAll() {
+              return request.cookies.getAll();
+            },
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+              supabaseResponse = NextResponse.next({ request });
+              cookiesToSet.forEach(({ name, value, options }) =>
+                supabaseResponse.cookies.set(name, value, options)
+              );
+            },
+          },
+        });
+
+        return { supabase, supabaseResponse };
+      };
+
+   d) File `middleware.ts` di root project:
+      - Panggil helper middleware Supabase di setiap request agar session cookie (`hingo_user_id` & Supabase Auth session) selalu diperbarui otomatis.
+      - Proteksi route `/account`, `/cart`, `/checkout`, `/wishlist`, `/orders`, `/seller/*`, dan `/chat/*`: jika pengguna belum login (tidak ada cookie `hingo_user_id` atau session Supabase aktif), otomatis redirect ke `/auth/login`.
+
+====================================================================
+BAGIAN 2: HAPUS SEMUA DATA DUMMY DI KATALOG, BERANDA & SELURUH HALAMAN (MULAI MURNI DARI 0!)
+====================================================================
+
+1. **Hapus Semua Array Dummy di Kode Frontend**:
+   - Cari di seluruh folder project (`app/`, `src/`, `components/`, `lib/`, `data/`) semua konstanta/array produk dan transaksi statis seperti `const products = [...]`, `mockProducts`, `initialProducts`, `bestSellers`, `recommendations`, `mockConsignments`, `mockOrders`, `mockMessages`.
+   - **Hapus total seluruh array dummy tersebut!** Jangan pernah memberikan fallback ke data dummy jika tabel di database Supabase masih kosong (`0 baris`).
+
+2. **Katalog (`/catalog`) & Beranda (`/`) Wajib 100% Dinamis dari Tabel `public.products` Supabase**:
+   - Ambil daftar produk di `/` dan `/catalog` murni dari `supabase.from('products').select('*').eq('status', 'AVAILABLE')`.
+   - Hapus angka kategori statis (`1.240 produk`, `860 produk`, `540 produk`, `320 produk`, `6 barang ditemukan`). Hitung jumlah produk per kategori (`Keyboard`, `Mouse`, `Headset`, `Monitor`, `Aksesoris`) secara real-time dari tabel `public.products` di Supabase. Saat tabel `products` kosong, tampilkan **`0 produk`** dan **`0 barang ditemukan`**.
+   - Jika katalog masih `0 produk`, tampilkan kartu **Empty State** rapi bertema Hingo (`#FFFBEB`): *"Belum ada barang titipan di katalog. Semua barang berasal dari pengajuan titip jual yang lolos inspeksi tim Hingo."* dengan tombol **`"+ Ajukan titip jual sekarang"`**.
+   - Pastikan produk baru di `/catalog` dan `/` hanya muncul ketika pengguna mengajukan barang di `/seller/consignments/new` lalu ditayangkan/di-approve lewat `/admin` (atau ditambahkan lewat form **Tambah Barang Katalog** di `/admin`).
+
+====================================================================
+BAGIAN 3: STRICT GUEST MODE SAAT AWAL BUKA APP + LOGIN PAGE AWAL FIGMA + REAL WA/EMAIL OTP + REDIRECT KE `/account`
+====================================================================
+
+1. **Jangan Pernah Auto-Login Saat Awal Buka Aplikasi**:
+   - Hapus semua kode fallback yang otomatis masuk sebagai `"Naya Putri"` atau user pertama di database.
+   - Saat aplikasi pertama kali dibuka tanpa session login, status wajib **Belum Login (`Guest`)**: di Top Navbar tampil tombol kuning **`Masuk`** (`/auth/login`) dan angka badge Wishlist serta Keranjang adalah `0` / disembunyikan.
+
+2. **Pertahankan Desain Login Page (`/auth/login`) & Verifikasi OTP (`/auth/verify-otp`) Persis Desain Awal Figma**:
+   - `/auth/login`: Layout 2 kolom khas Figma Hingo (Kiri: badge `PRELOVED, RELOVED.`, judul `"Gear bagus tak harus baru."`, foto keyboard, kartu `"Satu akun, banyak kesempatan"`; Kanan: judul `"Masuk atau daftar"`, toggle `Nomor HP` & `Email`, input Nomor HP `+62 812 3456 7890`, tombol kuning `#FFC629` **`"Kirim OTP ke nomor HP"`**, pemisah `"atau gunakan email"`, input `Alamat email` + tombol **`"Kirim OTP ke email"`**, dan tombol **`"G Lanjutkan dengan Google"`**). Jangan tambahkan tombol demo yang mengubah desain asli Figma.
+   - `/auth/verify-otp`: Judul `"Verifikasi nomor HP"` (atau email), nomor tujuan + link `Ubah`, 6 kotak input digit `KODE OTP`, timer `00:42`, dan tombol kuning **`"Verifikasi & lanjutkan"`**.
+
+3. **Kirim Kode OTP 6 Digit Beneran ke WhatsApp & Email (`/api/auth/send-otp`)**:
+   - Generate kode 6 digit angka acak (`100000`–`999999`) dan simpan ke tabel `public.otp_verifications` di Supabase (`target`, `otp_code`, `channel`, `expires_at: +5 menit`).
+   - **Untuk Nomor HP / WhatsApp**:
+     - Normalisasi nomor ke format `628...`.
+     - Bangun modul pengirim WhatsApp nyata (`/lib/whatsapp-gateway.ts`) dengan:
+       a) **Built-in WhatsApp Web QR Gateway (`@whiskeysockets/baileys` + `qrcode`)**: Sediakan endpoint `/api/whatsapp/qr` dan modal **"Tautkan Pengirim WhatsApp (Scan QR)"** yang bisa dibuka dari indikator kecil di halaman `/auth/login`. Jika pengirim WA belum tertaut saat tombol `"Kirim OTP ke nomor HP"` diklik, munculkan modal QR Code tersebut agar pengguna bisa men-scan QR 1 kali dari menu *Perangkat Tertaut* di WhatsApp HP-nya. Begitu tertaut, server langsung mengirim pesan chat WhatsApp asli ke nomor tujuan berisi kode 6 digit OTP Hingo!
+       b) **Dukungan Fonnte API (`FONNTE_TOKEN`)**: Jika `process.env.FONNTE_TOKEN` ada di `.env.local`, kirimkan juga via `POST https://api.fonnte.com/send`.
+   - **Untuk Email**:
+     - Kirimkan OTP ke email asli menggunakan `supabase.auth.signInWithOtp({ email })` dan/atau `nodemailer` SMTP.
+
+4. **Simpan Sesi Permanen di Supabase (Tidak Perlu Login Lagi) & Langsung Redirect ke `/account`**:
+   - Saat 6 digit OTP diverifikasi di `/auth/verify-otp` (`POST /api/auth/verify-otp`):
+     - Validasi kode terhadap tabel `public.otp_verifications` di Supabase.
+     - Lakukan `upsert` user ke tabel `public.users` di Supabase (`phone` + `phone_verified: true` jika login via WA, atau `email` + `email_verified: true` jika login via Email).
+     - Pasang persistent HTTP-Only Cookie `hingo_user_id` (`maxAge: 30 hari` / `2592000` detik) agar **kalau sudah login tidak perlu login lagi** saat menutup/membuka ulang browser.
+     - **Langsung arahkan (`router.push('/account')`) ke Halaman Profil Pengguna (`/account`)**!
+
+====================================================================
+BAGIAN 4: HALAMAN PROFIL PENGGUNA (`/account`), REAL-TIME WISHLIST/KERANJANG & CHAT MULAI DARI 0
+====================================================================
+
+1. **Halaman Profil Pengguna Lengkap (`/account`) — Tersimpan di Supabase**:
+   - Menampilkan Nomor WhatsApp (`✓ Terverifikasi`) atau Email (`✓ Terverifikasi`) yang digunakan saat login, serta menyediakan fitur tautkan Email/WA pendamping ke akun yang sama.
+   - Form Edit Profil (`Nama Lengkap`, `Kota Domisili`, `Bio`, `Foto Avatar`) yang meng-update tabel `public.users` di Supabase.
+   - Kartu Status Verifikasi Identitas / KYC (`Belum Verifikasi` / `Menunggu Peninjauan` / `Terverifikasi`) yang terhubung ke `/auth/verify-identity` dan tabel `public.kyc_documents`.
+   - Manajemen Buku Alamat Pengiriman (CRUD tabel `public.addresses`) dan Rekening Bank Pencairan Titip Jual (CRUD tabel `public.bank_accounts`).
+   - Tombol **`Keluar (Logout)`** yang menghapus session cookie dan mengembalikan aplikasi ke mode `Guest`.
+
+2. **Wishlist (`♡`) & Keranjang (`Cart`) Ter-update Secara Real-Time**:
+   - Buat `CartWishlistProvider` global yang membaca & memutasi tabel `public.wishlists` dan `public.cart_items` di Supabase untuk user yang sedang login.
+   - Setiap kali user menekan ikon hati (`♡`) atau tombol **`"Tambah keranjang"`** / hapus item di `/cart` / selesai `/checkout`, langsung update UI detik itu juga (*optimistic update*), simpan ke Supabase, dan langsung perbarui angka badge **Wishlist** serta **Keranjang** di Top Navbar secara real-time tanpa perlu refresh!
+
+3. **Chat Admin Produk (`/chat/product`) & CS (`/chat/support`) Responsif & Mulai Murni dari 0**:
+   - Untuk user baru, tabel `public.chat_threads` dan `public.chat_messages` mulai dari **0 (kosong, tanpa chat dummy bawaan)**.
+   - Saat user membuka chat (atau menekan `"Chat admin"` dari halaman detail produk), ruang chat mulai dari 0 pesan dengan *quick-reply chips*.
+   - Begitu user mengirim pesan, simpan ke tabel `public.chat_messages` di Supabase, tampilkan indikator `"Admin Hingo sedang mengetik..."`, lalu jalankan *Smart Auto-Reply* kontekstual (membaca data asli produk/pesanan dari Supabase) yang menyimpan balasan admin ke tabel `public.chat_messages` dan menampilkannya secara real-time.
+   - Pastikan layout Chat 100% responsif di layar Mobile (`390px` dengan *single-pane view* + tombol `← Kembali` + *sticky input bar*) maupun Desktop (`1440px` 3 kolom).
+
+====================================================================
+BAGIAN 5: PASTIKAN SKEMA 11 TABEL SUPABASE BERIKUT DIGUNAKAN DI SELURUH QUERY
+====================================================================
+Simpan juga script SQL berikut ke file `supabase/schema.sql` di dalam project dan pastikan seluruh query `supabase.from(...)` di aplikasi menggunakan nama tabel dan kolom yang persis sama:
+- `public.users`: `id`, `name`, `phone`, `email`, `city`, `bio`, `avatar_url`, `role`, `phone_verified`, `email_verified`, `kyc_status`, `created_at`, `updated_at`
+- `public.otp_verifications`: `id`, `target`, `otp_code`, `channel`, `verified`, `expires_at`, `created_at`
+- `public.kyc_documents`: `id`, `user_id`, `full_name_ktp`, `nik_number`, `masked_nik`, `ktp_image_url`, `ktp_file_size`, `selfie_image_url`, `selfie_file_size`, `status`, `created_at`
+- `public.addresses`: `id`, `user_id`, `label`, `recipient_name`, `phone`, `full_address`, `city`, `postal_code`, `is_primary`, `created_at`
+- `public.bank_accounts`: `id`, `user_id`, `bank_name`, `account_number`, `account_holder`, `is_primary`, `created_at`
+- `public.products`: `id`, `code`, `slug`, `seller_id`, `brand`, `name`, `subtitle`, `category`, `condition`, `usage_duration`, `switch_or_variant`, `completeness`, `description`, `defect_notes`, `price`, `original_new_price`, `stock`, `location`, `rating`, `sold_count`, `is_verified_by_team`, `images`, `status`, `created_at`
+- `public.wishlists`: `id`, `user_id`, `product_id`, `created_at`
+- `public.cart_items`: `id`, `user_id`, `product_id`, `quantity`, `selected`, `created_at`
+- `public.consignments`: `id`, `code`, `seller_id`, `category`, `brand_model`, `variant_spec`, `usage_duration`, `additional_specs`, `current_condition`, `defect_details`, `completeness`, `photos`, `expected_price`, `proposed_price`, `consignment_fee`, `estimated_net_payout`, `origin_city`, `handover_method`, `inbound_courier`, `inbound_tracking_number`, `stage`, `badge_label`, `status_summary`, `created_at`, `updated_at`
+- `public.orders`: `id`, `order_code`, `buyer_id`, `product_id`, `address_id`, `item_price`, `shipping_courier`, `shipping_cost`, `shipping_protection`, `service_fee`, `total_amount`, `payment_method`, `buyer_note`, `tracking_number`, `escrow_status`, `order_status`, `created_at`
+- `public.chat_threads` & `public.chat_messages`: `id`, `user_id`, `type`, `title`, `ticket_code`, `related_product_id`, `related_order_id`, `updated_at` & `id`, `thread_id`, `sender_role`, `content`, `is_read`, `created_at`
+````
 
 ---
 
-### BAGIAN 1: PENGIRIMAN KODE OTP 6 DIGIT NYATA KE EMAIL & WHATSAPP (`/api/auth/send-otp`)
-Buat endpoint/Server Action pengiriman OTP yang benar-benar mengirim pesan OTP 6 digit ke Email atau WhatsApp pengguna dan menyimpannya ke tabel `OtpVerification` di database Supabase:
+## 2. Script SQL untuk Dijalankan 1 Kali di Supabase SQL Editor (`obdczozspvkdebhtyhoh`)
 
-1. **Penyimpanan OTP di Database (`OtpVerification`)**:
-   - Setiap kali user meminta OTP di `/auth/login` (baik menggunakan tab **Nomor HP / WhatsApp** maupun tab **Email**), generate kode 6 digit angka acak (`100000`–`999999`), simpan ke tabel `OtpVerification` di database Supabase dengan masa berlaku 5 menit (`expiresAt = now + 5 menit`), dan tandai OTP lama untuk target tersebut sebagai kedaluwarsa.
+Jika kamu belum menjalankan pembuatan tabel di dashboard Supabase kamu, buka **[Supabase SQL Editor (obdczozspvkdebhtyhoh)](https://www.google.com/search?q=https://supabase.com/dashboard/project/obdczozspvkdebhtyhoh/sql/new)**, *copy-paste* blok SQL di bawah ini, lalu klik **Run**:
 
-2. **Pengiriman OTP Nyata ke Email (`target` berupa alamat Email)**:
-   - Gunakan `nodemailer` (via konfigurasi `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` di `.env`) ATAU **Supabase Auth (`supabase.auth.signInWithOtp`)** untuk mengirim email HTML berdesain Hingo (`#FFC629` header) yang berisi kode 6 digit OTP langsung ke inbox email pengguna.
-   - Pastikan jika variabel SMTP sudah diisi di `.env`, email benar-benar terkirim ke inbox tujuan.
+```sql
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT DEFAULT 'Pengguna Hingo',
+  phone TEXT UNIQUE,
+  email TEXT UNIQUE,
+  city TEXT DEFAULT '',
+  bio TEXT DEFAULT '',
+  avatar_url TEXT DEFAULT '',
+  role TEXT DEFAULT 'USER',
+  phone_verified BOOLEAN DEFAULT FALSE,
+  email_verified BOOLEAN DEFAULT FALSE,
+  kyc_status TEXT DEFAULT 'UNVERIFIED',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-3. **Pengiriman OTP Nyata ke WhatsApp (`target` berupa Nomor HP `+62...` / `08...`)**:
-   - Normalisasi nomor HP ke format standar internasional (`628...`).
-   - Kirim pesan WhatsApp asli menggunakan **Fonnte WhatsApp API** (`POST https://api.fonnte.com/send` dengan header `Authorization: process.env.FONNTE_TOKEN`) atau **Twilio/Supabase Phone Auth** dengan isi pesan:
-     `"Kode OTP Hingo kamu adalah: *[KODE_6_DIGIT]*. Berlaku selama 5 menit. Jangan berikan kode ini kepada siapa pun, termasuk pihak yang mengaku sebagai Hingo."`
-   - Sebagai pengaman saat development lokal (jika `FONNTE_TOKEN` atau `SMTP_PASS` di `.env` belum diisi), tetap kembalikan status sukses dan tampilkan info kode OTP di terminal server / *dev notice* agar alur pengetesan tidak pernah macet.
+CREATE TABLE IF NOT EXISTS public.otp_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  target TEXT NOT NULL,
+  otp_code TEXT NOT NULL,
+  channel TEXT NOT NULL DEFAULT 'whatsapp',
+  verified BOOLEAN DEFAULT FALSE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
----
+CREATE TABLE IF NOT EXISTS public.kyc_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  full_name_ktp TEXT NOT NULL,
+  nik_number TEXT NOT NULL,
+  masked_nik TEXT NOT NULL,
+  ktp_image_url TEXT NOT NULL,
+  ktp_file_size TEXT DEFAULT '1.5 MB',
+  selfie_image_url TEXT NOT NULL,
+  selfie_file_size TEXT DEFAULT '1.8 MB',
+  status TEXT DEFAULT 'PENDING_REVIEW',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-### BAGIAN 2: PERSISTENT LOGIN SESSION DI DATABASE SUPABASE & COOKIE (SEKALI LOGIN TIDAK PERLU LOGIN LAGI)
-1. **Tabel `Session` di Database Supabase + HTTP-Only Persistent Cookie (`30 Hari`)**:
-   - Saat user memasukkan 6 digit OTP yang benar di `/auth/verify-otp`:
-     - Tandai baris `OtpVerification` sebagai `verified = true`.
-     - Cari user di tabel `User` berdasarkan `phone` atau `email`. Jika belum ada, buat baris `User` baru di database Supabase (`phoneVerified: true` jika login via WA, atau simpan `email` jika login via Email).
-     - Buat baris sesi baru di tabel `Session` database Supabase (`token` unik, `userId`, `userAgent`, `expiresAt = 30 hari ke depan`).
-     - Set cookie **`hingo_session`** (`httpOnly: true`, `path: '/'`, `sameSite: 'lax'`, `maxAge: 60 * 60 * 24 * 30` / **30 hari**).
-2. **Otomatis Tetap Login Saat Buka Ulang / Refresh Aplikasi**:
-   - Di `getCurrentUser()` (dipanggil oleh Root Layout & Navbar):
-     - Baca cookie `hingo_session`, cocokkan dengan tabel `Session` + `User` di database Supabase.
-     - Selama cookie masih berlaku dan sesi ada di database Supabase, **user otomatis tetap login** meskipun tab ditutup, browser di-refresh, atau dibuka kembali keesokan harinya — **tidak perlu login berulang kali!**
-     - Jika user belum pernah login (atau sudah klik tombol **`Keluar / Logout`** yang menghapus baris `Session` di database dan menghapus cookie `hingo_session`), maka aplikasi tetap berada di mode **Belum Login (`Guest`)**.
-3. **Auto-Redirect untuk Halaman Auth**:
-   - Jika user **sudah login** lalu mencoba membuka `/auth/login` atau `/auth/verify-otp`, otomatis *redirect* langsung ke `/account` (atau `/`), sehingga tidak pernah diminta login ulang.
+CREATE TABLE IF NOT EXISTS public.addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  label TEXT DEFAULT 'Rumah',
+  recipient_name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  full_address TEXT NOT NULL,
+  city TEXT NOT NULL,
+  postal_code TEXT DEFAULT '',
+  is_primary BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
----
+CREATE TABLE IF NOT EXISTS public.bank_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  bank_name TEXT NOT NULL,
+  account_number TEXT NOT NULL,
+  account_holder TEXT NOT NULL,
+  is_primary BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-### BAGIAN 3: HALAMAN PROFIL PENGGUNA LENGKAP (`/account`) — 100% TERSIMPAN DI DATABASE SUPABASE
-Buat halaman **Profil & Pengaturan Akun (`/account`)** dengan desain khas Hingo (`#FFC629` Hingo Yellow, `#FFFBEB` Warm Cream, `#1A1A1A` Dark Surface, `#16A34A` Verified Green) yang responsif di Desktop (`1440px`) dan Mobile (`390px`), mencakup **5 bagian interaktif** berikut:
+CREATE TABLE IF NOT EXISTS public.products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  seller_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  brand TEXT NOT NULL,
+  name TEXT NOT NULL,
+  subtitle TEXT DEFAULT '',
+  category TEXT NOT NULL,
+  condition TEXT NOT NULL DEFAULT 'Sangat baik',
+  usage_duration TEXT DEFAULT '',
+  switch_or_variant TEXT DEFAULT '',
+  completeness TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  defect_notes TEXT DEFAULT '',
+  price BIGINT NOT NULL,
+  original_new_price BIGINT DEFAULT 0,
+  stock INT DEFAULT 1,
+  location TEXT DEFAULT 'Jakarta Selatan',
+  rating NUMERIC(3,1) DEFAULT 5.0,
+  sold_count INT DEFAULT 0,
+  is_verified_by_team BOOLEAN DEFAULT TRUE,
+  images JSONB DEFAULT '[]'::jsonb,
+  status TEXT DEFAULT 'AVAILABLE',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-1. **Kartu Profil Utama & Sinkronisasi Kontak (WA & Email)**:
-   - **Foto Profil / Avatar**: Menampilkan avatar inisial atau foto profil user, dilengkapi tombol **`"Ubah foto"`** yang mengunggah gambar ke Supabase Storage / `/public/uploads/avatars/` dan menyimpan URL-nya ke `user.avatarUrl` di database.
-   - **Form Edit Data Diri**: Input **`Nama Lengkap`**, **`Kota Domisili`** (mis. Semarang, Bandung, Jakarta Selatan), dan **`Bio Singkat`** dengan tombol **`"Simpan Perubahan"`** yang langsung meng-update tabel `User` di database Supabase.
-   - **Manajemen Kontak Terverifikasi (WhatsApp & Email)**:
-     - Jika user tadi login menggunakan **WhatsApp**, tampilkan Nomor HP dengan badge hijau **`✓ WhatsApp Terverifikasi`**, dan sediakan tombol **`"+ Tambah / Verifikasi Email"`** agar user bisa menautkan alamat email ke akun yang sama di database.
-     - Sebaliknya, jika user login menggunakan **Email**, tampilkan Email dengan badge hijau **`✓ Email Terverifikasi`**, dan sediakan tombol **`"+ Tambah / Verifikasi Nomor WhatsApp"`** (dengan kirim OTP ke WA) agar akun user memiliki data WA & Email yang lengkap untuk belanja maupun titip jual.
+CREATE TABLE IF NOT EXISTS public.wishlists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
 
-2. **Kartu Status Verifikasi Identitas / KYC (Terhubung ke `/auth/verify-identity` & Tabel `KycDocument`)**:
-   - Menampilkan status KYC user dari database Supabase secara real-time:
-     - **`Belum Verifikasi` (`UNVERIFIED`)**: Banner kuning lembut dengan penjelasan manfaat KYC dan tombol kuning **`"Mulai Verifikasi Identitas (KTP & Selfie)"`** yang mengarah ke `/auth/verify-identity`.
-     - **`Menunggu Peninjauan` (`PENDING_REVIEW`)**: Menampilkan Nama sesuai KTP, NIK tersamar (`•••• •••• •••• XXXX`), status file KTP & Selfie (`✓ Berhasil diunggah`), serta estimasi review `1 × 24 jam`.
-     - **`Terverifikasi` (`VERIFIED`)**: Badge hijau **`✓ Identitas Terverifikasi`** — siap untuk transaksi penuh dan pencairan hasil titip jual.
+CREATE TABLE IF NOT EXISTS public.cart_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
+  quantity INT DEFAULT 1,
+  selected BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
 
-3. **Buku Alamat Pengiriman (CRUD Tabel `Address` di Database Supabase)**:
-   - Menampilkan seluruh alamat pengiriman milik user yang tersimpan di tabel `Address`.
-   - Sediakan modal/form **`"+ Tambah Alamat Baru"`**, **`"Edit"`**, **`"Hapus"`**, dan tombol **`"Jadikan Alamat Utama"`** (mengatur `isPrimary = true` di database).
-   - Alamat utama yang diatur di sini otomatis menjadi alamat pengiriman default saat user masuk ke halaman `/checkout` dan kota asal saat mengajukan titip jual di `/seller/consignments/new`.
+CREATE TABLE IF NOT EXISTS public.consignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  seller_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  brand_model TEXT NOT NULL,
+  variant_spec TEXT DEFAULT '',
+  usage_duration TEXT DEFAULT '',
+  additional_specs TEXT DEFAULT '',
+  current_condition TEXT DEFAULT 'Bekas · berfungsi normal',
+  defect_details TEXT DEFAULT '',
+  completeness TEXT DEFAULT '',
+  photos JSONB DEFAULT '[]'::jsonb,
+  expected_price BIGINT NOT NULL,
+  proposed_price BIGINT,
+  consignment_fee BIGINT,
+  estimated_net_payout BIGINT,
+  origin_city TEXT DEFAULT '',
+  handover_method TEXT DEFAULT 'SHIP_AFTER_ONLINE_CHECK',
+  inbound_courier TEXT DEFAULT '',
+  inbound_tracking_number TEXT DEFAULT '',
+  stage TEXT DEFAULT 'ONLINE_CHECK',
+  badge_label TEXT DEFAULT 'Menunggu review',
+  status_summary TEXT DEFAULT 'Data sudah terkirim. Jangan kirim barang sebelum ada instruksi.',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-4. **Rekening Bank & E-Wallet Pencairan Titip Jual (CRUD Tabel `BankAccount` di Database Supabase)**:
-   - Menampilkan daftar rekening pencairan milik user (mis. `BCA`, `Mandiri`, `BRI`, `BNI`, `GoPay`, `OVO`, `DANA`).
-   - Sediakan form **`"+ Tambah Rekening Pencairan"`** (Pilih Bank/E-Wallet, Nomor Rekening, Nama Pemilik Rekening sesuai KTP, dan checkbox `Rekening Utama`) yang tersimpan langsung ke tabel `BankAccount` di database Supabase untuk digunakan saat pencairan dana konsinyasi.
+CREATE TABLE IF NOT EXISTS public.orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_code TEXT UNIQUE NOT NULL,
+  buyer_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES public.products(id) ON DELETE SET NULL,
+  address_id UUID REFERENCES public.addresses(id) ON DELETE SET NULL,
+  item_price BIGINT NOT NULL,
+  shipping_courier TEXT DEFAULT 'JNE REG',
+  shipping_cost BIGINT DEFAULT 18000,
+  shipping_protection BIGINT DEFAULT 5000,
+  service_fee BIGINT DEFAULT 2500,
+  total_amount BIGINT NOT NULL,
+  payment_method TEXT DEFAULT 'BCA_VA',
+  buyer_note TEXT DEFAULT '',
+  tracking_number TEXT DEFAULT '',
+  escrow_status TEXT DEFAULT 'HELD_BY_HINGO',
+  order_status TEXT DEFAULT 'PAID_PACKING',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-5. **Ringkasan Aktivitas Akun & Keamanan Sesi**:
-   - Menampilkan 4 kartu ringkasan real-time dari database user:
-     - `Pesanan Saya` (jumlah transaksi di `/orders`)
-     - `Barang Titipan` (jumlah pengajuan di `/seller/consignments`)
-     - `Wishlist` (jumlah barang disimpan di `/wishlist`)
-     - `Total Pencairan` (total nominal `Rp` yang sudah cair di `/seller/payouts`)
-   - Menampilkan informasi sesi login aktif (metode login: WhatsApp / Email, waktu login) dan tombol merah/outline **`"Keluar dari Akun (Logout)"`**.
+CREATE TABLE IF NOT EXISTS public.chat_threads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  type TEXT DEFAULT 'PRODUCT_ADMIN',
+  title TEXT DEFAULT 'Admin Hingo',
+  ticket_code TEXT DEFAULT '',
+  related_product_id UUID REFERENCES public.products(id) ON DELETE SET NULL,
+  related_order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
----
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  thread_id UUID REFERENCES public.chat_threads(id) ON DELETE CASCADE,
+  sender_role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-### BAGIAN 4: VERIFIKASI WAJIB
-1. Pastikan tabel `User`, `Session`, `OtpVerification`, `KycDocument`, `Address`, dan `BankAccount` sudah sinkron di database Supabase (`npx prisma db push`).
-2. Uji login dengan **Nomor WhatsApp** maupun **Email** di `/auth/login` → verifikasi kode OTP 6 digit di `/auth/verify-otp` → pastikan langsung masuk dan session tersimpan.
-3. Coba **refresh browser** atau buka ulang halaman `/` dan `/account`: pastikan user **tetap berstatus login** tanpa diminta login lagi.
-4. Uji edit Nama, Kota, tambah Alamat Pengiriman baru, dan tambah Rekening Bank di `/account` → refresh halaman → pastikan semua perubahan tersimpan permanen di database Supabase!
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.otp_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bank_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wishlists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.consignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all access for Hingo app" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.otp_verifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.kyc_documents FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.addresses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.bank_accounts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.wishlists FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.cart_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.consignments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.chat_threads FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.chat_messages FOR ALL USING (true) WITH CHECK (true);
 ```
-
----
-
-## 2. Cara Setting `.env` Supaya OTP Beneran Masuk ke WhatsApp & Email Kamu
-
-Agar proyek **Hingo** di laptopmu benar-benar bisa mengirim pesan ke aplikasi WhatsApp dan Inbox Email asli serta menyimpan datanya di **Supabase**, tambahkan konfigurasi berikut ke dalam file **`.env`** di proyek Antigravity kamu:
-
-```ini
-# 1. KONEKSI DATABASE SUPABASE POSTGRESQL
-# Ambil dari: Supabase Dashboard -> Project Settings -> Database -> Connection String (URI)
-DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD-DATABASE-KAMU]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD-DATABASE-KAMU]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
-
-# 2. PENGIRIMAN OTP KE EMAIL ASLI (Pakai Gmail SMTP Gratis)
-# Buat App Password 16 huruf di: Akun Google -> Keamanan -> Verifikasi 2 Langkah -> Sandi Aplikasi (App Passwords)
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="465"
-SMTP_USER="helmiismono35@gmail.com"
-SMTP_PASS="xxxx-xxxx-xxxx-xxxx"
-SMTP_FROM="Hingo Official <helmiismono35@gmail.com>"
-
-# 3. PENGIRIMAN OTP KE WHATSAPP ASLI (Pakai Fonnte API Gratis)
-# Daftar gratis di https://fonnte.com -> sambungkan QR WhatsApp -> copy Token Device kamu ke sini:
-FONNTE_TOKEN="PASTE_TOKEN_FONNTE_WA_KAMU_DI_SINI"
-```
-
-### Cara Kerja Ketiganya:
-* **Database Supabase (`DATABASE_URL`)**: Menyimpan semua akun `User`, `Session` login 30 hari, `OtpVerification`, `Address`, dan `BankAccount` di *cloud* Supabase (sehingga datanya awet dan tidak perlu login ulang).
-* **Email OTP (`SMTP_USER` & `SMTP_PASS`)**: Menggunakan fitur *App Password* dari akun Gmail kamu sendiri untuk mengirim kode 6 digit OTP langsung ke *inbox* email siapa pun yang login.
-* **WhatsApp OTP (`FONNTE_TOKEN`)**: Menggunakan layanan gateway WhatsApp populer di Indonesia (**Fonnte**) yang punya kuota gratis—cukup *scan* QR WhatsApp satu kali di dashboard Fonnte, lalu tempel *Token*-nya ke `.env` agar aplikasi Hingo langsung mengirim chat OTP ke nomor WA tujuan.

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
@@ -33,15 +34,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Nama penerima, no. HP, alamat lengkap, dan kota wajib diisi" }, { status: 400 });
     }
 
-    // If setting as primary, reset other addresses
     if (isPrimary) {
       await prisma.address.updateMany({
         where: { userId: user.id },
         data: { isPrimary: false },
       });
+      try {
+        await supabase.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
+      } catch (e) {}
     }
 
-    // Check if this is the user's first address
     const count = await prisma.address.count({ where: { userId: user.id } });
     const shouldBePrimary = isPrimary || count === 0;
 
@@ -57,6 +59,20 @@ export async function POST(req: Request) {
         isPrimary: shouldBePrimary,
       },
     });
+
+    // Sinkronkan ke Supabase public.addresses
+    try {
+      await supabase.from("addresses").insert({
+        user_id: user.id,
+        label: label || "Rumah",
+        recipient_name: recipientName.trim(),
+        phone: phone.trim(),
+        full_address: fullAddress.trim(),
+        city: city.trim(),
+        postal_code: postalCode ? postalCode.trim() : "12810",
+        is_primary: shouldBePrimary,
+      });
+    } catch (e) {}
 
     return NextResponse.json({ success: true, address });
   } catch (error: any) {
@@ -83,6 +99,9 @@ export async function PUT(req: Request) {
         where: { userId: user.id },
         data: { isPrimary: false },
       });
+      try {
+        await supabase.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
+      } catch (e) {}
     }
 
     const address = await prisma.address.update({
@@ -123,9 +142,12 @@ export async function DELETE(req: Request) {
       where: { id, userId: user.id },
     });
 
+    try {
+      await supabase.from("addresses").delete().eq("id", id);
+    } catch (e) {}
+
     return NextResponse.json({ success: true, message: "Alamat berhasil dihapus" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Gagal menghapus alamat" }, { status: 500 });
   }
 }
-

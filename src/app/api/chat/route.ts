@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(req: Request) {
   try {
@@ -236,6 +237,24 @@ export async function POST(req: Request) {
       where: { id: thread.id },
       data: { updatedAt: new Date() },
     });
+
+    // Sinkronkan ke Supabase public.chat_messages
+    try {
+      await supabase.from("chat_messages").insert([
+        {
+          thread_id: thread.id,
+          sender_role: "USER",
+          content: content.trim(),
+          is_read: true,
+        },
+        {
+          thread_id: thread.id,
+          sender_role: type === "CS_SUPPORT" ? "CS" : "ADMIN",
+          content: replyContent,
+          is_read: true,
+        },
+      ]);
+    } catch (e) {}
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
@@ -38,6 +39,20 @@ export async function PUT(req: Request) {
       },
     });
 
+    // Sinkronkan ke Supabase public.users
+    try {
+      await supabase
+        .from("users")
+        .update({
+          ...(name !== undefined ? { name: name.trim() } : {}),
+          ...(city !== undefined ? { city: city.trim() } : {}),
+          ...(bio !== undefined ? { bio: bio.trim() } : {}),
+          ...(avatarUrl !== undefined ? { avatar_url: avatarUrl.trim() } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+    } catch (e) {}
+
     return NextResponse.json({
       success: true,
       message: "Profil berhasil diperbarui",
@@ -48,4 +63,3 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: error.message || "Gagal memperbarui profil" }, { status: 500 });
   }
 }
-

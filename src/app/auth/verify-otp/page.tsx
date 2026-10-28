@@ -129,9 +129,9 @@ function VerifyOtpContent() {
 
       if (res.ok && data.success) {
         await refreshSession();
-        showToast("Login berhasil!");
-        const callbackUrl = searchParams.get("callbackUrl") || "/";
-        router.push(callbackUrl);
+        showToast("Login berhasil! Mengalihkan ke profil...");
+        const targetUrl = searchParams.get("callbackUrl");
+        router.push(targetUrl && targetUrl !== "/" ? targetUrl : "/account");
       } else {
         setErrorMsg(data.error || "Kode OTP salah atau tidak cocok");
       }

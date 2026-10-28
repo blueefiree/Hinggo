@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
@@ -38,6 +39,9 @@ export async function POST(req: Request) {
         where: { userId: user.id },
         data: { isPrimary: false },
       });
+      try {
+        await supabase.from("bank_accounts").update({ is_primary: false }).eq("user_id", user.id);
+      } catch (e) {}
     }
 
     const count = await prisma.bankAccount.count({ where: { userId: user.id } });
@@ -52,6 +56,17 @@ export async function POST(req: Request) {
         isPrimary: shouldBePrimary,
       },
     });
+
+    // Sinkronkan ke Supabase public.bank_accounts
+    try {
+      await supabase.from("bank_accounts").insert({
+        user_id: user.id,
+        bank_name: bankName.trim(),
+        account_number: accountNumber.trim(),
+        account_holder: accountHolder.trim(),
+        is_primary: shouldBePrimary,
+      });
+    } catch (e) {}
 
     return NextResponse.json({ success: true, bankAccount });
   } catch (error: any) {
@@ -78,6 +93,9 @@ export async function PUT(req: Request) {
         where: { userId: user.id },
         data: { isPrimary: false },
       });
+      try {
+        await supabase.from("bank_accounts").update({ is_primary: false }).eq("user_id", user.id);
+      } catch (e) {}
     }
 
     const bankAccount = await prisma.bankAccount.update({
@@ -115,9 +133,12 @@ export async function DELETE(req: Request) {
       where: { id, userId: user.id },
     });
 
+    try {
+      await supabase.from("bank_accounts").delete().eq("id", id);
+    } catch (e) {}
+
     return NextResponse.json({ success: true, message: "Rekening berhasil dihapus" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Gagal menghapus rekening" }, { status: 500 });
   }
 }
-

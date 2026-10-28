@@ -413,7 +413,7 @@ function AccountContent() {
   // Activity summary metrics
   const totalPayoutDisbursed = payouts
     .filter((p) => p.status === "SUCCESS")
-    .reduce((sum, p) => sum + (p.netDisbursed || (p as any).amount || 0), 0);
+    .reduce((sum, p) => sum + (p.netDisbursed || 0), 0);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
@@ -569,20 +569,19 @@ function AccountContent() {
               )}
 
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold border ${
-                  user?.kycStatus === "VERIFIED"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                    : user?.kycStatus === "PENDING_REVIEW"
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold border ${user?.kycStatus === "VERIFIED"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  : user?.kycStatus === "PENDING_REVIEW"
                     ? "bg-amber-50 text-amber-900 border-amber-300"
                     : "bg-neutral-100 text-neutral-600 border-neutral-300"
-                }`}
+                  }`}
               >
                 <ShieldCheck className="h-3 w-3" />
                 {user?.kycStatus === "VERIFIED"
                   ? "KYC Terverifikasi"
                   : user?.kycStatus === "PENDING_REVIEW"
-                  ? "KYC Menunggu Review"
-                  : "KYC Belum Verifikasi"}
+                    ? "KYC Menunggu Review"
+                    : "KYC Belum Verifikasi"}
               </span>
             </div>
           </div>
@@ -592,11 +591,10 @@ function AccountContent() {
             <button
               type="button"
               onClick={() => setActiveTab("profile")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${
-                activeTab === "profile"
-                  ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${activeTab === "profile"
+                ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
+                : "text-neutral-600 hover:bg-neutral-100"
+                }`}
             >
               <User className="h-4 w-4 text-amber-600" />
               <span>Profil & Kontak Terverifikasi</span>
@@ -605,11 +603,10 @@ function AccountContent() {
             <button
               type="button"
               onClick={() => setActiveTab("kyc")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${
-                activeTab === "kyc"
-                  ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${activeTab === "kyc"
+                ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
+                : "text-neutral-600 hover:bg-neutral-100"
+                }`}
             >
               <ShieldCheck className="h-4 w-4 text-amber-600" />
               <span>Verifikasi Identitas KYC ({user?.kycStatus === "VERIFIED" ? "Aktif" : "Perlu"})</span>
@@ -618,11 +615,10 @@ function AccountContent() {
             <button
               type="button"
               onClick={() => setActiveTab("address")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${
-                activeTab === "address"
-                  ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${activeTab === "address"
+                ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
+                : "text-neutral-600 hover:bg-neutral-100"
+                }`}
             >
               <MapPin className="h-4 w-4 text-amber-600" />
               <span>Buku Alamat Pengiriman ({addresses.length})</span>
@@ -631,11 +627,10 @@ function AccountContent() {
             <button
               type="button"
               onClick={() => setActiveTab("bank")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${
-                activeTab === "bank"
-                  ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${activeTab === "bank"
+                ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
+                : "text-neutral-600 hover:bg-neutral-100"
+                }`}
             >
               <Building2 className="h-4 w-4 text-amber-600" />
               <span>Rekening Bank Pencairan ({bankAccounts.length})</span>
@@ -644,11 +639,10 @@ function AccountContent() {
             <button
               type="button"
               onClick={() => setActiveTab("security")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${
-                activeTab === "security"
-                  ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${activeTab === "security"
+                ? "bg-[#FFFBEB] text-amber-950 font-black shadow-xs"
+                : "text-neutral-600 hover:bg-neutral-100"
+                }`}
             >
               <Clock className="h-4 w-4 text-amber-600" />
               <span>Keamanan Sesi (30 Hari Aktif)</span>
@@ -893,15 +887,15 @@ function AccountContent() {
                     user?.kycStatus === "VERIFIED"
                       ? "Terverifikasi"
                       : user?.kycStatus === "PENDING_REVIEW"
-                      ? "Menunggu Peninjauan"
-                      : "Belum Verifikasi"
+                        ? "Menunggu Peninjauan"
+                        : "Belum Verifikasi"
                   }
                   variant={
                     user?.kycStatus === "VERIFIED"
                       ? "verified"
                       : user?.kycStatus === "PENDING_REVIEW"
-                      ? "warning"
-                      : "neutral"
+                        ? "warning"
+                        : "neutral"
                   }
                 />
               </div>
@@ -1017,11 +1011,10 @@ function AccountContent() {
                   {addresses.map((addr) => (
                     <div
                       key={addr.id}
-                      className={`rounded-2xl p-5 border transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                        addr.isPrimary
-                          ? "border-[#FFC629] bg-[#FFFBEB]/40 ring-1 ring-[#FFC629]"
-                          : "border-neutral-200 bg-white hover:border-neutral-300"
-                      }`}
+                      className={`rounded-2xl p-5 border transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${addr.isPrimary
+                        ? "border-[#FFC629] bg-[#FFFBEB]/40 ring-1 ring-[#FFC629]"
+                        : "border-neutral-200 bg-white hover:border-neutral-300"
+                        }`}
                     >
                       <div className="flex flex-col gap-1 text-xs">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1119,11 +1112,10 @@ function AccountContent() {
                   {bankAccounts.map((b) => (
                     <div
                       key={b.id}
-                      className={`rounded-2xl p-5 border transition flex items-center justify-between gap-4 ${
-                        b.isPrimary
-                          ? "border-emerald-300 bg-emerald-50/40 ring-1 ring-emerald-400"
-                          : "border-neutral-200 bg-white hover:border-neutral-300"
-                      }`}
+                      className={`rounded-2xl p-5 border transition flex items-center justify-between gap-4 ${b.isPrimary
+                        ? "border-emerald-300 bg-emerald-50/40 ring-1 ring-emerald-400"
+                        : "border-neutral-200 bg-white hover:border-neutral-300"
+                        }`}
                     >
                       <div className="flex items-center gap-4">
                         <div className="flex h-12 w-14 items-center justify-center rounded-xl bg-neutral-900 text-[#FFC629] font-black text-xs tracking-wider">

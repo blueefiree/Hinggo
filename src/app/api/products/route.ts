@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: Request) {
@@ -12,6 +13,31 @@ export async function GET(req: Request) {
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
 
+    // 1. Coba ambil dari Supabase public.products
+    let supabaseProducts: any[] = [];
+    try {
+      let sbQuery = supabase.from("products").select("*").eq("status", "AVAILABLE");
+      if (category && category !== "ALL") {
+        sbQuery = sbQuery.eq("category", category.toUpperCase());
+      }
+      if (condition && condition !== "ALL") {
+        sbQuery = sbQuery.eq("condition", condition);
+      }
+      if (minPrice) {
+        sbQuery = sbQuery.gte("price", parseInt(minPrice, 10));
+      }
+      if (maxPrice) {
+        sbQuery = sbQuery.lte("price", parseInt(maxPrice, 10));
+      }
+      const { data, error } = await sbQuery;
+      if (!error && data && data.length > 0) {
+        supabaseProducts = data;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // 2. Query Prisma lokal
     const where: any = {
       status: "AVAILABLE",
     };
@@ -47,7 +73,7 @@ export async function GET(req: Request) {
       orderBy = { soldCount: "desc" };
     }
 
-    const [products, keyboardCount, mouseCount, headsetCount, monitorCount, accessoriesCount, totalCount] =
+    const [prismaProducts, keyboardCount, mouseCount, headsetCount, monitorCount, accessoriesCount, totalCount] =
       await Promise.all([
         prisma.product.findMany({ where, orderBy }),
         prisma.product.count({ where: { category: "KEYBOARD", status: "AVAILABLE" } }),
@@ -58,12 +84,18 @@ export async function GET(req: Request) {
         prisma.product.count({ where: { status: "AVAILABLE" } }),
       ]);
 
-    const parsedProducts = products.map((p) => {
+    const activeList = supabaseProducts.length > 0 ? supabaseProducts : prismaProducts;
+
+    const parsedProducts = activeList.map((p) => {
       let parsedImages: string[] = [];
-      try {
-        parsedImages = JSON.parse(p.images || "[]");
-      } catch {
-        parsedImages = p.images ? [p.images] : [];
+      if (Array.isArray(p.images)) {
+        parsedImages = p.images;
+      } else {
+        try {
+          parsedImages = JSON.parse(p.images || "[]");
+        } catch {
+          parsedImages = p.images ? [p.images] : [];
+        }
       }
       return {
         ...p,
@@ -144,6 +176,7 @@ export async function POST(req: Request) {
           "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=900&auto=format&fit=crop",
         ];
 
+    // 1. Simpan ke Prisma lokal
     const newProduct = await prisma.product.create({
       data: {
         code,
@@ -170,6 +203,33 @@ export async function POST(req: Request) {
         status: "AVAILABLE",
       },
     });
+
+    // 2. Simpan ke Supabase public.products
+    try {
+      await supabase.from("products").insert({
+        code,
+        slug,
+        brand: brand ? brand.toUpperCase() : "CUSTOM",
+        name,
+        subtitle: `${switchOrVariant} · ${condition}`,
+        category: category.toUpperCase(),
+        condition,
+        usage_duration: usageDuration,
+        switch_or_variant: switchOrVariant,
+        completeness,
+        description: description || `Gear titip jual terverifikasi Hingo. ${name}`,
+        defect_notes: defectNotes,
+        price: numPrice,
+        original_new_price: numOriginal,
+        stock: 1,
+        location,
+        rating: 5.0,
+        sold_count: 0,
+        is_verified_by_team: true,
+        images: imageArray,
+        status: "AVAILABLE",
+      });
+    } catch (e) {}
 
     return NextResponse.json({
       success: true,
