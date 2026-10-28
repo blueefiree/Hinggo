@@ -10,15 +10,18 @@ datasource db {
 model User {
   id             String            @id @default(uuid())
   name           String
-  phone          String            @unique
-  email          String            @unique
+  phone          String?           @unique
+  email          String?           @unique
   city           String            @default("Jakarta Selatan")
   avatarUrl      String?
+  bio            String?
   role           String            @default("USER") // USER | ADMIN | CS
   phoneVerified  Boolean           @default(false)
+  emailVerified  Boolean           @default(false)
   kycStatus      String            @default("UNVERIFIED") // UNVERIFIED | PENDING_REVIEW | VERIFIED | REJECTED
   createdAt      DateTime          @default(now())
   
+  sessions       Session[]
   kycDocument    KycDocument?
   addresses      Address[]
   bankAccounts   BankAccount[]
@@ -28,6 +31,16 @@ model User {
   consignments   ConsignmentItem[]
   payouts        Payout[]
   disputes       DisputeReport[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model OtpVerification {

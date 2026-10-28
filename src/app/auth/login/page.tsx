@@ -22,12 +22,19 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
-  const { setRole, refreshSession, showToast } = useHingoStore();
+  const { user, setRole, refreshSession, showToast } = useHingoStore();
   const [authMode, setAuthMode] = useState<"phone" | "email">("phone");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
+
+  // If already logged in, auto-redirect to account
+  React.useEffect(() => {
+    if (user) {
+      router.push("/account");
+    }
+  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

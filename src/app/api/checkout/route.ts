@@ -57,7 +57,7 @@ export async function POST(req: Request) {
           userId: user.id,
           label: "Rumah",
           recipientName: user.name,
-          phone: user.phone,
+          phone: user.phone || "081234567890",
           fullAddress: "Jl. Sudirman No. 45, Kebayoran Baru, Jakarta Selatan",
           city: "Jakarta Selatan",
           postalCode: "12190",
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
     const orderCode = `GRL-${dateStr}-${randomSuffix}`;
-    const vaNumber = `8801 ${user.phone.replace(/\D/g, "").slice(-8) || "08123456"}`;
+    const vaNumber = `8801 ${(user.phone || "081234567890").replace(/\D/g, "").slice(-8)}`;
 
     // 3. Database transaction
     const newOrder = await prisma.$transaction(async (tx) => {

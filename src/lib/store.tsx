@@ -24,11 +24,13 @@ export interface CartItem {
 export interface UserType {
   id: string;
   name: string;
-  phone: string;
-  email: string;
+  phone: string | null;
+  email: string | null;
   city: string;
   role: string;
   phoneVerified: boolean;
+  emailVerified?: boolean;
+  bio?: string | null;
   kycStatus: string;
   avatarUrl?: string | null;
   kycDocument?: any;

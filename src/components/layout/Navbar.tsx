@@ -259,9 +259,17 @@ export default function Navbar() {
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 className="flex items-center gap-2 rounded-full border border-neutral-200 bg-[#F6F6F4] p-1.5 pr-2.5 hover:bg-[#EAEAEA] transition cursor-pointer"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFC629] text-xs font-bold text-black uppercase">
-                  {user.name.charAt(0)}
-                </div>
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="h-7 w-7 rounded-full object-cover border border-[#FFC629]"
+                  />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFC629] text-xs font-bold text-black uppercase">
+                    {user.name.charAt(0)}
+                  </div>
+                )}
                 <div className="hidden sm:flex flex-col text-left">
                   <span className="text-xs font-bold leading-tight text-[#1A1A1A] max-w-[100px] truncate">
                     {user.name.split(" ")[0]}

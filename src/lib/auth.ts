@@ -12,7 +12,33 @@ export async function getCurrentUser() {
       return null;
     }
 
-    const user = await prisma.user.findUnique({
+    // 1. Primary: Look up persistent session in Session table
+    const session = await prisma.session.findUnique({
+      where: { token: sessionToken },
+      include: {
+        user: {
+          include: {
+            kycDocument: true,
+            addresses: true,
+            bankAccounts: true,
+          },
+        },
+      },
+    });
+
+    if (session) {
+      // Check if session has not expired
+      if (session.expiresAt > new Date()) {
+        return session.user;
+      } else {
+        // Expired session: clean up
+        await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
+        return null;
+      }
+    }
+
+    // 2. Fallback: Direct User ID (for admin or legacy sessions)
+    const directUser = await prisma.user.findUnique({
       where: { id: sessionToken },
       include: {
         kycDocument: true,
@@ -21,10 +47,9 @@ export async function getCurrentUser() {
       },
     });
 
-    return user || null;
+    return directUser || null;
   } catch (error) {
     console.error("getCurrentUser error:", error);
     return null;
   }
 }
-

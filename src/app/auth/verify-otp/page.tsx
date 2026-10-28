@@ -21,7 +21,7 @@ function VerifyOtpContent() {
   const targetParam = searchParams.get("target") || "+62 812 3456 7890";
   const devOtpParam = searchParams.get("devOtp") || "123456";
 
-  const { setUser, refreshSession, showToast } = useHingoStore();
+  const { user, setUser, refreshSession, showToast } = useHingoStore();
 
   const [target, setTarget] = useState(targetParam);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -31,6 +31,13 @@ function VerifyOtpContent() {
   const [activeOtpCode, setActiveOtpCode] = useState<string>(devOtpParam);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // If already logged in, auto-redirect
+  useEffect(() => {
+    if (user) {
+      router.push("/account");
+    }
+  }, [user, router]);
 
   // Pre-fill with first digits if demo
   useEffect(() => {
