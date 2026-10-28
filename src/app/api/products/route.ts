@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PRODUCTS } from "@/lib/data";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: Request) {
   try {
@@ -39,27 +39,148 @@ export async function GET(req: Request) {
     }
 
     let orderBy: any = { createdAt: "desc" };
-    if (sort === "cheapest") {
+    if (sort === "price_asc") {
       orderBy = { price: "asc" };
-    } else if (sort === "expensive") {
+    } else if (sort === "price_desc") {
       orderBy = { price: "desc" };
     } else if (sort === "popular") {
       orderBy = { soldCount: "desc" };
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      orderBy,
+    const [products, keyboardCount, mouseCount, headsetCount, monitorCount, accessoriesCount, totalCount] =
+      await Promise.all([
+        prisma.product.findMany({ where, orderBy }),
+        prisma.product.count({ where: { category: "KEYBOARD", status: "AVAILABLE" } }),
+        prisma.product.count({ where: { category: "MOUSE", status: "AVAILABLE" } }),
+        prisma.product.count({ where: { category: "HEADSET", status: "AVAILABLE" } }),
+        prisma.product.count({ where: { category: "MONITOR", status: "AVAILABLE" } }),
+        prisma.product.count({ where: { category: "ACCESSORIES", status: "AVAILABLE" } }),
+        prisma.product.count({ where: { status: "AVAILABLE" } }),
+      ]);
+
+    const parsedProducts = products.map((p) => {
+      let parsedImages: string[] = [];
+      try {
+        parsedImages = JSON.parse(p.images || "[]");
+      } catch {
+        parsedImages = p.images ? [p.images] : [];
+      }
+      return {
+        ...p,
+        images: parsedImages,
+      };
     });
 
-    const parsedProducts = products.map((p) => ({
-      ...p,
-      images: JSON.parse(p.images || "[]"),
-    }));
+    const categoryCounts = {
+      KEYBOARD: keyboardCount,
+      MOUSE: mouseCount,
+      HEADSET: headsetCount,
+      MONITOR: monitorCount,
+      ACCESSORIES: accessoriesCount,
+      TOTAL: totalCount,
+    };
 
-    return NextResponse.json({ products: parsedProducts });
+    return NextResponse.json({
+      products: parsedProducts,
+      categoryCounts,
+      total: parsedProducts.length,
+    });
   } catch (error: any) {
-    console.warn("Products API using data fallback:", error.message);
-    return NextResponse.json({ products: PRODUCTS });
+    console.error("Products API error:", error.message);
+    return NextResponse.json({
+      products: [],
+      categoryCounts: {
+        KEYBOARD: 0,
+        MOUSE: 0,
+        HEADSET: 0,
+        MONITOR: 0,
+        ACCESSORIES: 0,
+        TOTAL: 0,
+      },
+      total: 0,
+    });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Silakan login terlebih dahulu" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const {
+      name,
+      brand,
+      category = "KEYBOARD",
+      condition = "Sangat baik",
+      price,
+      originalNewPrice,
+      location = "Jakarta Selatan",
+      switchOrVariant = "Standar",
+      completeness = "Unit lengkap",
+      description = "",
+      defectNotes = "Fungsi normal 100%, mulus terawat.",
+      usageDuration = "6 bulan",
+      images = [],
+    } = body;
+
+    if (!name || !price) {
+      return NextResponse.json({ error: "Nama dan harga produk wajib diisi" }, { status: 400 });
+    }
+
+    const numPrice = Number(price);
+    const numOriginal = originalNewPrice ? Number(originalNewPrice) : Math.round(numPrice * 1.4);
+    const code = `HG-${Date.now().toString().slice(-4)}`;
+    const baseSlug = `${brand ? brand.toLowerCase() + "-" : ""}${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+
+    const imageArray = Array.isArray(images)
+      ? images.filter(Boolean)
+      : typeof images === "string" && images.trim()
+      ? [images.trim()]
+      : [
+          "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=900&auto=format&fit=crop",
+        ];
+
+    const newProduct = await prisma.product.create({
+      data: {
+        code,
+        slug,
+        sellerId: user.id,
+        brand: brand ? brand.toUpperCase() : "CUSTOM",
+        name,
+        subtitle: `${switchOrVariant} · ${condition}`,
+        category: category.toUpperCase(),
+        condition,
+        usageDuration,
+        switchOrVariant,
+        completeness,
+        description: description || `Gear titip jual terverifikasi Hingo. ${name}`,
+        defectNotes,
+        price: numPrice,
+        originalNewPrice: numOriginal,
+        stock: 1,
+        location,
+        rating: 5.0,
+        soldCount: 0,
+        isVerifiedByTeam: true,
+        images: JSON.stringify(imageArray),
+        status: "AVAILABLE",
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...newProduct,
+        images: imageArray,
+      },
+      message: "Produk berhasil ditambahkan ke katalog!",
+    });
+  } catch (error: any) {
+    console.error("Create product API error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

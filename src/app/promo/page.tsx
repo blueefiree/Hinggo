@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Tag,
@@ -12,11 +12,32 @@ import {
   ArrowRight,
   ShieldCheck,
   Clock,
+  Package,
 } from "lucide-react";
-import { PRODUCTS } from "@/lib/data";
+import { Product } from "@/lib/data";
 
 export default function PromoPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [promoProducts, setPromoProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPromoProducts() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/products");
+        if (res.ok) {
+          const data = await res.json();
+          setPromoProducts(data.products || []);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPromoProducts();
+  }, []);
 
   const vouchers = [
     {
@@ -63,14 +84,12 @@ export default function PromoPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const promoProducts = PRODUCTS.slice(0, 4);
-
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
+    }).format(val || 0);
   };
 
   return (
@@ -89,88 +108,77 @@ export default function PromoPage() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 z-10 shrink-0">
-          <Link
-            href="/catalog"
-            className="px-6 py-3.5 rounded-2xl bg-[#1A1A1A] hover:bg-neutral-800 text-white font-black text-xs sm:text-sm transition shadow-md"
-          >
-            Belanja Gear Preloved
-          </Link>
-          <Link
-            href="/seller/consignments/new"
-            className="px-6 py-3.5 rounded-2xl bg-white hover:bg-neutral-100 text-[#1A1A1A] font-black text-xs sm:text-sm transition border border-neutral-300"
-          >
-            Titip Jual Sekarang
-          </Link>
+        <div className="flex flex-col gap-2 bg-white/40 backdrop-blur-sm p-4 rounded-2xl border border-white/60 text-xs font-bold text-neutral-900 z-10">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span>Voucher diperbarui setiap bulan</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Garansi proteksi escrow 100%</span>
+          </div>
         </div>
-
-        {/* Decorative Circle */}
-        <div className="absolute -right-10 -bottom-10 h-64 w-64 rounded-full bg-white/20 blur-2xl pointer-events-none" />
       </div>
 
-      {/* Section 1: Active Vouchers */}
-      <div className="flex flex-col gap-6 mb-12">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#1A1A1A]">
-            Kupon & Voucher Aktif
-          </h2>
-          <p className="text-xs text-neutral-500 mt-1">
-            Salin kode voucher dan masukkan saat pembayaran di halaman checkout atau pengajuan titip jual.
-          </p>
-        </div>
+      {/* Section 1: Official Promo Vouchers */}
+      <div className="mb-14">
+        <h2 className="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-2">
+          Kupon & Voucher Resmi
+        </h2>
+        <p className="text-xs text-neutral-500 mb-6">
+          Klik salin kode untuk langsung menggunakan kupon pada saat checkout pesanan.
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {vouchers.map((v) => {
+          {vouchers.map((v, idx) => {
             const Icon = v.icon;
             const isCopied = copiedCode === v.code;
+
             return (
               <div
-                key={v.code}
-                className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between gap-4 hover:border-amber-300 transition"
+                key={idx}
+                className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between gap-4 hover:border-[#FFC629] transition"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3.5">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFFBEB] text-amber-700 border border-[#FDE68A]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFFBEB] text-amber-800 border border-[#FDE68A]">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <span className="rounded-md bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold">
+                      <span className="rounded-full bg-neutral-100 text-neutral-600 px-2.5 py-0.5 text-[10px] font-bold">
                         {v.tag}
                       </span>
-                      <h3 className="text-sm font-extrabold text-[#1A1A1A] mt-1">
+                      <h3 className="text-sm sm:text-base font-extrabold text-[#1A1A1A] mt-1.5">
                         {v.title}
                       </h3>
-                      <p className="text-xs text-neutral-600 mt-0.5 leading-relaxed">
+                      <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
                         {v.description}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-amber-950 bg-[#FFFBEB] px-3 py-1 rounded-lg border border-[#FDE68A]">
-                      {v.code}
-                    </span>
-                    <span className="text-[11px] text-neutral-400 hidden sm:inline">
-                      s.d {v.validUntil}
-                    </span>
+                <div className="pt-3 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-neutral-400 font-medium">Syarat</span>
+                    <strong className="text-neutral-800 font-bold">{v.minSpend}</strong>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => handleCopy(v.code)}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#1A1A1A] hover:bg-neutral-800 text-white px-4 py-2 font-bold text-xs transition cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-[#F6F6F4] hover:bg-[#FFC629] hover:border-[#FFC629] px-4 py-2 font-mono font-black text-xs text-[#1A1A1A] transition active:scale-95 cursor-pointer"
                   >
+                    <span>{v.code}</span>
                     {isCopied ? (
                       <>
-                        <Check className="h-3.5 w-3.5 text-emerald-400" />
-                        <span>Tersalin</span>
+                        <Check className="h-3.5 w-3.5 text-emerald-700" />
+                        <span className="text-emerald-800 font-sans">Tersalin!</span>
                       </>
                     ) : (
                       <>
                         <Copy className="h-3.5 w-3.5" />
-                        <span>Salin Kode</span>
+                        <span className="font-sans">Salin</span>
                       </>
                     )}
                   </button>
@@ -186,7 +194,7 @@ export default function PromoPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-[#1A1A1A]">
-              Gear Pilihan Diskon Spesial
+              Gear Pilihan Katalog
             </h2>
             <p className="text-xs text-neutral-500 mt-1">
               Semua unit sudah lolos inspeksi fisik ketat tim Hingo.
@@ -200,43 +208,63 @@ export default function PromoPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {promoProducts.map((p) => (
-            <Link
-              key={p.id}
-              href={`/product/${p.slug}`}
-              className="group rounded-3xl border border-[#E5E5E5] bg-white p-3 sm:p-4 shadow-xs hover:border-[#FFC629] hover:shadow-md transition flex flex-col justify-between"
-            >
-              <div>
-                <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-neutral-100 mb-3">
-                  <img
-                    src={p.images[0]}
-                    alt={p.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <span className="absolute top-2 left-2 rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-bold">
-                    Hemat {Math.round(((p.originalNewPrice - p.price) / p.originalNewPrice) * 100)}%
+        {promoProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {promoProducts.slice(0, 4).map((p) => (
+              <Link
+                key={p.id}
+                href={`/product/${p.slug}`}
+                className="group rounded-3xl border border-[#E5E5E5] bg-white p-3 sm:p-4 shadow-xs hover:border-[#FFC629] hover:shadow-md transition flex flex-col justify-between"
+              >
+                <div>
+                  <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-neutral-100 mb-3">
+                    <img
+                      src={p.images?.[0] || "/images/placeholder.png"}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                    {p.originalNewPrice && p.originalNewPrice > p.price && (
+                      <span className="absolute top-2 left-2 rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-bold">
+                        Hemat {Math.round(((p.originalNewPrice - p.price) / p.originalNewPrice) * 100)}%
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-extrabold text-[#1A1A1A] line-clamp-1 group-hover:text-amber-800">
+                    {p.name}
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">
+                    {p.subtitle}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-neutral-100">
+                  {p.originalNewPrice && p.originalNewPrice > p.price && (
+                    <span className="text-[11px] text-neutral-400 line-through block">
+                      {formatRupiah(p.originalNewPrice)}
+                    </span>
+                  )}
+                  <span className="text-sm sm:text-base font-black text-[#1A1A1A]">
+                    {formatRupiah(p.price)}
                   </span>
                 </div>
-                <h3 className="text-xs sm:text-sm font-extrabold text-[#1A1A1A] line-clamp-1 group-hover:text-amber-800">
-                  {p.name}
-                </h3>
-                <p className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">
-                  {p.subtitle}
-                </p>
-              </div>
-
-              <div className="mt-3 pt-2 border-t border-neutral-100">
-                <span className="text-[11px] text-neutral-400 line-through block">
-                  {formatRupiah(p.originalNewPrice)}
-                </span>
-                <span className="text-sm sm:text-base font-black text-[#1A1A1A]">
-                  {formatRupiah(p.price)}
-                </span>
-              </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-8 text-center flex flex-col items-center justify-center gap-3">
+            <Package className="h-8 w-8 text-amber-700" />
+            <h3 className="text-sm font-bold text-[#1A1A1A]">Belum Ada Gear Promo di Katalog</h3>
+            <p className="text-xs text-neutral-600">
+              Barang yang baru saja disetujui kurator akan langsung ditampilkan di katalog.
+            </p>
+            <Link
+              href="/catalog"
+              className="mt-2 rounded-xl bg-[#1A1A1A] text-white px-5 py-2.5 text-xs font-bold hover:bg-neutral-800 transition"
+            >
+              Buka Katalog
             </Link>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

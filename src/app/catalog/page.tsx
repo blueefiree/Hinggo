@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Filter,
   RotateCcw,
@@ -10,12 +11,31 @@ import {
   X,
   ShieldCheck,
   Search,
+  Package,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import ProductCard from "@/components/ui/ProductCard";
-import { PRODUCTS, Product } from "@/lib/data";
+import { Product } from "@/lib/data";
+import { useHingoStore } from "@/lib/store";
 
-export default function CatalogPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+function CatalogContent() {
+  const searchParams = useSearchParams();
+  const initialCat = (searchParams.get("cat") || "ALL").toUpperCase();
+  const { user } = useHingoStore();
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categoryCounts, setCategoryCounts] = useState({
+    KEYBOARD: 0,
+    MOUSE: 0,
+    HEADSET: 0,
+    MONITOR: 0,
+    ACCESSORIES: 0,
+    TOTAL: 0,
+  });
+
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCat);
   const [selectedCondition, setSelectedCondition] = useState<string>("ALL");
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(2000000);
@@ -24,11 +44,38 @@ export default function CatalogPage() {
   const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
 
   // Active filter chips removal
-  const [filterChips, setFilterChips] = useState([
-    { id: "cond", label: "Kondisi: Baik+" },
-    { id: "price", label: "≤ Rp2 juta" },
-    { id: "loc", label: "Jakarta Selatan" },
-  ]);
+  const [filterChips, setFilterChips] = useState<Array<{ id: string; label: string }>>([]);
+
+  const fetchCatalogProducts = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/products");
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data.products || []);
+        if (data.categoryCounts) {
+          setCategoryCounts(data.categoryCounts);
+        }
+      } else {
+        setProducts([]);
+      }
+    } catch (e) {
+      console.error("Error fetching catalog products:", e);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCatalogProducts();
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("cat")) {
+      setSelectedCategory((searchParams.get("cat") || "ALL").toUpperCase());
+    }
+  }, [searchParams]);
 
   const removeChip = (id: string) => {
     setFilterChips((prev) => prev.filter((c) => c.id !== id));
@@ -42,39 +89,32 @@ export default function CatalogPage() {
     setMinPrice(0);
     setMaxPrice(2000000);
     setSearchQuery("");
-    setFilterChips([
-      { id: "cond", label: "Kondisi: Baik+" },
-      { id: "price", label: "≤ Rp2 juta" },
-      { id: "loc", label: "Jakarta Selatan" },
-    ]);
+    setFilterChips([]);
   };
 
-  // Filtered products
+  // Filtered products purely from DB
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((p) => {
-      if (selectedCategory !== "ALL" && p.category !== selectedCategory)
-        return false;
-      if (
-        selectedCondition !== "ALL" &&
-        p.condition !== selectedCondition
-      )
-        return false;
-      if (p.price < minPrice || p.price > maxPrice) return false;
-      if (
-        searchQuery &&
-        !p.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !p.brand.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === "price_asc") return a.price - b.price;
-      if (sortBy === "price_desc") return b.price - a.price;
-      if (sortBy === "rating") return b.rating - a.rating;
-      return 0; // default newest
-    });
-  }, [selectedCategory, selectedCondition, minPrice, maxPrice, sortBy, searchQuery]);
+    return products
+      .filter((p) => {
+        if (selectedCategory !== "ALL" && p.category !== selectedCategory) return false;
+        if (selectedCondition !== "ALL" && p.condition !== selectedCondition) return false;
+        if (p.price < minPrice || p.price > maxPrice) return false;
+        if (
+          searchQuery &&
+          !p.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !p.brand.toLowerCase().includes(searchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "price_asc") return a.price - b.price;
+        if (sortBy === "price_desc") return b.price - a.price;
+        if (sortBy === "rating") return b.rating - a.rating;
+        return 0; // default newest
+      });
+  }, [products, selectedCategory, selectedCondition, minPrice, maxPrice, sortBy, searchQuery]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
@@ -98,32 +138,43 @@ export default function CatalogPage() {
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-[#1A1A1A]">Ditangani tim kami</h4>
-            <p className="text-[11px] text-neutral-500">Stok preloved aman & teruji</p>
+            <span className="text-xs font-bold text-[#1A1A1A] block">
+              100% Terverifikasi Teknisi
+            </span>
+            <span className="text-[11px] text-neutral-500">
+              Garansi pengembalian 48 jam jika cacat
+            </span>
           </div>
         </div>
       </div>
 
-      {/* 2. CATEGORY FILTER PILLS */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-6">
+      {/* 2. CATEGORY PILL TABS */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
         {[
-          { label: "Semua gear", value: "ALL" },
-          { label: "Keyboard", value: "KEYBOARD" },
-          { label: "Mouse", value: "MOUSE" },
-          { label: "Headset", value: "HEADSET" },
-          { label: "Monitor", value: "MONITOR" },
-          { label: "Aksesoris", value: "ACCESSORIES" },
+          { label: "Semua gear", value: "ALL", count: categoryCounts.TOTAL },
+          { label: "Keyboard", value: "KEYBOARD", count: categoryCounts.KEYBOARD },
+          { label: "Mouse", value: "MOUSE", count: categoryCounts.MOUSE },
+          { label: "Headset", value: "HEADSET", count: categoryCounts.HEADSET },
+          { label: "Monitor", value: "MONITOR", count: categoryCounts.MONITOR },
+          { label: "Aksesoris", value: "ACCESSORIES", count: categoryCounts.ACCESSORIES },
         ].map((pill) => (
           <button
             key={pill.value}
             onClick={() => setSelectedCategory(pill.value)}
-            className={`whitespace-nowrap rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition shadow-xs ${
+            className={`whitespace-nowrap rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer ${
               selectedCategory === pill.value
                 ? "bg-[#FFC629] text-[#1A1A1A] border border-[#F59E0B]"
                 : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
             }`}
           >
-            {pill.label}
+            <span>{pill.label}</span>
+            <span
+              className={`text-[11px] px-1.5 py-0.2 rounded-full ${
+                selectedCategory === pill.value ? "bg-black/10 text-black" : "bg-neutral-200 text-neutral-500"
+              }`}
+            >
+              {pill.count}
+            </span>
           </button>
         ))}
       </div>
@@ -140,7 +191,7 @@ export default function CatalogPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="flex items-center gap-1 text-xs font-semibold text-neutral-500 hover:text-black"
+                className="flex items-center gap-1 text-xs font-semibold text-neutral-500 hover:text-black cursor-pointer"
               >
                 <RotateCcw className="h-3 w-3" /> Reset
               </button>
@@ -153,24 +204,27 @@ export default function CatalogPage() {
               </label>
               <div className="flex flex-col gap-2 text-xs font-semibold text-neutral-700">
                 {[
-                  { label: "Semua peripheral", value: "ALL" },
-                  { label: "Keyboard", value: "KEYBOARD" },
-                  { label: "Mouse", value: "MOUSE" },
-                  { label: "Headset", value: "HEADSET" },
-                  { label: "Monitor", value: "MONITOR" },
+                  { label: "Semua peripheral", value: "ALL", count: categoryCounts.TOTAL },
+                  { label: "Keyboard", value: "KEYBOARD", count: categoryCounts.KEYBOARD },
+                  { label: "Mouse", value: "MOUSE", count: categoryCounts.MOUSE },
+                  { label: "Headset", value: "HEADSET", count: categoryCounts.HEADSET },
+                  { label: "Monitor", value: "MONITOR", count: categoryCounts.MONITOR },
                 ].map((item) => (
                   <label
                     key={item.value}
-                    className="flex items-center gap-2.5 cursor-pointer hover:text-black"
+                    className="flex items-center justify-between cursor-pointer hover:text-black py-0.5"
                   >
-                    <input
-                      type="radio"
-                      name="catRadio"
-                      checked={selectedCategory === item.value}
-                      onChange={() => setSelectedCategory(item.value)}
-                      className="accent-[#FFC629] h-4 w-4 cursor-pointer"
-                    />
-                    <span>{item.label}</span>
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="radio"
+                        name="catRadio"
+                        checked={selectedCategory === item.value}
+                        onChange={() => setSelectedCategory(item.value)}
+                        className="accent-[#FFC629] h-4 w-4 cursor-pointer"
+                      />
+                      <span>{item.label}</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-neutral-400">({item.count})</span>
                   </label>
                 ))}
               </div>
@@ -187,7 +241,7 @@ export default function CatalogPage() {
                     key={c}
                     type="button"
                     onClick={() => setSelectedCondition(c)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                       selectedCondition === c
                         ? "bg-[#1A1A1A] text-white"
                         : "bg-[#F6F6F4] text-neutral-700 hover:bg-neutral-200"
@@ -267,7 +321,7 @@ export default function CatalogPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-bold text-[#1A1A1A] outline-none"
+                className="rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-bold text-[#1A1A1A] outline-none cursor-pointer"
               >
                 <option value="newest">Urutkan: Terbaru ↓</option>
                 <option value="price_asc">Harga: Terendah ke Tertinggi</option>
@@ -289,7 +343,7 @@ export default function CatalogPage() {
                   <button
                     type="button"
                     onClick={() => removeChip(chip.id)}
-                    className="hover:text-black"
+                    className="hover:text-black cursor-pointer"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -298,32 +352,47 @@ export default function CatalogPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="text-xs font-semibold text-neutral-500 hover:text-black underline ml-1"
+                className="text-xs font-semibold text-neutral-500 hover:text-black underline ml-1 cursor-pointer"
               >
                 Hapus semua
               </button>
             </div>
           )}
 
-          {/* Products Grid */}
-          {filteredProducts.length > 0 ? (
+          {/* Loading State */}
+          {loading ? (
+            <div className="rounded-3xl border border-neutral-200 bg-white p-16 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
+              <p className="text-xs font-bold text-neutral-500">Memuat katalog peripheral...</p>
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            /* Products Grid */
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-neutral-300 p-12 text-center flex flex-col items-center justify-center gap-3">
-              <p className="text-base font-bold text-neutral-700">
-                Tidak ada barang yang cocok dengan filter kamu.
-              </p>
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="rounded-xl bg-[#FFC629] px-4 py-2 text-xs font-bold text-black"
+            /* Clean Empty State as required by prompt */
+            <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-10 sm:p-14 text-center flex flex-col items-center justify-center gap-4 shadow-xs">
+              <div className="h-16 w-16 rounded-2xl bg-[#FFC629] text-[#1A1A1A] flex items-center justify-center shadow-xs">
+                <Package className="h-8 w-8" />
+              </div>
+              <div className="max-w-md">
+                <h3 className="text-lg sm:text-xl font-black text-[#1A1A1A]">
+                  Belum ada barang titipan di katalog
+                </h3>
+                <p className="text-xs sm:text-sm text-neutral-600 mt-1 leading-relaxed">
+                  Semua barang di katalog Hingo berasal dari pengajuan titip jual yang telah lolos inspeksi tim kami.
+                </p>
+              </div>
+              <Link
+                href={user ? "/seller/consignments/new" : "/auth/login?callbackUrl=/seller/consignments/new"}
+                className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#1A1A1A] hover:bg-neutral-800 text-white px-6 py-3 text-xs sm:text-sm font-bold shadow-md transition active:scale-95"
               >
-                Reset Filter
-              </button>
+                <Plus className="h-4 w-4" />
+                <span>+ Ajukan titip jual sekarang</span>
+              </Link>
             </div>
           )}
         </div>
@@ -338,7 +407,7 @@ export default function CatalogPage() {
               <button
                 type="button"
                 onClick={() => setMobileFilterOpen(false)}
-                className="rounded-full p-1 text-neutral-500 hover:bg-neutral-100"
+                className="rounded-full p-1 text-neutral-500 hover:bg-neutral-100 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -360,11 +429,14 @@ export default function CatalogPage() {
                     <button
                       key={item.value}
                       type="button"
-                      onClick={() => setSelectedCategory(item.value)}
-                      className={`p-2.5 rounded-xl border text-left ${
+                      onClick={() => {
+                        setSelectedCategory(item.value);
+                        setMobileFilterOpen(false);
+                      }}
+                      className={`p-2.5 rounded-xl border text-center transition ${
                         selectedCategory === item.value
-                          ? "bg-[#FFFBEB] border-[#FFC629] font-bold text-black"
-                          : "border-neutral-200 text-neutral-700"
+                          ? "border-[#FFC629] bg-[#FFFBEB] font-bold text-[#1A1A1A]"
+                          : "border-neutral-200 text-neutral-600"
                       }`}
                     >
                       {item.label}
@@ -372,45 +444,6 @@ export default function CatalogPage() {
                   ))}
                 </div>
               </div>
-
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500 block mb-2">
-                  Kondisi
-                </label>
-                <div className="flex gap-2">
-                  {["ALL", "Sangat baik", "Baik"].map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setSelectedCondition(c)}
-                      className={`flex-1 py-2 text-xs font-semibold rounded-xl border ${
-                        selectedCondition === c
-                          ? "bg-[#1A1A1A] text-white border-black"
-                          : "border-neutral-200 text-neutral-700"
-                      }`}
-                    >
-                      {c === "ALL" ? "Semua" : c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-neutral-100 flex gap-3">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="flex-1 py-3 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-700"
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobileFilterOpen(false)}
-                className="flex-1 py-3 rounded-xl bg-[#FFC629] text-xs font-bold text-black"
-              >
-                Terapkan Filter
-              </button>
             </div>
           </div>
         </div>
@@ -418,3 +451,32 @@ export default function CatalogPage() {
     </div>
   );
 }
+
+export default function CatalogPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-24 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
+        </div>
+      }
+    >
+      <CatalogContent />
+    </Suspense>
+  );
+}
+
+export default function CatalogPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-24 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
+        </div>
+      }
+    >
+      <CatalogContent />
+    </Suspense>
+  );
+}
+

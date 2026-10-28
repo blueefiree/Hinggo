@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useHingoStore } from "@/lib/store";
-import { PRODUCTS, Product } from "@/lib/data";
+import { Product } from "@/lib/data";
 
 function ChatProductContent() {
   const router = useRouter();
@@ -25,12 +25,49 @@ function ChatProductContent() {
 
   const { user, addToCart, showToast } = useHingoStore();
 
-  // Selected product logic
-  const targetProduct: Product =
-    PRODUCTS.find((p) => p.id === queryProductId || p.slug === queryProductId) ||
-    PRODUCTS[0];
+  const [targetProduct, setTargetProduct] = useState<Product | null>(null);
 
-  const [activeProductId, setActiveProductId] = useState<string>(targetProduct.id);
+  useEffect(() => {
+    async function loadProduct() {
+      if (queryProductId) {
+        try {
+          const res = await fetch(`/api/products/${queryProductId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.product) {
+              setTargetProduct(data.product);
+              return;
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      try {
+        const res = await fetch("/api/products");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.products && data.products.length > 0) {
+            setTargetProduct(data.products[0]);
+          } else {
+            setTargetProduct(null);
+          }
+        }
+      } catch (e) {
+        setTargetProduct(null);
+      }
+    }
+    loadProduct();
+  }, [queryProductId]);
+
+  const [activeProductId, setActiveProductId] = useState<string>("");
+
+  useEffect(() => {
+    if (targetProduct) {
+      setActiveProductId(targetProduct.id);
+    }
+  }, [targetProduct]);
   const [messages, setMessages] = useState<
     Array<{
       id: string;
@@ -213,7 +250,7 @@ function ChatProductContent() {
                   <span className="text-[10px] text-emerald-600 font-semibold">Online</span>
                 </div>
                 <p className="text-[11px] font-semibold text-amber-900 truncate">
-                  {targetProduct.name}
+                  {targetProduct?.name || "Tanya Gear & Konsinyasi"}
                 </p>
                 <p className="text-[11px] text-neutral-500 truncate mt-0.5">
                   {messages.length > 0
@@ -278,42 +315,46 @@ function ChatProductContent() {
               </div>
             </div>
 
-            <span className="rounded-full bg-[#FFFBEB] border border-[#FDE68A] px-2.5 py-1 text-[11px] font-bold text-amber-900 hidden sm:inline">
-              {targetProduct.name} · {formatRupiah(targetProduct.price)}
-            </span>
+            {targetProduct && (
+              <span className="rounded-full bg-[#FFFBEB] border border-[#FDE68A] px-2.5 py-1 text-[11px] font-bold text-amber-900 hidden sm:inline">
+                {targetProduct.name} · {formatRupiah(targetProduct.price)}
+              </span>
+            )}
           </div>
 
           {/* Compact Product Banner for Mobile & Context Pin */}
-          <div className="my-2 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-2.5 flex items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <img
-                src={targetProduct.images[0]}
-                alt={targetProduct.name}
-                className="h-10 w-10 rounded-xl object-cover border border-[#FDE68A] shrink-0"
-              />
-              <div className="min-w-0">
-                <h4 className="text-xs font-bold text-[#1A1A1A] truncate">
-                  {targetProduct.name}
-                </h4>
-                <p className="text-[11px] font-black text-amber-900">
-                  {formatRupiah(targetProduct.price)}
-                </p>
+          {targetProduct && (
+            <div className="my-2 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-2.5 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img
+                  src={targetProduct.images?.[0] || "/images/placeholder.png"}
+                  alt={targetProduct.name}
+                  className="h-10 w-10 rounded-xl object-cover border border-[#FDE68A] shrink-0"
+                />
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-[#1A1A1A] truncate">
+                    {targetProduct.name}
+                  </h4>
+                  <p className="text-[11px] font-black text-amber-900">
+                    {formatRupiah(targetProduct.price)}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={async () => {
-                await addToCart(targetProduct);
-                showToast("Berhasil ditambahkan ke keranjang!");
-              }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-black font-bold text-xs shrink-0 shadow-xs cursor-pointer"
-            >
-              <ShoppingBag className="h-3 w-3" />
-              <span className="hidden sm:inline">Tambah Keranjang</span>
-              <span className="sm:hidden">+ Keranjang</span>
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  await addToCart(targetProduct);
+                  showToast("Berhasil ditambahkan ke keranjang!");
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-black font-bold text-xs shrink-0 shadow-xs cursor-pointer"
+              >
+                <ShoppingBag className="h-3 w-3" />
+                <span className="hidden sm:inline">Tambah Keranjang</span>
+                <span className="sm:hidden">+ Keranjang</span>
+              </button>
+            </div>
+          )}
 
           {/* Messages Scrollable Area */}
           <div className="flex-1 overflow-y-auto py-3 flex flex-col gap-3 pr-1">
@@ -418,52 +459,62 @@ function ChatProductContent() {
             Barang yang dibahas
           </h4>
 
-          <div className="rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-xs flex flex-col gap-3">
-            <img
-              src={targetProduct.images[0]}
-              alt={targetProduct.name}
-              className="aspect-4/3 w-full rounded-xl object-cover"
-            />
-            <div>
-              <span className="text-[10px] font-bold uppercase text-neutral-400">
-                {targetProduct.brand}
-              </span>
-              <h4 className="text-xs font-bold text-[#1A1A1A]">
-                {targetProduct.name}
-              </h4>
-              <p className="text-[11px] text-neutral-500">
-                {targetProduct.condition} · {targetProduct.switchOrVariant}
+          {targetProduct ? (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-xs flex flex-col gap-3">
+              <img
+                src={targetProduct.images?.[0] || "/images/placeholder.png"}
+                alt={targetProduct.name}
+                className="aspect-4/3 w-full rounded-xl object-cover"
+              />
+              <div>
+                <span className="text-[10px] font-bold uppercase text-neutral-400">
+                  {targetProduct.brand}
+                </span>
+                <h4 className="text-xs font-bold text-[#1A1A1A]">
+                  {targetProduct.name}
+                </h4>
+                <p className="text-[11px] text-neutral-500">
+                  {targetProduct.condition} · {targetProduct.switchOrVariant}
+                </p>
+                <span className="text-sm font-black text-[#1A1A1A] mt-1 block">
+                  {formatRupiah(targetProduct.price)}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 p-2 rounded-lg">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Dicek 12 poin inspeksi Hingo</span>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-1">
+                <Link
+                  href={`/product/${targetProduct.slug}`}
+                  className="w-full text-center py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition"
+                >
+                  Lihat barang
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await addToCart(targetProduct);
+                    showToast("Berhasil ditambahkan ke keranjang!");
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#FFC629] text-xs font-bold text-black hover:bg-[#FFC420] transition cursor-pointer"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  <span>Tambah keranjang</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-center text-xs flex flex-col items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-amber-700" />
+              <span className="font-bold text-[#1A1A1A]">Tanya Kurator Hingo</span>
+              <p className="text-[11px] text-neutral-600">
+                Pilih gear dari katalog atau tanyakan seputar titip jual langsung ke tim Hingo di sini.
               </p>
-              <span className="text-sm font-black text-[#1A1A1A] mt-1 block">
-                {formatRupiah(targetProduct.price)}
-              </span>
             </div>
-
-            <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 p-2 rounded-lg">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Dicek 12 poin inspeksi Hingo</span>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-1">
-              <Link
-                href={`/product/${targetProduct.slug}`}
-                className="w-full text-center py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition"
-              >
-                Lihat barang
-              </Link>
-              <button
-                type="button"
-                onClick={async () => {
-                  await addToCart(targetProduct);
-                  showToast("Berhasil ditambahkan ke keranjang!");
-                }}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#FFC629] text-xs font-bold text-black hover:bg-[#FFC420] transition cursor-pointer"
-              >
-                <ShoppingBag className="h-3.5 w-3.5" />
-                <span>Tambah keranjang</span>
-              </button>
-            </div>
-          </div>
+          )}
 
           <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-3 text-xs text-neutral-700 flex flex-col gap-2">
             <span className="font-bold text-[#1A1A1A]">Punya kendala transaksi?</span>

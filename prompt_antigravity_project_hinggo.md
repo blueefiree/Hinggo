@@ -1,120 +1,72 @@
-# Master Prompt & Perbaikan Total Google Antigravity — Proyek Hingo (Strict Auth, Zero Dummy, Real-Time Cart/Wishlist & Chat dari 0)
+# Master Prompt & Perbaikan Google Antigravity — Proyek Hingo (Hapus Total Data Dummy di Katalog & Home — 100% Murni Database)
 
-Dokumen ini berisi **Prompt Perbaikan Spesifik (Langsung Copy-Paste di Bagian 1)** untuk mengatasi masalah:
-1. Aplikasi yang tadinya langsung *auto-login* sebagai user dummy (`Naya`) → diubah menjadi **wajib berstatus Belum Login (Guest)** saat pertama kali dibuka.
-2. Data transaksi, barang titipan, keranjang, wishlist, dan chat yang masih berisi *dummy* → **dibersihkan total menjadi 0 (kosong)** untuk setiap akun pengguna.
-3. **Wishlist & Keranjang** yang wajib **ter-update secara *real-time* (termasuk angka *badge* di Navbar)** setiap kali diklik.
-4. **Chat Admin & CS** yang **mulai benar-benar dari 0 (kosong)**, **responsif di layar Mobile & Desktop**, dan langsung membalas secara kontekstual sesuai produk/pesanan yang ditanyakan.
+Dokumen ini berisi **Prompt Khusus (Bagian 1)** untuk **menghapus seluruh data dummy produk di halaman Katalog (`/catalog`), Home (`/`), dan Detail Produk (`/product/[slug]`)** — baik yang masih tersimpan di kode *frontend* (`const products = [...]`) maupun yang berasal dari *database seed* (`prisma/seed.ts`).
 
 ---
 
-## 1. Prompt Antigravity: "Hapus Semua Auto-Login & Dummy User Data, Aktifkan Real-Time Wishlist/Cart & Chat Mulai dari 0"
+## 1. Prompt Antigravity: "Hapus Semua Produk Dummy di Katalog & Home (Mulai Murni dari 0 Produk)"
 
 Salin seluruh blok prompt di bawah ini dan tempelkan langsung ke **Agent Chat di Google Antigravity IDE**:
 
 ```markdown
-# TASK: FIX AUTH STATE (NO AUTO-LOGIN), WIPE ALL DUMMY USER DATA (START FROM 0), IMPLEMENT REAL-TIME WISHLIST & CART SYNC, AND MAKE CHAT START FROM 0 & FULLY RESPONSIVE
+# TASK: WIPE ALL DUMMY CATALOG PRODUCTS FROM FRONTEND & DATABASE (START WITH 0 PRODUCTS & 100% DYNAMIC COUNTS)
 
-Saat ini aplikasi masih memiliki beberapa masalah kritis yang harus segera diperbaiki:
-1. Aplikasi masih otomatis login (auto-login / fallback ke user dummy "Naya Putri") saat pertama kali dibuka dan masih menampilkan data dummy pada barang titipan, pesanan, keranjang, dan riwayat chat.
-2. Wishlist dan Keranjang belum ter-sinkronisasi secara real-time di seluruh halaman dan badge Navbar.
-3. Halaman Chat masih menampilkan percakapan dummy bawaan dan belum sepenuhnya responsif saat dimulai dari 0.
+Saat ini di halaman Katalog (`/catalog`) dan Beranda (`/`) masih muncul produk-produk dummy (seperti Keychron K2 V2, Logitech MX Master 3, Sony WH-1000XM4, Dell P2419H, Logitech G304, Akko 3068B Plus, dll.) serta angka jumlah kategori yang masih di-hardcode (`1.240 produk`, `860 produk`, dll.).
 
-Lakukan refactoring menyeluruh dengan aturan ketat berikut:
+Tolong bersihkan **100% data dummy di Katalog dan Beranda** dengan langkah-langkah wajib berikut:
 
 ---
 
-### ATURAN 1: STRICT GUEST MODE SAAT AWAL BUKA APP (JANGAN PERNAH AUTO-LOGIN!)
-1. **Hapus Semua Fallback Auto-Login**:
-   - Cari di seluruh codebase (termasuk helper `getCurrentUser()`, middleware, context, atau API routes) kode yang melakukan fallback seperti `prisma.user.findFirst()` atau hardcode user `"Naya Putri"` ketika cookie/session kosong. **Hapus total fallback tersebut!**
-   - Jika tidak ada cookie session login yang valid (`hingo_session`), `getCurrentUser()` **WAJIB mengembalikan `null`**.
-2. **Tampilan Saat Belum Login (`user === null`)**:
-   - Di Top Navbar, tampilkan tombol kuning **`Masuk`** (mengarah ke `/auth/login`), bukan nama user.
-   - Angka badge **Wishlist** dan **Keranjang** di Navbar disembunyikan (atau `0`).
-   - Pengunjung yang belum login (`Guest`) hanya boleh melihat halaman publik: `/` (Home), `/catalog` (Katalog & Pencarian), `/product/[slug]` (Detail Produk), `/promo`, dan `/how-it-works`.
-   - Jika pengunjung yang belum login mengklik:
-     - Tombol **Wishlist (`♡`)** atau **`Tambah keranjang`**
-     - Menu **`Titip jual`**, **`Keranjang`**, **`Chat`**, **`Transaksi`**, atau **`Akun`**
-     maka sistem **WAJIB langsung mengarahkan (redirect) ke `/auth/login?callbackUrl=...`**!
-3. **Alur Login & Logout Nyata**:
-   - User baru benar-benar berstatus login **HANYA setelah** menyelesaikan input Nomor HP / Email di `/auth/login` dan memverifikasi kode OTP di `/auth/verify-otp`.
-   - Sediakan tombol **`Keluar (Logout)`** yang jelas di dropdown profil Navbar dan halaman `/account` yang menghapus cookie `hingo_session` di server, mengosongkan state client, dan mengembalikan aplikasi ke mode **Belum Login (`Guest`)**.
+### LANGKAH 1: HAPUS SEMUA ARRAY PRODUK DUMMY DI KODE FRONTEND & DATA HELPER
+1. Cari di seluruh folder project (`app/`, `src/`, `components/`, `lib/`, `data/`) semua array atau objek produk statis/dummy seperti:
+   - `const products = [...]`, `mockProducts`, `initialProducts`, `defaultProducts`, `bestSellers`, `recommendations`, atau fallback array di `/catalog`, `/` (Home), `/promo`, dan `/product/[slug]`.
+2. **Hapus total seluruh array produk dummy tersebut!** Jangan pernah memberikan fallback ke array dummy jika hasil query database kosong (`products.length === 0`).
 
 ---
 
-### ATURAN 2: HAPUS SEMUA DATA DUMMY USER (MULAI DARI 0 DI DATABASE!)
-1. **Bersihkan `prisma/seed.ts` dan Database Saat Ini**:
-   - Di `prisma/seed.ts`, **HANYA boleh mengisi tabel `Product` (daftar barang katalog toko yang tersedia untuk dibeli)**.
-   - **JANGAN** men-seed data dummy ke tabel `Wishlist`, `CartItem`, `Order`, `OrderTimeline`, `ConsignmentItem`, `ConsignmentTimeline`, `ChatThread`, atau `ChatMessage`!
-   - Jalankan perintah reset (`npx prisma migrate reset --force` atau hapus semua baris di tabel `CartItem`, `Wishlist`, `Order`, `ConsignmentItem`, `ChatThread`, `ChatMessage`) lalu jalankan ulang seed khusus katalog `Product` saja.
-2. **Hapus Semua Array Dummy di Komponen Frontend**:
-   - Pastikan di halaman `/seller/consignments` (Barang titipan saya), `/orders` (Transaksi), `/cart` (Keranjang), `/wishlist`, `/chat/product`, dan `/chat/support` **TIDAK ADA SATU PUN array dummy/statis**.
-   - Ketika user baru login pertama kali:
-     - **Wishlist (`/wishlist`)**: Kosong (`0 barang`), tampilkan *Empty State* rapi dengan tombol `"Jelajahi Katalog"`.
-     - **Keranjang (`/cart`)**: Kosong (`0 barang`), tampilkan *Empty State* rapi dengan tombol `"Mulai Belanja"`.
-     - **Barang Titipan Saya (`/seller/consignments`)**: Semua KPI bernilai `0` (`Total barang: 0`, `Perlu tindakan: 0`, `Dipasarkan: 0`, `Selesai: 0`), saldo `Rp0`, dan daftar barang kosong sampai user benar-benar mengisi form di `/seller/consignments/new`.
-     - **Transaksi (`/orders`)**: Kosong (`0 pesanan`) sampai user benar-benar melakukan checkout dari `/cart`.
-     - **Chat (`/chat/product` & `/chat/support`)**: Kosong (`0 percakapan` & `0 pesan`) sampai user memulai chat baru.
+### LANGKAH 2: KOSONGKAN TABEL `Product` DI DATABASE & HAPUS SEED PRODUK DUMMY
+1. Buka `prisma/seed.ts` dan **hapus semua kode yang melakukan `prisma.product.create` / `createMany` produk dummy**.
+2. Jalankan perintah atau script pembersihan database untuk menghapus seluruh data dummy yang sudah terlanjur masuk ke database:
+   - Kosongkan tabel `CartItem`, `Wishlist`, `Order`, `OrderTimeline`, `ConsignmentItem`, `ConsignmentTimeline`, `ChatMessage`, `ChatThread`, dan **`Product`** (`await prisma.product.deleteMany({})`).
+3. Pastikan setelah dibersihkan, jumlah baris di tabel `Product` adalah **`0`**.
 
 ---
 
-### ATURAN 3: WISHLIST & KERANJANG REAL-TIME (REAKTIF + PERSISTEN DI DATABASE)
-1. **Global Store / Context + Database API Sinkron**:
-   - Buat `CartWishlistProvider` (React Context / Zustand / SWR) yang mengambil data awal `wishlistIds` dan `cartItems` milik user yang sedang login dari API database (`/api/wishlist` dan `/api/cart`).
-2. **Fungsi Wishlist Real-Time (`POST /api/wishlist/toggle`)**:
-   - Di setiap `ProductCard` (pada `/`, `/catalog`, `/promo`, `/wishlist`) dan halaman `/product/[slug]`, tombol ikon hati (`♡`):
-     - Mengecek apakah `product.id` ada di `wishlistIds` database user. Jika ya, tampilkan ikon hati terisi penuh (warna merah/kuning aktif).
-     - Saat diklik: langsung perbarui UI detik itu juga (*optimistic update*), jalankan `POST /api/wishlist/toggle` untuk menambah/menghapus baris di tabel `Wishlist` database, langsung perbarui angka badge **Wishlist** di Top Navbar, dan perbarui daftar di halaman `/wishlist` tanpa perlu refresh manual!
-3. **Fungsi Keranjang Real-Time (`POST /api/cart`, `PATCH /api/cart`, `DELETE /api/cart`)**:
-   - Saat user mengklik **`"Tambah keranjang"`** di halaman `/product/[slug]` atau kartu produk:
-     - Simpan/update baris di tabel `CartItem` database (`userId`, `productId`, `quantity: 1`).
-     - Langsung perbarui angka badge **Keranjang** di Top Navbar secara real-time dan tampilkan notifikasi toast `"Berhasil ditambahkan ke keranjang"`.
-     - Jika produk sudah ada di keranjang (karena stok barang preloved = 1), tampilkan status `"Sudah di keranjang — Lihat Keranjang"`.
-   - Di halaman `/cart`:
-     - Centang pilih barang, hapus barang (`Hapus`), atau hapus semua yang dipilih langsung memutasi tabel `CartItem` di database, langsung menghitung ulang **Ringkasan Pembayaran** (`Harga barang`, `Ongkir`, `Perlindungan pengiriman Rp5.000`, `Biaya layanan Rp2.500`, `Total pembayaran`), dan langsung mengurangi angka badge di Navbar.
-   - Saat user menyelesaikan **`Checkout` (`/checkout`)**:
-     - Barang yang di-checkout otomatis dihapus dari `CartItem` database, angka badge Keranjang di Navbar langsung kembali ke `0`, stok produk di tabel `Product` berubah menjadi `0` (`SOLD`), dan pesanan baru langsung tercatat di tabel `Order`.
+### LANGKAH 3: UBAH ANGKA KATEGORI & TAMPILAN KATALOG MENJADI 100% DINAMIS DARI DATABASE
+1. **Angka Jumlah Produk per Kategori di `/` (Home) & `/catalog`**:
+   - Hapus teks hardcode `1.240 produk`, `860 produk`, `540 produk`, `320 produk`, dan `6 barang ditemukan`.
+   - Hitung jumlah produk secara real-time dari database menggunakan `prisma.product.count({ where: { category: 'KEYBOARD', status: 'AVAILABLE' } })` (dan kategori lainnya: `MOUSE`, `HEADSET`, `MONITOR`, `ACCESSORIES`).
+   - Saat database masih kosong, masing-masing kartu kategori menampilkan **`0 produk`** dan header katalog menampilkan **`0 barang ditemukan`**.
+2. **Tampilan Empty State Rapi Saat Katalog Masih `0 Produk`**:
+   - Di halaman `/catalog` dan bagian `Produk terlaris` / `Rekomendasi untukmu` di `/` (Home), jika hasil query `prisma.product.findMany()` masih kosong (`0 barang`), tampilkan komponen **Empty State** yang bersih sesuai desain Hingo (`#FFFBEB` cream card):
+     - Judul: `"Belum ada barang titipan di katalog"`
+     - Subteks: `"Semua barang di katalog Hingo berasal dari pengajuan titip jual yang telah lolos inspeksi tim kami."`
+     - Tombol CTA: **`"+ Ajukan titip jual sekarang"`** (mengarah ke `/seller/consignments/new`, atau ke `/auth/login` jika belum login).
 
 ---
 
-### ATURAN 4: CHAT MULAI DARI 0, RESPONSIF DI MOBILE/DESKTOP, DAN INTERAKTIF REAL-TIME
-1. **Mulai Benar-Benar dari 0 (Tanpa Chat Bawaan)**:
-   - Saat user membuka `/chat/product` atau `/chat/support` pertama kali dan belum pernah mengirim pesan, tabel `ChatThread` dan `ChatMessage` untuk user tersebut masih kosong (`0 pesan`).
-   - Jika user masuk lewat tombol **`"Chat admin"`** dari halaman detail produk (misal `/product/keychron-k2-v2` → mengarah ke `/chat/product?productId=...`):
-     - Tampilkan header ruang chat `Admin Hingo` beserta kartu konteks produk yang sedang ditanyakan (`Keychron K2 V2 · Rp850.000`), namun area riwayat pesan **dimulai dari 0 (kosong)** dengan chip pertanyaan cepat (*quick-reply chips*):
-       - `"Halo Kak, apakah barang ini masih tersedia?"`
-       - `"Apakah semua tombol dan fungsinya normal?"`
-       - `"Kelengkapan box dan kabelnya masih lengkap?"`
-       - `"Bisa dikirim hari ini kalau saya checkout sekarang?"`
-2. **Balasan Otomatis Kontekstual & Real-Time dari Database**:
-   - Begitu user mengetik pesan sendiri atau mengklik salah satu *quick-reply chip* lalu menekan **`Kirim`**:
-     - Simpan pesan user ke tabel `ChatMessage` di database (`senderRole: "USER"`) dan langsung tampilkan gelembung pesan user di layar beserta jam kirim & tanda centang (`✓✓`).
-     - Tampilkan indikator animasi **`"Admin Hingo sedang mengetik..."`** (atau `"CS Mira sedang mengetik..."` di `/chat/support`) selama 1,5 detik.
-     - Jalankan logika **Smart Auto-Reply Server** yang membaca detail produk asli (`product.name`, `product.condition`, `product.defectNotes`, `product.completeness`, `product.price`, `product.location`) atau detail pesanan (`order.orderCode`, `order.orderStatus`, `order.trackingNumber`) dari database, lalu simpan balasan relevan dari `Admin Hingo` / `CS Mira` ke tabel `ChatMessage` di database dan tampilkan langsung di layar!
-     - Semua percakapan yang sudah dimulai otomatis tersimpan di tabel `ChatThread` & `ChatMessage` sehingga tetap ada saat halaman di-refresh, dan bisa juga dibalas manual lewat `/admin`.
-3. **Layout Chat 100% Responsif (Desktop 1440px & Mobile 390px)**:
-   - **Desktop (`>= 1024px`)**: Layout 3 kolom proporsional (Kolom Kiri: Daftar Thread & Pencarian Percakapan; Kolom Tengah: Area Pesan *scrollable* dengan *sticky header* & *sticky input bar* di bawah; Kolom Kanan: Kartu Konteks Produk/Transaksi terkait dengan tombol `"Lihat barang"` & `"Tambah keranjang"`).
-   - **Mobile (`< 768px`)**:
-     - Gunakan sistem *Single-Pane Switchable View*: saat di daftar percakapan tampilkan list thread; saat thread dipilih (atau masuk dengan `?productId=...`), tampilkan ruang chat *full-screen* dengan tombol panah **`← Kembali`** di kiri atas header, kartu ringkas produk yang menempel di bawah header, area bubble chat yang nyaman di-*scroll*, serta *input bar* pesan yang *sticky* tepat di atas/menggantikan *bottom navigation bar* agar tidak pernah terpotong layar HP.
+### LANGKAH 4: PASTIKAN PRODUK BARU DI KATALOG MURNI BERASAL DARI INPUT USER / ADMIN
+Agar katalog bisa terisi dengan data asli (bukan dummy), pastikan 2 alur ini bekerja 100% ke tabel `Product` di database:
+1. **Otomatis Masuk ke Katalog dari Alur Titip Jual (`/seller/consignments/new` → `/admin` / Persetujuan Harga)**:
+   - Ketika user yang login mengajukan barang di `/seller/consignments/new`, data tersimpan di tabel `ConsignmentItem`.
+   - Sediakan tombol cepat **`"Loloskan Inspeksi & Tayangkan ke Katalog"`** di halaman `/admin` (atau saat penjual menekan **`"Setujui harga & kondisi"`** di `/seller/consignments/[code]`) yang otomatis membuat record baru di tabel `Product` berdasarkan data dan foto asli dari `ConsignmentItem` tersebut.
+   - Begitu ditayangkan, barang tersebut **langsung muncul secara real-time di `/catalog` dan `/` (Home)**, dan angka jumlah produk pada kategorinya otomatis bertambah (`0 produk` → `1 produk`)!
+2. **Form "Tambah Produk ke Katalog" di `/admin`**:
+   - Di halaman `/admin`, sediakan juga form sederhana **"Tambah Barang Katalog Baru"** (Nama barang, Brand, Kategori, Kondisi, Harga jual, Harga baru, Lokasi, Spesifikasi, Kelengkapan, dan Upload Foto) yang langsung menyimpan ke tabel `Product` database agar admin bisa menambahkan stok kapan saja tanpa data dummy.
 
 ---
 
-### LANGKAH VERIFIKASI WAJIB SEBELUM SELESAI:
-1. Reset database dan jalankan ulang seed yang **hanya** mengisi katalog `Product`.
-2. Buka aplikasi di browser baru (tanpa cookie): pastikan di pojok kanan atas tampil tombol **`Masuk`** (bukan nama `"Naya"`), serta halaman `/cart`, `/wishlist`, `/orders`, `/seller/consignments`, dan `/chat/product` meminta login terlebih dahulu.
-3. Login dengan akun baru melalui `/auth/login` → `/auth/verify-otp`:
-   - Pastikan **Wishlist = 0**, **Keranjang = 0**, **Barang Titipan = 0**, **Transaksi = 0**, dan **Chat = 0**.
-   - Klik ikon hati (`♡`) dan `"Tambah keranjang"` pada produk katalog: pastikan badge Navbar dan halaman `/wishlist` serta `/cart` langsung ter-update seketika.
-   - Klik `"Chat admin"` dari halaman produk: pastikan chat mulai dari 0, responsif saat diketik, dan membalas otomatis sesuai data produk di database.
+### LANGKAH 5: VERIFIKASI AKHIR
+1. Jalankan pembersihan database dan buka `/` serta `/catalog` di browser preview Antigravity: pastikan **0 produk dummy** yang tampil dan semua kategori tertulis **`0 produk`**.
+2. Coba login, ajukan 1 barang titipan baru di `/seller/consignments/new` (atau tambahkan 1 barang lewat `/admin`), tayangkan ke katalog, lalu buka `/catalog` — pastikan hanya barang asli yang baru saja kamu input yang muncul di katalog!
 ```
 
 ---
 
-## 2. Ringkasan Perubahan Perilaku Aplikasi (Sebelum vs Sesudah Prompt Ini)
+## 2. Apa yang Berubah Setelah Prompt Ini Dijalankan?
 
-| Fitur / Alur | Kondisi Sebelumnya (Masih Campur Dummy) | Kondisi Sesudah Prompt Ini Dijalankan |
+| Bagian | Sebelum Prompt Ini | Sesudah Prompt Ini Dijalankan |
 | :--- | :--- | :--- |
-| **Saat Awal Buka Aplikasi** | Langsung *auto-login* sebagai `Naya Putri` | Benar-benar **Belum Login (`Guest`)**; tombol kuning `Masuk` tampil di Navbar, dan semua fitur transaksi terkunci sampai user login. |
-| **Isi Data Akun Saat Baru Login** | Sudah terisi 9 barang titipan, pesanan, dan chat dummy | **Mulai murni dari 0 (Kosong)**; hanya katalog produk toko yang tampil untuk dibeli. |
-| **Wishlist (`♡`) & Keranjang** | Statis / badge tidak sinkron saat diklik | **Ter-update *real-time* di database & Navbar** setiap kali user klik hati (`♡`), tambah keranjang, hapus item, atau selesai checkout. |
-| **Chat Admin Produk & CS** | Sudah berisi teks percakapan dummy dari awal | **Mulai dari 0 (ruang chat bersih)** saat pertama dibuka, layout **responsif di HP & Desktop**, dan otomatis membalas secara kontekstual sesuai data produk/pesanan di database. |
+| **Isi Halaman `/catalog` & `Home` Saat Awal Buka** | Masih muncul 6–12 produk dummy (`Keychron K2 V2`, `MX Master 3`, `Sony WH-1000XM4`, dll.) | **0 Produk (100% Bersih)** — menampilkan *Empty State* rapi dengan tombol **"+ Ajukan titip jual sekarang"**. |
+| **Angka Jumlah Produk per Kategori** | Hardcode statis (`1.240 produk`, `860 produk`, dll.) | **Dihitung *live* dari database (`0 produk` saat kosong)** dan otomatis bertambah (`1 produk`, `2 produk`, dst.) saat ada barang yang ditayangkan. |
+| **Asal Produk yang Muncul di Katalog** | Dari `prisma/seed.ts` atau array `const products` | **100% murni dari input kamu sendiri** (baik dari form *Ajukan Titip Jual* yang di-*publish* maupun dari form tambah barang di `/admin`). |

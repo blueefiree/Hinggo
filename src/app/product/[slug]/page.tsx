@@ -1,24 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ShieldCheck,
-  Star,
   Truck,
   Heart,
-  Share2,
-  CheckCircle2,
   MessageSquare,
   ShoppingBag,
-  ArrowRight,
   Info,
   Clock,
   ChevronRight,
+  Package,
+  Loader2,
 } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { PRODUCTS, Product } from "@/lib/data";
+import { Product } from "@/lib/data";
 import { useHingoStore } from "@/lib/store";
 
 export default function ProductDetailPage() {
@@ -27,24 +25,49 @@ export default function ProductDetailPage() {
   const { user, addToCart, isInWishlist, toggleWishlist, cart } = useHingoStore();
 
   const slug = params?.slug as string;
-  const product: Product =
-    PRODUCTS.find((p) => p.slug === slug) || PRODUCTS[0];
-
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const isFavorite = isInWishlist(product.id);
-  const isAlreadyInCart = cart.some(
-    (item) => item.product.id === product.id || (item as any).productId === product.id
-  );
+
+  useEffect(() => {
+    async function fetchProduct() {
+      if (!slug) return;
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/products/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          setProduct(data.product || null);
+        } else {
+          setProduct(null);
+        }
+      } catch (err) {
+        console.error("Error loading product detail:", err);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProduct();
+  }, [slug]);
+
+  const isFavorite = product ? isInWishlist(product.id) : false;
+  const isAlreadyInCart = product
+    ? cart.some(
+        (item) => item.product.id === product.id || (item as any).productId === product.id
+      )
+    : false;
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
+    }).format(val || 0);
   };
 
   const handleAddToCart = async () => {
+    if (!product) return;
     if (!user) {
       router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/product/${product.slug}`)}`);
       return;
@@ -56,13 +79,51 @@ export default function ProductDetailPage() {
   };
 
   const handleChatAdmin = (e: React.MouseEvent) => {
+    if (!product) return;
     if (!user) {
       e.preventDefault();
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/chat/product?productId=${product.id}`)}`);
+      router.push(
+        `/auth/login?callbackUrl=${encodeURIComponent(`/chat/product?productId=${product.id}`)}`
+      );
     } else {
       router.push(`/chat/product?productId=${product.id}`);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-28 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
+        <p className="text-sm font-semibold text-neutral-500">Memuat rincian gear...</p>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-24 flex flex-col items-center justify-center gap-4 text-center">
+        <div className="h-16 w-16 rounded-full bg-[#FFFBEB] border border-[#FDE68A] flex items-center justify-center text-amber-700">
+          <Package className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl sm:text-2xl font-black text-[#1A1A1A]">
+          Produk Tidak Ditemukan di Katalog
+        </h2>
+        <p className="text-xs sm:text-sm text-neutral-500 max-w-md">
+          Barang yang kamu cari mungkin sudah terjual atau belum dipublikasikan oleh kurator Hingo.
+        </p>
+        <Link
+          href="/catalog"
+          className="rounded-xl bg-[#1A1A1A] text-white px-6 py-3 text-xs sm:text-sm font-bold hover:bg-neutral-800 transition"
+        >
+          Kembali ke Katalog Belanja
+        </Link>
+      </div>
+    );
+  }
+
+  const images = product.images && product.images.length > 0
+    ? product.images
+    : ["/images/placeholder.png"];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
@@ -80,9 +141,7 @@ export default function ProductDetailPage() {
           {product.category}
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-[#1A1A1A] font-bold line-clamp-1">
-          {product.name}
-        </span>
+        <span className="text-[#1A1A1A] font-bold line-clamp-1">{product.name}</span>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
@@ -92,7 +151,7 @@ export default function ProductDetailPage() {
           <div className="flex flex-col gap-3">
             <div className="relative aspect-4/3 w-full overflow-hidden rounded-3xl bg-[#F6F6F4] border border-[#E5E5E5] shadow-xs">
               <img
-                src={product.images[activeImageIndex] || product.images[0]}
+                src={images[activeImageIndex] || images[0]}
                 alt={product.name}
                 className="h-full w-full object-cover object-center"
               />
@@ -106,122 +165,82 @@ export default function ProductDetailPage() {
                   onClick={() => toggleWishlist(product)}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-xs backdrop-blur-xs hover:bg-white text-neutral-700 hover:text-red-500 transition cursor-pointer"
                 >
-                  <Heart
-                    className={`h-5 w-5 ${
-                      isFavorite ? "fill-red-500 text-red-500" : ""
-                    }`}
-                  />
+                  <Heart className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
                 </button>
               </div>
             </div>
 
             {/* Clickable Thumbnails */}
-            <div className="flex items-center gap-3">
-              {product.images.map((img, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setActiveImageIndex(idx)}
-                  className={`relative aspect-4/3 w-20 overflow-hidden rounded-xl border-2 transition ${
-                    activeImageIndex === idx
-                      ? "border-[#FFC629] ring-2 ring-[#FFC629]/40"
-                      : "border-neutral-200 opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  <img
-                    src={img}
-                    alt={`Thumbnail ${idx + 1}`}
-                    className="h-full w-full object-cover"
-                  />
-                </button>
-              ))}
-              <span className="text-xs text-neutral-500 font-medium ml-2">
-                Foto barang titipan asli · {product.images.length} foto
-              </span>
-            </div>
-          </div>
-
-          {/* Tentang Barang Ini Card */}
-          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-6">
-            <h2 className="text-lg font-black text-[#1A1A1A]">
-              Tentang barang ini
-            </h2>
-
-            {/* Spec Key-Value Table */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 rounded-2xl bg-[#F6F6F4] p-4 text-xs">
-              <div>
-                <span className="text-neutral-500 block">Kondisi</span>
-                <strong className="text-[#1A1A1A] text-sm font-bold">
-                  {product.condition}
-                </strong>
-              </div>
-              <div>
-                <span className="text-neutral-500 block">Lama Pemakaian</span>
-                <strong className="text-[#1A1A1A] text-sm font-bold">
-                  {product.usageDuration}
-                </strong>
-              </div>
-              <div>
-                <span className="text-neutral-500 block">Varian / Switch</span>
-                <strong className="text-[#1A1A1A] text-sm font-bold">
-                  {product.switchOrVariant}
-                </strong>
-              </div>
-              <div>
-                <span className="text-neutral-500 block">Kelengkapan</span>
-                <strong className="text-[#1A1A1A] text-sm font-bold">
-                  {product.completeness}
-                </strong>
-              </div>
-            </div>
-
-            {/* Description & Defect Notes */}
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-bold text-[#1A1A1A]">
-                Deskripsi & Hasil Pengecekan Fisik
-              </h3>
-              <p className="text-sm leading-relaxed text-neutral-700 font-medium">
-                {product.description}
-              </p>
-            </div>
-
-            {/* Defect warning box if present */}
-            {product.defectNotes && (
-              <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 flex items-start gap-3">
-                <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
-                <div className="text-xs text-neutral-700 leading-relaxed">
-                  <strong className="text-[#1A1A1A] font-bold">Catatan Kosmetik: </strong>
-                  {product.defectNotes}
-                </div>
+            {images.length > 1 && (
+              <div className="flex items-center gap-3">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={`relative h-20 w-20 overflow-hidden rounded-2xl border-2 transition cursor-pointer ${
+                      activeImageIndex === idx
+                        ? "border-[#FFC629] ring-2 ring-[#FFC629]/20"
+                        : "border-neutral-200 hover:border-neutral-300"
+                    }`}
+                  >
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
               </div>
             )}
+          </div>
 
-            <div className="border-t border-neutral-100 pt-4 flex items-center justify-between text-xs text-neutral-400">
-              <span>Diunggah 22 Oktober 2026</span>
-              <span>Kode barang: <strong className="text-neutral-700">{product.code}</strong></span>
+          {/* Inspection Report Card */}
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-base font-extrabold text-[#1A1A1A]">
+                  Laporan Hasil Uji Fungsi Laboratorium
+                </h3>
+              </div>
+              <span className="rounded-full bg-emerald-100 text-emerald-800 px-3 py-0.5 text-xs font-bold">
+                Lolos Pengecekan
+              </span>
             </div>
+
+            <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-medium">
+              {product.description}
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs">
+              <div className="p-3 rounded-2xl bg-[#F6F6F4]">
+                <span className="text-neutral-400 block text-[11px]">Kondisi Fisik</span>
+                <strong className="text-neutral-800">{product.condition}</strong>
+              </div>
+              <div className="p-3 rounded-2xl bg-[#F6F6F4]">
+                <span className="text-neutral-400 block text-[11px]">Durasi Pemakaian</span>
+                <strong className="text-neutral-800">{product.usageDuration}</strong>
+              </div>
+              <div className="p-3 rounded-2xl bg-[#F6F6F4]">
+                <span className="text-neutral-400 block text-[11px]">Kelengkapan</span>
+                <strong className="text-neutral-800">{product.completeness}</strong>
+              </div>
+            </div>
+
+            {product.defectNotes && (
+              <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-xs text-amber-900 leading-relaxed">
+                <strong className="block font-bold mb-1">Catatan Cacat Kosmetik:</strong>
+                {product.defectNotes}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column: Pricing, Shipping, & CTA */}
+        {/* Right Column: Pricing & Action Controls */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="sticky top-28 rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-6">
-            {/* Badges */}
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[#FFFBEB] border border-[#FDE68A] px-3 py-1 text-xs font-bold text-amber-900">
-                {product.condition}
-              </span>
-              <span className="rounded-full bg-red-50 border border-red-200 px-3 py-1 text-xs font-bold text-red-600">
-                Stok 1 barang
-              </span>
-            </div>
-
-            {/* Title & Subtitle */}
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-5">
             <div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#8A8A8A]">
-                {product.brand}
+              <span className="text-xs font-bold font-mono uppercase tracking-wider text-neutral-400">
+                {product.brand} · {product.code}
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A] mt-0.5">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A] mt-1">
                 {product.name}
               </h1>
               <p className="text-xs sm:text-sm text-neutral-500 mt-1">
@@ -229,123 +248,51 @@ export default function ProductDetailPage() {
               </p>
             </div>
 
-            {/* Price block */}
-            <div className="rounded-2xl bg-[#F6F6F4] p-4 flex flex-col gap-1">
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-black text-[#1A1A1A]">
-                  {formatRupiah(product.price)}
-                </span>
+            <div className="flex items-baseline gap-3 py-2 border-y border-neutral-100">
+              <span className="text-3xl font-black text-[#1A1A1A]">
+                {formatRupiah(product.price)}
+              </span>
+              {product.originalNewPrice && product.originalNewPrice > product.price && (
                 <span className="text-sm font-semibold text-neutral-400 line-through">
                   {formatRupiah(product.originalNewPrice)}
                 </span>
-              </div>
-              <span className="text-xs font-bold text-[#16A34A]">
-                Harga baru sekitar {formatRupiah(product.originalNewPrice)} · Hemat 43%
-              </span>
+              )}
             </div>
 
-            {/* Shipping Info Card */}
-            <div className="rounded-2xl border border-neutral-200 p-4 flex flex-col gap-2.5 text-xs text-neutral-700">
-              <div className="flex items-center gap-2 font-bold text-[#1A1A1A]">
-                <Truck className="h-4 w-4 text-amber-600" />
-                <span>Pengiriman dari Jakarta Selatan</span>
+            <div className="flex flex-col gap-3 text-xs text-neutral-600">
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-neutral-500" />
+                <span>Pengiriman dari <strong>{product.location}</strong></span>
               </div>
-              <div className="flex items-center justify-between text-neutral-600 pl-6">
-                <span>Ke Tebet, Jakarta Selatan</span>
-                <span className="font-bold text-[#1A1A1A]">Rp18.000</span>
-              </div>
-              <div className="pl-6 text-[11px] text-neutral-500">
-                Kurir JNE REG · Estimasi tiba 24–25 Okt 2026
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-neutral-500" />
+                <span>Garansi tes fungsi <strong>2 × 24 jam</strong> sejak barang tiba</span>
               </div>
             </div>
 
-            {/* Trust box */}
-            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
-              <div className="text-xs text-neutral-800 leading-snug">
-                <strong className="text-black">Dicek dan dikirim tim kami</strong> — Dana
-                disimpan di escrow Hingo sampai barang tiba dan kamu periksa.
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleChatAdmin}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-neutral-300 py-3.5 text-xs sm:text-sm font-bold text-neutral-800 hover:bg-neutral-50 transition cursor-pointer"
-              >
-                <MessageSquare className="h-4 w-4" />
-                <span>Chat admin</span>
-              </button>
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-3">
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3.5 text-xs sm:text-sm font-bold shadow-xs transition active:scale-[0.99] cursor-pointer ${
+                className={`w-full flex-1 flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition shadow-xs cursor-pointer ${
                   isAlreadyInCart
                     ? "bg-[#1A1A1A] text-[#FFC629] hover:bg-neutral-800"
-                    : "bg-[#FFC629] hover:bg-[#FFC420] text-[#1A1A1A]"
+                    : "bg-[#FFC629] hover:bg-[#FFC420] text-[#1A1A1A] active:scale-[0.99]"
                 }`}
               >
                 <ShoppingBag className="h-4 w-4" />
-                <span>
-                  {isAlreadyInCart
-                    ? "Sudah di keranjang — Lihat Keranjang"
-                    : "Tambah keranjang"}
-                </span>
+                <span>{isAlreadyInCart ? "Lihat di Keranjang" : "Tambah ke Keranjang"}</span>
               </button>
-            </div>
-
-            {/* Dikelola Tim Hingo Pill */}
-            <div className="flex items-center justify-between border-t border-neutral-100 pt-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFC629] font-black text-black">
-                  H
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#1A1A1A]">Admin Hingo</h4>
-                  <p className="text-[11px] text-neutral-500">Tim pengelola · Aktif 5 menit lalu</p>
-                </div>
-              </div>
               <button
                 type="button"
                 onClick={handleChatAdmin}
-                className="text-xs font-bold text-amber-700 hover:underline cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-[#F6F6F4] px-5 py-3.5 text-xs font-bold text-neutral-800 hover:bg-neutral-200 transition cursor-pointer"
               >
-                Chat admin
+                <MessageSquare className="h-4 w-4" />
+                <span>Tanya Admin</span>
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Bottom Sticky Bar for Mobile */}
-      <div className="fixed bottom-16 left-0 right-0 z-40 flex items-center justify-between border-t border-neutral-200 bg-white/95 p-3 px-4 shadow-lg backdrop-blur-md md:hidden">
-        <div>
-          <span className="text-[10px] text-neutral-500 block">Harga barang</span>
-          <span className="text-base font-black text-[#1A1A1A]">
-            {formatRupiah(product.price)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleChatAdmin}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 cursor-pointer"
-          >
-            <MessageSquare className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className={`rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs cursor-pointer ${
-              isAlreadyInCart
-                ? "bg-[#1A1A1A] text-[#FFC629]"
-                : "bg-[#FFC629] text-black"
-            }`}
-          >
-            {isAlreadyInCart ? "Lihat Keranjang" : "Tambah keranjang"}
-          </button>
         </div>
       </div>
 

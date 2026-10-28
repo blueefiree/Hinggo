@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
@@ -6,22 +8,56 @@ import {
   ArrowRight,
   Sparkles,
   ShoppingBag,
-  Send,
-  Camera,
-  Boxes,
-  Truck,
-  MessageSquare,
   Keyboard,
   Mouse,
   Headphones,
   Tv,
+  Truck,
+  MessageSquare,
+  Package,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import ProductCard from "@/components/ui/ProductCard";
-import { PRODUCTS } from "@/lib/data";
+import { Product } from "@/lib/data";
+import { useHingoStore } from "@/lib/store";
 
 export default function Home() {
-  const bestSellers = PRODUCTS.slice(6, 10);
-  const recommendations = PRODUCTS.slice(0, 4);
+  const { user } = useHingoStore();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categoryCounts, setCategoryCounts] = useState({
+    KEYBOARD: 0,
+    MOUSE: 0,
+    HEADSET: 0,
+    MONITOR: 0,
+    ACCESSORIES: 0,
+    TOTAL: 0,
+  });
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/products");
+        if (res.ok) {
+          const data = await res.json();
+          setProducts(data.products || []);
+          if (data.categoryCounts) {
+            setCategoryCounts(data.categoryCounts);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load products for homepage:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
+
+  const bestSellers = products.slice(0, 4);
+  const recommendations = products.slice(4, 8).length > 0 ? products.slice(4, 8) : products.slice(0, 4);
 
   return (
     <div className="flex flex-col gap-10 md:gap-16 py-4 md:py-8">
@@ -72,7 +108,7 @@ export default function Home() {
               <div className="pt-2 flex items-center gap-6 text-xs sm:text-sm text-[#1A1A1A]/90 font-semibold">
                 <div className="flex items-center gap-1.5">
                   <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-ping" />
-                  <span>3.200+ Gear Terverifikasi</span>
+                  <span>{categoryCounts.TOTAL} Gear Terverifikasi</span>
                 </div>
                 <span>·</span>
                 <div>Garansi Cek Fisik 100%</div>
@@ -103,7 +139,7 @@ export default function Home() {
                   <span className="text-[#16A34A] flex items-center gap-1">
                     <ShieldCheck className="h-3.5 w-3.5" /> 100% Lolos Pengecekan
                   </span>
-                  <span className="text-neutral-400">1.240+ Unit</span>
+                  <span className="text-neutral-500 font-bold">{categoryCounts.KEYBOARD} Unit</span>
                 </div>
               </div>
 
@@ -121,7 +157,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-neutral-100 text-[11px] font-bold text-neutral-700">
-                  860+ Pilihan
+                  {categoryCounts.MOUSE} Pilihan
                 </div>
               </div>
 
@@ -139,7 +175,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-neutral-100 text-[11px] font-bold text-neutral-700">
-                  540+ Pilihan
+                  {categoryCounts.HEADSET} Pilihan
                 </div>
               </div>
             </div>
@@ -194,7 +230,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. KATEGORI POPULER */}
+      {/* 3. KATEGORI POPULER - 100% DINAMIS DARI DATABASE */}
       <section className="mx-auto w-full max-w-7xl px-4">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -228,7 +264,7 @@ export default function Home() {
             <div className="mt-6">
               <h3 className="text-base font-bold text-[#1A1A1A]">Keyboard</h3>
               <p className="text-xs text-amber-800 font-semibold mt-0.5">
-                1.240 produk
+                {categoryCounts.KEYBOARD} produk
               </p>
             </div>
           </Link>
@@ -246,7 +282,7 @@ export default function Home() {
             <div className="mt-6">
               <h3 className="text-base font-bold text-[#1A1A1A]">Mouse</h3>
               <p className="text-xs text-amber-800 font-semibold mt-0.5">
-                860 produk
+                {categoryCounts.MOUSE} produk
               </p>
             </div>
           </Link>
@@ -264,7 +300,7 @@ export default function Home() {
             <div className="mt-6">
               <h3 className="text-base font-bold text-[#1A1A1A]">Headset</h3>
               <p className="text-xs text-amber-800 font-semibold mt-0.5">
-                540 produk
+                {categoryCounts.HEADSET} produk
               </p>
             </div>
           </Link>
@@ -282,7 +318,7 @@ export default function Home() {
             <div className="mt-6">
               <h3 className="text-base font-bold text-[#1A1A1A]">Monitor</h3>
               <p className="text-xs text-amber-800 font-semibold mt-0.5">
-                320 produk
+                {categoryCounts.MONITOR} produk
               </p>
             </div>
           </Link>
@@ -309,11 +345,37 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
-          {bestSellers.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="rounded-3xl border border-neutral-200 bg-white p-12 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="h-7 w-7 animate-spin text-[#FFC629]" />
+            <p className="text-xs font-semibold text-neutral-500">Memuat produk pilihan...</p>
+          </div>
+        ) : bestSellers.length > 0 ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+            {bestSellers.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-8 sm:p-10 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
+            <div className="h-12 w-12 rounded-xl bg-[#FFC629] text-[#1A1A1A] flex items-center justify-center">
+              <Package className="h-6 w-6" />
+            </div>
+            <h3 className="text-base font-bold text-[#1A1A1A]">
+              Belum ada barang titipan di katalog
+            </h3>
+            <p className="text-xs text-neutral-600 max-w-md">
+              Semua barang di katalog Hingo berasal dari pengajuan titip jual yang telah lolos inspeksi tim kami.
+            </p>
+            <Link
+              href={user ? "/seller/consignments/new" : "/auth/login?callbackUrl=/seller/consignments/new"}
+              className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#1A1A1A] hover:bg-neutral-800 text-white px-5 py-2.5 text-xs font-bold shadow-xs transition"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>+ Ajukan titip jual sekarang</span>
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* 5. HOW CONSIGNMENT WORKS */}
@@ -400,7 +462,7 @@ export default function Home() {
               <span>Tanpa biaya pendaftaran di muka · Komisi hanya dipotong saat gear terjual</span>
             </div>
             <Link
-              href="/seller/consignments/new"
+              href={user ? "/seller/consignments/new" : "/auth/login?callbackUrl=/seller/consignments/new"}
               className="inline-flex items-center gap-2 rounded-xl bg-[#1A1A1A] px-5 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-neutral-800 transition"
             >
               Mulai titip gear sekarang
@@ -430,11 +492,37 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
-          {recommendations.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="rounded-3xl border border-neutral-200 bg-white p-12 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="h-7 w-7 animate-spin text-[#FFC629]" />
+            <p className="text-xs font-semibold text-neutral-500">Memuat rekomendasi...</p>
+          </div>
+        ) : recommendations.length > 0 ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+            {recommendations.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-8 sm:p-10 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
+            <div className="h-12 w-12 rounded-xl bg-[#FFC629] text-[#1A1A1A] flex items-center justify-center">
+              <Package className="h-6 w-6" />
+            </div>
+            <h3 className="text-base font-bold text-[#1A1A1A]">
+              Belum ada barang titipan di katalog
+            </h3>
+            <p className="text-xs text-neutral-600 max-w-md">
+              Semua barang di katalog Hingo berasal dari pengajuan titip jual yang telah lolos inspeksi tim kami.
+            </p>
+            <Link
+              href={user ? "/seller/consignments/new" : "/auth/login?callbackUrl=/seller/consignments/new"}
+              className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#1A1A1A] hover:bg-neutral-800 text-white px-5 py-2.5 text-xs font-bold shadow-xs transition"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>+ Ajukan titip jual sekarang</span>
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );

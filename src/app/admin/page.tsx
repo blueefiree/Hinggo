@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Search,
   RefreshCw,
+  Plus,
 } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
@@ -41,7 +42,7 @@ export default function AdminDashboardPage() {
     adminUpdateTracking,
   } = useHingoStore();
 
-  const [activeTab, setActiveTab] = useState<"kyc" | "inspection" | "orders" | "chat">("kyc");
+  const [activeTab, setActiveTab] = useState<"kyc" | "inspection" | "orders" | "chat" | "add_product">("kyc");
 
   // KYC review state
   const [kycFeedback, setKycFeedback] = useState<string | null>(null);
@@ -65,6 +66,21 @@ export default function AdminDashboardPage() {
   );
   const [inspectionPrice, setInspectionPrice] = useState<number>(950000);
   const [inspectionSubmitted, setInspectionSubmitted] = useState(false);
+  const [publishSuccessMsg, setPublishSuccessMsg] = useState<string | null>(null);
+
+  // New Catalog Product Form State
+  const [newProdName, setNewProdName] = useState("");
+  const [newProdBrand, setNewProdBrand] = useState("");
+  const [newProdCategory, setNewProdCategory] = useState("KEYBOARD");
+  const [newProdCondition, setNewProdCondition] = useState("Sangat baik");
+  const [newProdPrice, setNewProdPrice] = useState("");
+  const [newProdOriginalPrice, setNewProdOriginalPrice] = useState("");
+  const [newProdVariant, setNewProdVariant] = useState("");
+  const [newProdCompleteness, setNewProdCompleteness] = useState("Unit lengkap dengan box");
+  const [newProdDesc, setNewProdDesc] = useState("");
+  const [newProdImageUrl, setNewProdImageUrl] = useState("");
+  const [isSubmittingNewProd, setIsSubmittingNewProd] = useState(false);
+  const [newProdSuccessMsg, setNewProdSuccessMsg] = useState<string | null>(null);
 
   // Escrow tracking state
   const [trackingInput, setTrackingInput] = useState<string>("JNE2201040842");
@@ -114,6 +130,91 @@ export default function AdminDashboardPage() {
 
     setInspectionSubmitted(true);
     setTimeout(() => setInspectionSubmitted(false), 3500);
+  };
+
+  const handleApproveAndPublish = async () => {
+    try {
+      const res = await fetch(`/api/consignments/${selectedConsignmentCode}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "APPROVE_PRICE",
+          proposedPrice: inspectionPrice,
+        }),
+      });
+
+      if (res.ok) {
+        setPublishSuccessMsg(`✓ Barang titipan ${selectedConsignmentCode} berhasil lolos inspeksi dan resmi tayang di Katalog!`);
+      } else {
+        // Direct product publish fallback
+        await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: selectedConsignment?.brandModel || "Peripheral Gaming Hingo",
+            brand: selectedConsignment?.brandModel?.split(" ")[0] || "HINGO",
+            category: selectedConsignment?.category || "KEYBOARD",
+            condition: "Sangat baik",
+            price: inspectionPrice,
+            originalNewPrice: Math.round(inspectionPrice * 1.5),
+            switchOrVariant: inspectionSpecs.slice(0, 40),
+            completeness: inspectionCompleteness,
+            description: `${inspectionFunction}. ${inspectionCosmetic}`,
+            defectNotes: inspectionCosmetic,
+            images: selectedConsignment?.photos || [],
+          }),
+        });
+        setPublishSuccessMsg(`✓ Barang titipan berhasil lolos inspeksi dan resmi diterbitkan ke Katalog!`);
+      }
+      setTimeout(() => setPublishSuccessMsg(null), 5000);
+    } catch (e: any) {
+      alert("Gagal menayangkan barang ke katalog: " + e.message);
+    }
+  };
+
+  const handleCreateNewCatalogProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProdName || !newProdPrice) {
+      alert("Nama dan harga produk wajib diisi");
+      return;
+    }
+    setIsSubmittingNewProd(true);
+    try {
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newProdName,
+          brand: newProdBrand || "CUSTOM",
+          category: newProdCategory,
+          condition: newProdCondition,
+          price: Number(newProdPrice),
+          originalNewPrice: newProdOriginalPrice ? Number(newProdOriginalPrice) : undefined,
+          switchOrVariant: newProdVariant || "Varian Standar",
+          completeness: newProdCompleteness,
+          description: newProdDesc,
+          images: newProdImageUrl ? [newProdImageUrl] : [],
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNewProdSuccessMsg(`✓ "${newProdName}" berhasil diterbitkan ke database Katalog! Silakan cek di /catalog.`);
+        setNewProdName("");
+        setNewProdBrand("");
+        setNewProdPrice("");
+        setNewProdOriginalPrice("");
+        setNewProdVariant("");
+        setNewProdDesc("");
+        setNewProdImageUrl("");
+        setTimeout(() => setNewProdSuccessMsg(null), 6000);
+      } else {
+        alert(data.error || "Gagal menambahkan produk");
+      }
+    } catch (err: any) {
+      alert("Terjadi kesalahan koneksi server");
+    } finally {
+      setIsSubmittingNewProd(false);
+    }
   };
 
   const handleReleaseEscrow = (orderCode: string) => {
@@ -267,6 +368,19 @@ export default function AdminDashboardPage() {
           <MessageSquare className="h-4 w-4" />
           <span>Live Support Desk (Admin / CS Mira)</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("add_product")}
+          className={`px-4 py-2 rounded-xl transition whitespace-nowrap cursor-pointer flex items-center gap-2 ${
+            activeTab === "add_product"
+              ? "bg-[#FFC629] text-black font-black shadow-xs"
+              : "bg-[#F6F6F4] text-neutral-600 hover:text-black"
+          }`}
+        >
+          <Plus className="h-4 w-4" />
+          <span>+ Tambah Produk Katalog</span>
+        </button>
       </div>
 
       {/* Feedback Alert */}
@@ -401,6 +515,12 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {publishSuccessMsg && (
+            <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-bold text-emerald-800">
+              {publishSuccessMsg}
+            </div>
+          )}
+
           <form onSubmit={handleInspectionSubmit} className="flex flex-col gap-5 text-xs">
             {/* Gear Selector */}
             <div>
@@ -504,7 +624,15 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleApproveAndPublish}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition active:scale-95 cursor-pointer"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Loloskan Inspeksi & Tayangkan ke Katalog</span>
+              </button>
               <button
                 type="submit"
                 className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-black font-black text-xs shadow-xs transition active:scale-95 cursor-pointer"
@@ -733,6 +861,170 @@ export default function AdminDashboardPage() {
               </form>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: TAMBAH PRODUK KATALOG */}
+      {activeTab === "add_product" && (
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-100">
+            <div>
+              <h2 className="text-base font-extrabold text-[#1A1A1A]">
+                Tambah Barang Katalog Baru (Langsung ke Database)
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Barang yang didaftarkan di sini akan langsung tampil di halaman /catalog dan / (Home) secara real-time.
+              </p>
+            </div>
+          </div>
+
+          {newProdSuccessMsg && (
+            <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-bold text-emerald-800">
+              {newProdSuccessMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleCreateNewCatalogProduct} className="flex flex-col gap-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Nama Produk / Model *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Keychron K2 V2 Wireless Mechanical"
+                  value={newProdName}
+                  onChange={(e) => setNewProdName(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Brand / Merek</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Keychron, Logitech, Sony, dll."
+                  value={newProdBrand}
+                  onChange={(e) => setNewProdBrand(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Kategori *</label>
+                <select
+                  value={newProdCategory}
+                  onChange={(e) => setNewProdCategory(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white"
+                >
+                  <option value="KEYBOARD">Keyboard</option>
+                  <option value="MOUSE">Mouse</option>
+                  <option value="HEADSET">Audio / Headset</option>
+                  <option value="MONITOR">Monitor</option>
+                  <option value="ACCESSORIES">Aksesoris</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Kondisi</label>
+                <select
+                  value={newProdCondition}
+                  onChange={(e) => setNewProdCondition(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white"
+                >
+                  <option value="Seperti baru">Seperti baru (Like New)</option>
+                  <option value="Sangat baik">Sangat baik</option>
+                  <option value="Baik">Baik</option>
+                  <option value="Cukup">Cukup</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Switch / Spesifikasi Singkat</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Gateron G Pro Brown / 8000 DPI"
+                  value={newProdVariant}
+                  onChange={(e) => setNewProdVariant(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Harga Jual Hingo (Rp) *</label>
+                <input
+                  type="number"
+                  required
+                  step="1000"
+                  placeholder="Contoh: 850000"
+                  value={newProdPrice}
+                  onChange={(e) => setNewProdPrice(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Harga Beli Baru Asli (Rp, Opsional)</label>
+                <input
+                  type="number"
+                  step="1000"
+                  placeholder="Contoh: 1400000"
+                  value={newProdOriginalPrice}
+                  onChange={(e) => setNewProdOriginalPrice(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">Kelengkapan</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Fullset unit, box, kabel original, keycap puller"
+                  value={newProdCompleteness}
+                  onChange={(e) => setNewProdCompleteness(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-700 mb-1">URL Foto Produk (Opsional)</label>
+                <input
+                  type="url"
+                  placeholder="Contoh: https://images.unsplash.com/photo-..."
+                  value={newProdImageUrl}
+                  onChange={(e) => setNewProdImageUrl(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-neutral-700 mb-1">Deskripsi & Catatan Hasil Inspeksi</label>
+              <textarea
+                rows={3}
+                placeholder="Fungsi switch dan koneksi bluetooth 100% normal. Bodi bersih tanpa retak."
+                value={newProdDesc}
+                onChange={(e) => setNewProdDesc(e.target.value)}
+                className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-3 text-xs text-neutral-900 outline-none focus:border-[#FFC629] focus:bg-white"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={isSubmittingNewProd}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-black font-black text-xs shadow-xs transition active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{isSubmittingNewProd ? "Menerbitkan..." : "Terbitkan Produk ke Katalog"}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
