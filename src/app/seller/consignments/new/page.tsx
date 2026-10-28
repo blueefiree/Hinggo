@@ -42,9 +42,11 @@ export default function NewConsignmentPage() {
     escrow: true,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    addConsignment({
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSave = async (isDraft: boolean) => {
+    setIsSubmitting(true);
+    const payload = {
       category,
       brandModel,
       variantSpec,
@@ -54,18 +56,45 @@ export default function NewConsignmentPage() {
       defectDetails,
       completeness,
       expectedPrice,
-      originCity: "Bandung",
+      originCity: "Jakarta Selatan",
       handoverMethod:
         handoverMethod === "SHIP_AFTER_ONLINE"
           ? "Kirim via kurir setelah online check"
-          : "Antar langsung sesuai arahan admin",
+          : "Antar langsung ke gudang Jakarta",
       photos: [
         "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=800&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=800&auto=format&fit=crop",
       ],
-    });
-    alert("Pengajuan titip jual berhasil dikirim! Tim kurator Hingo akan mereview dalam 1x24 jam.");
-    router.push("/seller/consignments");
+      isDraft,
+    };
+
+    try {
+      const res = await fetch("/api/consignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      addConsignment(payload);
+      alert(
+        data.message ||
+          (isDraft
+            ? "Draf berhasil disimpan di database Hingo."
+            : "Pengajuan titip jual berhasil dikirim ke database! Tim kurator Hingo akan mereview dalam 1×24 jam.")
+      );
+      router.push("/seller/consignments");
+    } catch (e) {
+      addConsignment(payload);
+      router.push("/seller/consignments");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSave(false);
   };
 
   return (
@@ -320,19 +349,19 @@ export default function NewConsignmentPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium text-neutral-700">
                 <div>
                   <span className="text-neutral-400 block text-[11px]">Nama Lengkap</span>
-                  <strong className="text-sm font-bold text-[#1A1A1A]">{user.name}</strong>
+                  <strong className="text-sm font-bold text-[#1A1A1A]">{user?.name || "-"}</strong>
                 </div>
                 <div>
                   <span className="text-neutral-400 block text-[11px]">Nomor WhatsApp</span>
-                  <strong className="text-sm font-bold text-[#1A1A1A]">{user.phone}</strong>
+                  <strong className="text-sm font-bold text-[#1A1A1A]">{user?.phone || "-"}</strong>
                 </div>
                 <div>
                   <span className="text-neutral-400 block text-[11px]">Email</span>
-                  <strong className="text-sm font-bold text-[#1A1A1A]">{user.email}</strong>
+                  <strong className="text-sm font-bold text-[#1A1A1A]">{user?.email || "-"}</strong>
                 </div>
                 <div>
                   <span className="text-neutral-400 block text-[11px]">Kota Asal Pemilik</span>
-                  <strong className="text-sm font-bold text-[#1A1A1A]">{user.city}</strong>
+                  <strong className="text-sm font-bold text-[#1A1A1A]">{user?.city || "Jakarta Selatan"}</strong>
                 </div>
               </div>
 
@@ -407,10 +436,11 @@ export default function NewConsignmentPage() {
               <div className="pt-4 border-t border-neutral-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => alert("Draf pengajuan tersimpan otomatis.")}
-                  className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
+                  disabled={isSubmitting}
+                  onClick={() => handleSave(true)}
+                  className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-xs font-bold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                 >
-                  Simpan draf
+                  {isSubmitting ? "Menyimpan..." : "Simpan draf"}
                 </button>
                 <button
                   type="submit"

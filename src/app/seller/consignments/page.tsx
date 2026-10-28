@@ -15,12 +15,13 @@ import {
   MessageSquare,
   HelpCircle,
   ExternalLink,
+  Layers,
 } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
 
 export default function SellerConsignmentsPage() {
-  const { consignments } = useHingoStore();
+  const { user, consignments, payouts } = useHingoStore();
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -32,7 +33,7 @@ export default function SellerConsignmentsPage() {
     }).format(val);
   };
 
-  // KPI Calculations
+  // KPI Calculations (starts at 0)
   const totalCount = consignments.length;
   const actionCount = consignments.filter(
     (c) =>
@@ -47,6 +48,14 @@ export default function SellerConsignmentsPage() {
   const completedCount = consignments.filter(
     (c) => c.stage === "PAYOUT_COMPLETED"
   ).length;
+
+  const totalPending = (payouts as any[])
+    .filter((p: any) => p.status === "PROCESSING" || p.status === "PENDING_ESCROW")
+    .reduce((sum: number, p: any) => sum + (p.netDisbursed || p.amount || 0), 0);
+
+  const totalDisbursed = (payouts as any[])
+    .filter((p: any) => p.status === "SUCCESS" || p.status === "DISBURSED")
+    .reduce((sum: number, p: any) => sum + (p.netDisbursed || p.amount || 0), 0);
 
   const filteredConsignments = useMemo(() => {
     return consignments.filter((c) => {
@@ -97,7 +106,7 @@ export default function SellerConsignmentsPage() {
             Barang titipan saya
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
-            Halo, Naya! Pantau gear kamu, dari pengajuan sampai hasil penjualan.
+            Halo, {user?.name || "Penjual"}! Pantau gear kamu, dari pengajuan sampai hasil penjualan.
           </p>
         </div>
 
@@ -121,14 +130,24 @@ export default function SellerConsignmentsPage() {
           </div>
         </div>
 
-        {/* Card 2: Perlu Tindakan (Highlighted #FFFBEB) */}
-        <div className="rounded-2xl border-2 border-[#FFC629] bg-[#FFFBEB] p-5 shadow-xs flex flex-col justify-between">
+        {/* Card 2: Perlu Tindakan */}
+        <div
+          className={`rounded-2xl border-2 p-5 shadow-xs flex flex-col justify-between ${
+            actionCount > 0
+              ? "border-[#FFC629] bg-[#FFFBEB]"
+              : "border-[#E5E5E5] bg-white"
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-900">Perlu tindakan</span>
-            <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+            <span className={`text-xs font-bold ${actionCount > 0 ? "text-amber-900" : "text-neutral-500"}`}>
+              Perlu tindakan
+            </span>
+            {actionCount > 0 && <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-ping" />}
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-3xl font-black text-amber-900">{actionCount}</span>
+            <span className={`text-3xl font-black ${actionCount > 0 ? "text-amber-900" : "text-[#1A1A1A]"}`}>
+              {actionCount}
+            </span>
             <span className="text-[11px] font-bold text-amber-800">
               Persetujuan & kirim
             </span>
@@ -154,185 +173,199 @@ export default function SellerConsignmentsPage() {
         </div>
       </div>
 
-      {/* Cream Alert Banner */}
-      <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 sm:p-5 mb-8 flex items-start gap-3.5 shadow-xs">
-        <AlertCircle className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
-        <div className="text-xs sm:text-sm text-neutral-800 leading-relaxed">
-          <strong className="text-black font-bold">4 barang butuh tindakanmu — </strong>
-          Tinjau hasil inspeksi MX Master 3S, kirim Akko setelah membaca instruksi, lengkapi foto Keychron C1, dan bahas pengembalian AOC.
+      {/* Action Banner (only if actionCount > 0) */}
+      {actionCount > 0 && (
+        <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 sm:p-5 mb-8 flex items-start gap-3.5 shadow-xs">
+          <AlertCircle className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+          <div className="text-xs sm:text-sm text-neutral-800 leading-relaxed">
+            <strong className="text-black font-bold">
+              {actionCount} barang butuh tindakanmu —{" "}
+            </strong>
+            Tinjau hasil inspeksi atau ikuti instruksi pengiriman gear ke Gudang Hingo.
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main List + Financial Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Filter + 9 Cards */}
+        {/* Left Column: Filter + Cards */}
         <div className="lg:col-span-8 flex flex-col gap-5">
           {/* Search & Filter pills */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              {[
+                { id: "ALL", label: "Semua", count: totalCount },
+                { id: "ACTION", label: "Perlu Tindakan", count: actionCount },
+                { id: "PROCESS", label: "Dalam Proses", count: consignments.filter(c => c.stage === "ONLINE_CHECK" || c.stage === "SHIPPING_TO_HINGO").length },
+                { id: "MARKETING", label: "Dipasarkan", count: marketingCount },
+                { id: "DONE", label: "Selesai", count: completedCount },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setActiveFilter(f.id)}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                    activeFilter === f.id
+                      ? "bg-[#1A1A1A] text-white"
+                      : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
+                  }`}
+                >
+                  <span>{f.label}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                      activeFilter === f.id
+                        ? "bg-[#FFC629] text-black"
+                        : "bg-white text-neutral-500"
+                    }`}
+                  >
+                    {f.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full sm:w-60">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari nama barang atau ID..."
-                className="w-full rounded-xl bg-[#F6F6F4] py-2.5 pl-9 pr-3 text-xs font-medium text-[#1A1A1A] outline-none border border-transparent focus:border-[#FFC629] focus:bg-white"
+                placeholder="Cari kode / model gear..."
+                className="w-full rounded-full bg-[#F6F6F4] py-1.5 pl-8 pr-3 text-xs text-[#1A1A1A] outline-none border border-neutral-200 focus:border-[#FFC629] focus:bg-white"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setActiveFilter("ALL")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  activeFilter === "ALL"
-                    ? "bg-[#1A1A1A] text-white"
-                    : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Semua · {totalCount}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("ACTION")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  activeFilter === "ACTION"
-                    ? "bg-[#FFC629] text-black border border-[#F59E0B]"
-                    : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Perlu tindakan · {actionCount}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("PROCESS")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  activeFilter === "PROCESS"
-                    ? "bg-[#1A1A1A] text-white"
-                    : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Diproses · 2
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("MARKETING")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  activeFilter === "MARKETING"
-                    ? "bg-[#1A1A1A] text-white"
-                    : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Dipasarkan · 1
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("BUYER")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  activeFilter === "BUYER"
-                    ? "bg-[#1A1A1A] text-white"
-                    : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Ke pembeli · 1
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter("DONE")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  activeFilter === "DONE"
-                    ? "bg-[#1A1A1A] text-white"
-                    : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Selesai · 1
-              </button>
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
             </div>
           </div>
 
-          {/* Consignment Items Cards */}
-          <div className="flex flex-col gap-4">
-            {filteredConsignments.map((item) => (
-              <div
-                key={item.id}
-                className="group rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs hover:border-[#FFC629] transition-all flex flex-col gap-4"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-100">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-neutral-500">
-                      {item.code}
-                    </span>
-                    <span className="text-neutral-300">·</span>
-                    <span className="text-xs text-neutral-400 font-medium">
-                      {item.category}
-                    </span>
-                  </div>
+          {/* Consignments List */}
+          {filteredConsignments.length === 0 ? (
+            <div className="rounded-3xl border border-neutral-200 bg-white p-12 text-center flex flex-col items-center justify-center gap-4">
+              <div className="h-16 w-16 rounded-3xl bg-[#FFFBEB] flex items-center justify-center text-amber-600 border border-[#FDE68A]">
+                <Layers className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-black text-[#1A1A1A]">
+                {consignments.length === 0
+                  ? "Belum ada barang titipan"
+                  : "Tidak ada barang pada filter ini"}
+              </h3>
+              <p className="text-xs text-neutral-500 max-w-sm">
+                {consignments.length === 0
+                  ? "Titipkan keyboard, mouse, headset, atau monitor kamu ke Hingo. Kami cek fungsi, foto studio, dan pasarkan aman dengan sistem escrow."
+                  : "Ganti filter atau bersihkan pencarian untuk melihat barang lainnya."}
+              </p>
+              {consignments.length === 0 ? (
+                <Link
+                  href="/seller/consignments/new"
+                  className="rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-6 py-3 text-xs font-bold text-black shadow-xs transition"
+                >
+                  Ajukan Titip Jual Sekarang
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("ALL");
+                    setSearchQuery("");
+                  }}
+                  className="text-xs font-bold text-amber-800 hover:underline"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredConsignments.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-4 hover:border-neutral-300 transition"
+                >
+                  {/* Top Bar of Card */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-neutral-100 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-neutral-800">
+                        {item.code}
+                      </span>
+                      <span className="text-neutral-300">·</span>
+                      <span className="text-neutral-500">{item.originCity}</span>
+                    </div>
 
-                  <StatusBadge label={item.badgeLabel} />
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="relative aspect-square w-16 sm:w-20 shrink-0 overflow-hidden rounded-2xl bg-[#F6F6F4] border border-neutral-200">
-                    <img
-                      src={item.photos[0]}
-                      alt={item.brandModel}
-                      className="h-full w-full object-cover"
+                    <StatusBadge
+                      label={item.badgeLabel}
+                      variant={
+                        item.stage === "INSPECTION_COMPLETED" ||
+                        item.stage === "ONLINE_CHECK_PASSED"
+                          ? "warning"
+                          : item.stage === "PAYOUT_COMPLETED"
+                          ? "verified"
+                          : item.stage === "PRICE_AGREED_MARKETING"
+                          ? "verified"
+                          : "neutral"
+                      }
                     />
                   </div>
 
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-sm sm:text-base font-bold text-[#1A1A1A] group-hover:text-amber-800 transition">
-                        {item.brandModel}
-                      </h3>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        {item.variantSpec}
+                  {/* Body Content */}
+                  <div className="flex gap-4 sm:gap-5">
+                    <img
+                      src={item.photos[0] || "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=300&auto=format&fit=crop"}
+                      alt={item.brandModel}
+                      className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-cover border border-neutral-200 shrink-0"
+                    />
+
+                    <div className="flex flex-1 flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                          {item.category}
+                        </span>
+                        <h3 className="text-sm sm:text-base font-bold text-[#1A1A1A]">
+                          {item.brandModel}
+                        </h3>
+                        <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1">
+                          {item.variantSpec} · {item.usageDuration}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-neutral-600 mt-2 font-medium">
+                        {item.statusSummary}
                       </p>
                     </div>
-
-                    <p className="text-xs text-neutral-700 font-medium mt-2">
-                      {item.statusSummary}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
-                  <div className="text-xs">
-                    {item.proposedPriceAfterInspection ? (
-                      <span>
-                        Usulan harga jual:{" "}
-                        <strong className="text-[#1A1A1A] font-bold">
-                          {formatRupiah(item.proposedPriceAfterInspection)}
-                        </strong>
-                      </span>
-                    ) : item.estimatedNetPayout ? (
-                      <span>
-                        Estimasi hasil bersih:{" "}
-                        <strong className="text-[#1A1A1A] font-bold">
-                          {formatRupiah(item.estimatedNetPayout)}
-                        </strong>
-                      </span>
-                    ) : item.actualNetPayout ? (
-                      <span className="text-[#16A34A] font-bold">
-                        Pencairan diterima: {formatRupiah(item.actualNetPayout)}
-                      </span>
-                    ) : (
-                      <span className="text-neutral-500">
-                        Ekspektasi awal: {formatRupiah(item.expectedPrice)}
-                      </span>
-                    )}
                   </div>
 
-                  <Link
-                    href={`/seller/consignments/${item.code}`}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-800 hover:text-black hover:underline"
-                  >
-                    <span>{item.actionPrompt}</span>
-                  </Link>
+                  {/* Card Footer */}
+                  <div className="pt-3 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-xs">
+                      {item.proposedPriceAfterInspection ? (
+                        <span>
+                          Usulan harga jual:{" "}
+                          <strong className="text-[#1A1A1A] font-bold">
+                            {formatRupiah(item.proposedPriceAfterInspection)}
+                          </strong>
+                        </span>
+                      ) : item.estimatedNetPayout ? (
+                        <span>
+                          Estimasi hasil bersih:{" "}
+                          <strong className="text-[#1A1A1A] font-bold">
+                            {formatRupiah(item.estimatedNetPayout)}
+                          </strong>
+                        </span>
+                      ) : (
+                        <span className="text-neutral-500">
+                          Ekspektasi awal: {formatRupiah(item.expectedPrice)}
+                        </span>
+                      )}
+                    </div>
+
+                    <Link
+                      href={`/seller/consignments/${item.code}`}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-amber-800 hover:text-black hover:underline"
+                    >
+                      <span>Lihat Detail →</span>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Financial Sidebar */}
@@ -348,10 +381,10 @@ export default function SellerConsignmentsPage() {
                 Estimasi belum dibayarkan
               </span>
               <span className="text-2xl font-black text-[#1A1A1A]">
-                Rp1.450.000
+                {formatRupiah(totalPending)}
               </span>
               <span className="text-[11px] text-neutral-500">
-                Dari Dell P2422H (Sedang dikirim ke pembeli)
+                {totalPending > 0 ? "Dalam proses transaksi escrow" : "Tidak ada dana tertahan"}
               </span>
             </div>
 
@@ -360,20 +393,19 @@ export default function SellerConsignmentsPage() {
                 Pencairan sudah diterima
               </span>
               <span className="text-2xl font-black text-[#16A34A]">
-                Rp450.000
+                {formatRupiah(totalDisbursed)}
               </span>
               <span className="text-[11px] text-neutral-500">
-                Dari SteelSeries Apex 3 (BCA Naya Putri)
+                {totalDisbursed > 0 ? "Telah ditransfer ke rekening bankmu" : "Belum ada pencairan"}
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => alert("Riwayat mutasi transfer rekening: 1 pencairan sukses pada 15 Okt 2026.")}
-              className="w-full text-center py-2.5 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition"
+            <Link
+              href="/seller/payouts"
+              className="w-full text-center py-2.5 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition block"
             >
               Lihat riwayat pencairan
-            </button>
+            </Link>
           </div>
 
           {/* Logistics Guidance */}

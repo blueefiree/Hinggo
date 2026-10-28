@@ -21,18 +21,22 @@ import { useHingoStore } from "@/lib/store";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user, order } = useHingoStore();
+  const { user, activeAddress, cart, clearCart, refreshOrders, showToast } = useHingoStore();
 
   const [selectedCourier, setSelectedCourier] = useState<"jne" | "jnt">("jne");
   const [shippingProtection, setShippingProtection] = useState<boolean>(true);
   const [paymentMethod, setPaymentMethod] = useState<"bca_va" | "qris">("bca_va");
   const [buyerNote, setBuyerNote] = useState<string>("Mohon bubble wrap tambahan, ya.");
+  const [isPaying, setIsPaying] = useState(false);
 
-  const itemPrice = 850000;
+  const selectedItems = cart.filter((c) => c.selected !== false);
+  const targetProduct = selectedItems[0]?.product || cart[0]?.product;
+
+  const itemPrice = targetProduct ? targetProduct.price : 0;
   const courierCost = selectedCourier === "jne" ? 18000 : 22000;
   const protectionCost = shippingProtection ? 5000 : 0;
   const serviceFee = 2500;
-  const totalAmount = itemPrice + courierCost + protectionCost + serviceFee;
+  const totalAmount = itemPrice > 0 ? itemPrice + courierCost + protectionCost + serviceFee : 0;
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -42,9 +46,56 @@ export default function CheckoutPage() {
     }).format(val);
   };
 
-  const handlePay = () => {
-    router.push("/orders/GRL-20261022-0842");
+  const handlePay = async () => {
+    if (!targetProduct) {
+      router.push("/cart");
+      return;
+    }
+
+    setIsPaying(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: targetProduct.id,
+          addressId: activeAddress?.id,
+          shippingCourier: selectedCourier === "jne" ? "JNE REG" : "J&T Reguler",
+          shippingCost: courierCost,
+          paymentMethod: paymentMethod === "bca_va" ? "BCA_VA" : "QRIS",
+          buyerNote,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.orderCode) {
+        await clearCart();
+        await refreshOrders();
+        showToast("Pesanan berhasil dibuat!");
+        router.push(`/orders/${data.orderCode}`);
+      } else {
+        alert(data.error || "Gagal membuat pesanan");
+      }
+    } catch (e: any) {
+      alert("Terjadi kesalahan sistem saat checkout");
+    } finally {
+      setIsPaying(false);
+    }
   };
+
+  if (!targetProduct) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-16 text-center">
+        <h2 className="text-xl font-bold">Tidak ada barang yang siap di-checkout</h2>
+        <p className="text-neutral-500 mt-2 text-sm">Silakan pilih barang di keranjang belanja terlebih dahulu.</p>
+        <Link
+          href="/cart"
+          className="mt-4 inline-block rounded-xl bg-[#FFC629] px-6 py-2.5 font-bold text-black"
+        >
+          Ke Keranjang
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
@@ -74,32 +125,31 @@ export default function CheckoutPage() {
           <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 shadow-xs flex flex-col gap-4">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-amber-600" />
+                <MapPin className="h-4 w-4 text-[#D97706]" />
                 <h2 className="text-sm font-bold text-[#1A1A1A]">
                   Alamat pengiriman
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={() => alert("Ubah alamat aktif")}
+              <Link
+                href="/account"
                 className="text-xs font-bold text-amber-700 hover:underline"
               >
-                Ubah
-              </button>
+                Ubah Alamat
+              </Link>
             </div>
 
-            <div className="flex flex-col gap-1.5 text-xs text-neutral-700">
+            <div className="text-xs">
               <div className="flex items-center gap-2">
-                <span className="rounded-md bg-[#FFFBEB] border border-[#FDE68A] px-2 py-0.5 text-[11px] font-bold text-amber-900">
-                  Rumah · Utama
+                <span className="rounded-full bg-[#FFFBEB] px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-[#FDE68A]">
+                  {activeAddress?.label || "Rumah · Utama"}
                 </span>
                 <strong className="text-neutral-900 text-sm">
-                  {user.address.recipientName}
+                  {activeAddress?.recipientName || user?.name || "Penerima"}
                 </strong>
-                <span className="text-neutral-500">· {user.address.phone}</span>
+                <span className="text-neutral-500">· {activeAddress?.phone || user?.phone || "-"}</span>
               </div>
               <p className="text-neutral-600 font-medium leading-relaxed mt-1">
-                {user.address.fullAddress}
+                {activeAddress?.fullAddress || "Jl. Sudirman No. 45, Kebayoran Baru, Jakarta Selatan"}
               </p>
             </div>
           </div>
@@ -112,19 +162,19 @@ export default function CheckoutPage() {
 
             <div className="flex items-center gap-4">
               <img
-                src="https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=300&auto=format&fit=crop"
-                alt="Keychron K2 V2"
+                src={targetProduct.images[0]}
+                alt={targetProduct.name}
                 className="h-16 w-16 rounded-xl object-cover border border-neutral-200"
               />
               <div className="flex-1">
                 <h3 className="text-sm font-bold text-[#1A1A1A]">
-                  Keychron K2 V2
+                  {targetProduct.name}
                 </h3>
                 <p className="text-xs text-neutral-500">
-                  Wireless mechanical keyboard · Brown switch · Berat 1 kg
+                  {targetProduct.subtitle} · {targetProduct.condition}
                 </p>
                 <span className="text-sm font-black text-[#1A1A1A] mt-1 block">
-                  Rp850.000 · 1 barang
+                  {formatRupiah(targetProduct.price)} · 1 barang
                 </span>
               </div>
             </div>
@@ -164,7 +214,7 @@ export default function CheckoutPage() {
                     <span className="text-xs font-black text-[#1A1A1A]">Rp18.000</span>
                   </div>
                   <p className="text-[11px] text-neutral-500 mt-1">
-                    Estimasi tiba 24–25 Okt 2026
+                    Estimasi tiba 1–2 hari kerja
                   </p>
                 </div>
                 <span className="mt-3 text-[10px] font-bold text-[#16A34A]">
@@ -186,7 +236,7 @@ export default function CheckoutPage() {
                     <span className="text-xs font-black text-[#1A1A1A]">Rp22.000</span>
                   </div>
                   <p className="text-[11px] text-neutral-500 mt-1">
-                    Estimasi tiba 24–26 Okt 2026
+                    Estimasi tiba 2–3 hari kerja
                   </p>
                 </div>
                 <span className="mt-3 text-[10px] font-medium text-neutral-400">
@@ -195,96 +245,103 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Toggle perlindungan */}
-            <label className="flex items-center justify-between rounded-xl bg-[#F6F6F4] p-3 text-xs cursor-pointer border border-neutral-200">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={shippingProtection}
-                  onChange={(e) => setShippingProtection(e.target.checked)}
-                  className="h-4 w-4 rounded-md accent-[#FFC629]"
-                />
-                <div>
-                  <strong className="text-[#1A1A1A] block">
-                    Perlindungan pengiriman (Rp5.000)
-                  </strong>
-                  <span className="text-[11px] text-neutral-500">
-                    Ganti rugi 100% jika paket hilang atau rusak saat perjalanan
+            {/* Perlindungan pengiriman checkbox */}
+            <label className="mt-2 flex items-start gap-3 rounded-2xl bg-[#F6F6F4] p-3.5 border border-neutral-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={shippingProtection}
+                onChange={(e) => setShippingProtection(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded-md accent-[#FFC629]"
+              />
+              <div className="flex-1 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#1A1A1A]">
+                    Proteksi Kerusakan Pengiriman Hingo
                   </span>
+                  <span className="font-bold text-neutral-800">Rp5.000</span>
                 </div>
+                <p className="text-[11px] text-neutral-500 mt-0.5">
+                  Klaim ganti rugi 100% jika terjadi benturan atau kerusakan saat proses logistik.
+                </p>
               </div>
-              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
             </label>
           </div>
 
           {/* Card 4: Metode Pembayaran */}
           <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 shadow-xs flex flex-col gap-4">
             <h2 className="text-sm font-bold text-[#1A1A1A] pb-3 border-b border-neutral-100">
-              Metode pembayaran resmi
+              Metode pembayaran resmi Hingo
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div
+            <div className="flex flex-col gap-2.5">
+              <label
                 onClick={() => setPaymentMethod("bca_va")}
-                className={`cursor-pointer rounded-2xl p-4 border transition flex flex-col justify-between ${
+                className={`flex items-center justify-between rounded-2xl p-4 border cursor-pointer transition ${
                   paymentMethod === "bca_va"
                     ? "border-[#FFC629] bg-[#FFFBEB] ring-2 ring-[#FFC629]/30"
-                    : "border-neutral-200 bg-white hover:border-neutral-300"
+                    : "border-neutral-200 hover:border-neutral-300"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700 font-black text-xs">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 font-black text-xs border border-blue-200">
                     BCA
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-[#1A1A1A]">
-                      BCA Virtual Account
+                      BCA Virtual Account (Otomatis)
                     </h4>
                     <p className="text-[11px] text-neutral-500">
-                      Verifikasi otomatis 24 jam
+                      Verifikasi instan tanpa bukti transfer
                     </p>
                   </div>
                 </div>
-              </div>
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === "bca_va"}
+                  onChange={() => setPaymentMethod("bca_va")}
+                  className="accent-[#FFC629]"
+                />
+              </label>
 
-              <div
+              <label
                 onClick={() => setPaymentMethod("qris")}
-                className={`cursor-pointer rounded-2xl p-4 border transition flex flex-col justify-between ${
+                className={`flex items-center justify-between rounded-2xl p-4 border cursor-pointer transition ${
                   paymentMethod === "qris"
                     ? "border-[#FFC629] bg-[#FFFBEB] ring-2 ring-[#FFC629]/30"
-                    : "border-neutral-200 bg-white hover:border-neutral-300"
+                    : "border-neutral-200 hover:border-neutral-300"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-neutral-800">
-                    <QrCode className="h-5 w-5" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 font-black text-xs border border-red-200">
+                    QRIS
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-[#1A1A1A]">QRIS Instan</h4>
+                    <h4 className="text-xs font-bold text-[#1A1A1A]">
+                      QRIS Semua Bank & E-Wallet
+                    </h4>
                     <p className="text-[11px] text-neutral-500">
-                      GoPay, OVO, ShopeePay, BCA
+                      Scan via GoPay, OVO, Dana, BCA Mobile, Livin
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Official payment warning */}
-            <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-3 flex items-center gap-2 text-xs text-amber-900">
-              <Info className="h-4 w-4 shrink-0 text-amber-700" />
-              <span>
-                <strong>Bayar hanya melalui Hingo:</strong> Transaksi di luar sistem resmi tidak
-                dilindungi garansi rekening bersama.
-              </span>
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === "qris"}
+                  onChange={() => setPaymentMethod("qris")}
+                  className="accent-[#FFC629]"
+                />
+              </label>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar: Ringkasan & Alur Pesanan */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
+        {/* Right Sidebar: Ringkasan Total & Tombol Bayar */}
+        <div className="lg:col-span-4">
           <div className="sticky top-28 rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-5">
             <h2 className="text-base font-black text-[#1A1A1A]">
-              Ringkasan pembayaran
+              Ringkasan pesanan
             </h2>
 
             <div className="flex flex-col gap-2.5 text-xs text-neutral-600 pb-4 border-b border-neutral-100">
@@ -295,19 +352,19 @@ export default function CheckoutPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Ongkir {selectedCourier === "jne" ? "JNE REG" : "J&T Reguler"}</span>
+                <span>Ongkir ({selectedCourier.toUpperCase()})</span>
                 <span className="font-semibold text-neutral-900">
                   {formatRupiah(courierCost)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Perlindungan pengiriman</span>
+                <span>Proteksi pengiriman</span>
                 <span className="font-semibold text-neutral-900">
                   {formatRupiah(protectionCost)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Biaya layanan</span>
+                <span>Biaya layanan escrow</span>
                 <span className="font-semibold text-neutral-900">
                   {formatRupiah(serviceFee)}
                 </span>
@@ -316,45 +373,27 @@ export default function CheckoutPage() {
 
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-bold text-[#1A1A1A]">Total pembayaran</span>
-              <span className="text-2xl font-black text-[#1A1A1A]">
+              <span className="text-xl font-black text-[#1A1A1A]">
                 {formatRupiah(totalAmount)}
               </span>
             </div>
 
             <button
               type="button"
+              disabled={isPaying}
               onClick={handlePay}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99]"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99] cursor-pointer"
             >
-              <span>Bayar {formatRupiah(totalAmount)}</span>
+              <span>{isPaying ? "Memproses..." : "Bayar Sekarang"}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
 
-            {/* Alur Pesanan */}
-            <div className="border-t border-neutral-100 pt-5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3">
-                Alur pesanan terjamin
-              </h4>
-              <div className="flex flex-col gap-2.5 text-xs text-neutral-600">
-                <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#FFC629] text-[9px] font-black text-black">
-                    1
-                  </span>
-                  <span>Bayar pesanan resmi melalui Hingo</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[9px] font-bold text-neutral-700">
-                    2
-                  </span>
-                  <span>Tim Hingo kemas rapi dan kirim dengan bubble wrap</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[9px] font-bold text-neutral-700">
-                    3
-                  </span>
-                  <span>Paket tiba, kamu cek barang lalu konfirmasi terima</span>
-                </div>
-              </div>
+            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-3 text-[11px] text-amber-900 flex items-start gap-2">
+              <ShieldCheck className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+              <span>
+                <strong>Garansi Uang Kembali:</strong> Dana belanjaanmu disimpan di rekening bersama Hingo.
+                Penjual baru menerima dana setelah kamu selesai menguji fungsi gear selama 48 jam.
+              </span>
             </div>
           </div>
         </div>

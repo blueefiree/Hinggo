@@ -24,14 +24,17 @@ import { useHingoStore } from "@/lib/store";
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { addToCart } = useHingoStore();
+  const { user, addToCart, isInWishlist, toggleWishlist, cart } = useHingoStore();
 
   const slug = params?.slug as string;
   const product: Product =
     PRODUCTS.find((p) => p.slug === slug) || PRODUCTS[0];
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const isFavorite = isInWishlist(product.id);
+  const isAlreadyInCart = cart.some(
+    (item) => item.product.id === product.id || (item as any).productId === product.id
+  );
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -41,9 +44,24 @@ export default function ProductDetailPage() {
     }).format(val);
   };
 
-  const handleAddToCart = () => {
-    addToCart(product);
-    router.push("/cart");
+  const handleAddToCart = async () => {
+    if (!user) {
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/product/${product.slug}`)}`);
+      return;
+    }
+    const res = await addToCart(product);
+    if (res.alreadyInCart) {
+      router.push("/cart");
+    }
+  };
+
+  const handleChatAdmin = (e: React.MouseEvent) => {
+    if (!user) {
+      e.preventDefault();
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/chat/product?productId=${product.id}`)}`);
+    } else {
+      router.push(`/chat/product?productId=${product.id}`);
+    }
   };
 
   return (
@@ -85,8 +103,8 @@ export default function ProductDetailPage() {
               <div className="absolute top-4 right-4 z-10 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsFavorite(!isFavorite)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-xs backdrop-blur-xs hover:bg-white text-neutral-700 hover:text-red-500 transition"
+                  onClick={() => toggleWishlist(product)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-xs backdrop-blur-xs hover:bg-white text-neutral-700 hover:text-red-500 transition cursor-pointer"
                 >
                   <Heart
                     className={`h-5 w-5 ${
@@ -252,20 +270,29 @@ export default function ProductDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-3">
-              <Link
-                href="/chat/product"
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-neutral-300 py-3.5 text-xs sm:text-sm font-bold text-neutral-800 hover:bg-neutral-50 transition"
+              <button
+                type="button"
+                onClick={handleChatAdmin}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-neutral-300 py-3.5 text-xs sm:text-sm font-bold text-neutral-800 hover:bg-neutral-50 transition cursor-pointer"
               >
                 <MessageSquare className="h-4 w-4" />
                 <span>Chat admin</span>
-              </Link>
+              </button>
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99]"
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3.5 text-xs sm:text-sm font-bold shadow-xs transition active:scale-[0.99] cursor-pointer ${
+                  isAlreadyInCart
+                    ? "bg-[#1A1A1A] text-[#FFC629] hover:bg-neutral-800"
+                    : "bg-[#FFC629] hover:bg-[#FFC420] text-[#1A1A1A]"
+                }`}
               >
                 <ShoppingBag className="h-4 w-4" />
-                <span>Tambah keranjang</span>
+                <span>
+                  {isAlreadyInCart
+                    ? "Sudah di keranjang — Lihat Keranjang"
+                    : "Tambah keranjang"}
+                </span>
               </button>
             </div>
 
@@ -280,12 +307,13 @@ export default function ProductDetailPage() {
                   <p className="text-[11px] text-neutral-500">Tim pengelola · Aktif 5 menit lalu</p>
                 </div>
               </div>
-              <Link
-                href="/chat/product"
-                className="text-xs font-bold text-amber-700 hover:underline"
+              <button
+                type="button"
+                onClick={handleChatAdmin}
+                className="text-xs font-bold text-amber-700 hover:underline cursor-pointer"
               >
                 Chat admin
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -300,18 +328,23 @@ export default function ProductDetailPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/chat/product"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700"
+          <button
+            type="button"
+            onClick={handleChatAdmin}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 cursor-pointer"
           >
             <MessageSquare className="h-4 w-4" />
-          </Link>
+          </button>
           <button
             type="button"
             onClick={handleAddToCart}
-            className="rounded-xl bg-[#FFC629] px-4 py-2.5 text-xs font-bold text-black shadow-xs"
+            className={`rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs cursor-pointer ${
+              isAlreadyInCart
+                ? "bg-[#1A1A1A] text-[#FFC629]"
+                : "bg-[#FFC629] text-black"
+            }`}
           >
-            Tambah keranjang
+            {isAlreadyInCart ? "Lihat Keranjang" : "Tambah keranjang"}
           </button>
         </div>
       </div>

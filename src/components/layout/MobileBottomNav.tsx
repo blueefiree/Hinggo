@@ -2,11 +2,28 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, Compass, Package, User } from "lucide-react";
+import { useHingoStore } from "@/lib/store";
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, orders } = useHingoStore();
+
+  // If in chat fullscreen on mobile, do not show bottom nav so input is never blocked
+  if (pathname.startsWith("/chat/")) {
+    return null;
+  }
+
+  const checkingCount = orders.filter((o) => o.orderStatus === "DELIVERED_CHECKING").length;
+
+  const handleProtectedClick = (e: React.MouseEvent, targetPath: string) => {
+    if (!user) {
+      e.preventDefault();
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(targetPath)}`);
+    }
+  };
 
   const navItems = [
     {
@@ -14,26 +31,32 @@ export default function MobileBottomNav() {
       href: "/",
       icon: Home,
       isActive: pathname === "/",
+      isProtected: false,
     },
     {
       label: "Jelajah",
       href: "/catalog",
       icon: Compass,
       isActive: pathname === "/catalog" || pathname.startsWith("/product"),
+      isProtected: false,
     },
     {
       label: "Transaksi",
-      href: "/orders/GRL-20261022-0842",
+      href: user ? "/orders" : "/auth/login?callbackUrl=/orders",
       icon: Package,
       isActive: pathname.startsWith("/orders") || pathname === "/checkout" || pathname === "/cart",
-      badge: "1",
+      badge: user && checkingCount > 0 ? String(checkingCount) : undefined,
+      isProtected: true,
+      targetPath: "/orders",
     },
     {
       label: "Akun",
-      href: "/seller/consignments",
+      href: user ? "/account" : "/auth/login?callbackUrl=/account",
       icon: User,
-      isActive: pathname.startsWith("/seller") || pathname.startsWith("/auth"),
-      indicator: true,
+      isActive: pathname === "/account" || pathname.startsWith("/seller") || pathname.startsWith("/auth"),
+      indicator: user && user.kycStatus === "PENDING_REVIEW",
+      isProtected: true,
+      targetPath: "/account",
     },
   ];
 
@@ -45,6 +68,11 @@ export default function MobileBottomNav() {
           <Link
             key={item.label}
             href={item.href}
+            onClick={(e) => {
+              if (item.isProtected && item.targetPath) {
+                handleProtectedClick(e, item.targetPath);
+              }
+            }}
             className={`relative flex flex-1 flex-col items-center justify-center py-1 transition ${
               item.isActive
                 ? "text-[#1A1A1A] font-bold"

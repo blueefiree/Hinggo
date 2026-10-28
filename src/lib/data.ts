@@ -68,6 +68,49 @@ export interface ConsignmentItem {
   };
 }
 
+export interface DisputeReport {
+  category: string;
+  description: string;
+  evidenceFiles: string[];
+  createdAt: string;
+  status: "UNDER_REVIEW" | "RESOLVED";
+}
+
+export interface UserAddress {
+  id: string;
+  label: string;
+  isPrimary: boolean;
+  recipientName: string;
+  phone: string;
+  fullAddress: string;
+  city: string;
+  postalCode: string;
+}
+
+export interface UserBankAccount {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  isPrimary: boolean;
+}
+
+export interface PayoutRecord {
+  id: string;
+  referenceNumber: string;
+  consignmentCode: string;
+  itemName: string;
+  grossAmount: number;
+  consignmentFee: number;
+  netDisbursed: number;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  senderAccount: string;
+  disbursedAt: string;
+  status: "SUCCESS" | "PROCESSING";
+}
+
 export interface OrderItem {
   id: string;
   orderCode: string;
@@ -94,6 +137,7 @@ export interface OrderItem {
     | "ISSUE_REPORTED";
   inspectionDeadline: string;
   createdAt: string;
+  dispute?: DisputeReport;
   timeline: {
     step: number;
     title: string;
@@ -712,6 +756,170 @@ export const INITIAL_ORDER: OrderItem = {
     },
   ],
 };
+
+export const INITIAL_ADDRESSES: UserAddress[] = [
+  {
+    id: "addr-1",
+    label: "Rumah · Utama",
+    isPrimary: true,
+    recipientName: "Naya Putri",
+    phone: "0812 3456 7890",
+    fullAddress: "Jl. Melati No. 18, RT 003/RW 005, Tebet, Jakarta Selatan, DKI Jakarta",
+    city: "Jakarta Selatan",
+    postalCode: "12810",
+  },
+  {
+    id: "addr-2",
+    label: "Bandung (Asal Konsinyasi)",
+    isPrimary: false,
+    recipientName: "Naya Putri",
+    phone: "0812 3456 7890",
+    fullAddress: "Jl. Dago No. 120, Coblong, Kota Bandung, Jawa Barat",
+    city: "Bandung",
+    postalCode: "40135",
+  },
+];
+
+export const INITIAL_BANK_ACCOUNTS: UserBankAccount[] = [
+  {
+    id: "bank-1",
+    bankName: "BCA (Bank Central Asia)",
+    accountNumber: "4370192831",
+    accountHolder: "Naya Putri",
+    isPrimary: true,
+  },
+  {
+    id: "bank-2",
+    bankName: "Mandiri",
+    accountNumber: "1310098273641",
+    accountHolder: "Naya Putri",
+    isPrimary: false,
+  },
+];
+
+export const INITIAL_PAYOUTS: PayoutRecord[] = [
+  {
+    id: "pay-1",
+    referenceNumber: "HGO-TRF-20261020-0081",
+    consignmentCode: "HG-261002-036",
+    itemName: "SteelSeries Apex 3",
+    grossAmount: 500000,
+    consignmentFee: 50000,
+    netDisbursed: 450000,
+    bankName: "BCA",
+    accountNumber: "4370192831",
+    accountHolder: "Naya Putri",
+    senderAccount: "PT Hingo Niaga Digital - BCA 0881928301",
+    disbursedAt: "20 Okt 2026, 15:32:10 WIB",
+    status: "SUCCESS",
+  },
+];
+
+export const INITIAL_ORDERS: OrderItem[] = [
+  INITIAL_ORDER,
+  {
+    id: "ord-419",
+    orderCode: "GRL-20260914-0419",
+    buyerName: "Naya Putri",
+    buyerPhone: "0812 3456 7890",
+    buyerAddress: "Jl. Melati No. 18, RT 003/RW 005, Tebet, Jakarta Selatan, DKI Jakarta 12810",
+    product: PRODUCTS[5], // Razer DeathAdder V3
+    itemPrice: 1099000,
+    shippingCourier: "JNE REG",
+    shippingCost: 18000,
+    shippingProtection: 5000,
+    serviceFee: 2500,
+    totalAmount: 1124500,
+    paymentMethod: "BCA Virtual Account",
+    buyerNote: "Pakai kardus tebal ya min.",
+    trackingNumber: "JNE1409040419",
+    escrowStatus: "RELEASED_TO_SELLER",
+    orderStatus: "COMPLETED",
+    inspectionDeadline: "18 Sep 2026, 17.00 WIB",
+    createdAt: "14 September 2026",
+    timeline: [
+      {
+        step: 1,
+        title: "Pembayaran diterima",
+        timestamp: "14 Sep 2026 · 11.20 WIB",
+        detail: "Rp1.124.500 dibayar via BCA Virtual Account.",
+        status: "completed",
+      },
+      {
+        step: 2,
+        title: "Barang dikirim tim Hingo",
+        timestamp: "15 Sep 2026 · 10.00 WIB",
+        detail: "Resi JNE REG: JNE1409040419.",
+        status: "completed",
+      },
+      {
+        step: 3,
+        title: "Paket tiba — konfirmasi terima",
+        timestamp: "16 Sep 2026 · 14.10 WIB",
+        detail: "Diterima dan dikonfirmasi sesuai oleh Naya Putri.",
+        status: "completed",
+      },
+      {
+        step: 4,
+        title: "Pencairan ke pemilik selesai",
+        timestamp: "16 Sep 2026 · 14.15 WIB",
+        detail: "Dana diteruskan ke penjual.",
+        status: "completed",
+      },
+    ],
+  },
+  {
+    id: "ord-1102",
+    orderCode: "GRL-20261028-1102",
+    buyerName: "Naya Putri",
+    buyerPhone: "0812 3456 7890",
+    buyerAddress: "Jl. Melati No. 18, RT 003/RW 005, Tebet, Jakarta Selatan, DKI Jakarta 12810",
+    product: PRODUCTS[1], // Logitech MX Master 3
+    itemPrice: 650000,
+    shippingCourier: "J&T Express",
+    shippingCost: 22000,
+    shippingProtection: 5000,
+    serviceFee: 2500,
+    totalAmount: 679500,
+    paymentMethod: "BCA Virtual Account",
+    buyerNote: "Warna Graphite ya.",
+    trackingNumber: "Menunggu pembayaran",
+    escrowStatus: "HELD_BY_HINGO",
+    orderStatus: "AWAITING_PAYMENT",
+    inspectionDeadline: "29 Okt 2026, 12.00 WIB",
+    createdAt: "28 Oktober 2026",
+    timeline: [
+      {
+        step: 1,
+        title: "Menunggu pembayaran",
+        timestamp: "28 Okt 2026 · 11.02 WIB",
+        detail: "Tagihan Rp679.500 menunggu pembayaran BCA VA.",
+        status: "current",
+      },
+      {
+        step: 2,
+        title: "Barang dikirim tim Hingo",
+        timestamp: "Menunggu bayar",
+        detail: "Akan segera diproses tim gudang.",
+        status: "upcoming",
+      },
+      {
+        step: 3,
+        title: "Paket tiba — cek barang",
+        timestamp: "-",
+        detail: "Dana ditahan Hingo selama 24 jam pengujian.",
+        status: "upcoming",
+      },
+      {
+        step: 4,
+        title: "Konfirmasi & pencairan",
+        timestamp: "-",
+        detail: "Hasil penjualan diteruskan.",
+        status: "upcoming",
+      },
+    ],
+  },
+];
 
 export const INITIAL_CHAT_THREADS: ChatThread[] = [
   {

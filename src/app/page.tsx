@@ -60,7 +60,7 @@ export default function Home() {
                   Belanja sekarang
                 </Link>
                 <Link
-                  href="/seller/consignments/new"
+                  href="/how-it-works"
                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm sm:text-base font-bold text-[#1A1A1A] shadow-md transition hover:bg-neutral-50 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Cara titip jual

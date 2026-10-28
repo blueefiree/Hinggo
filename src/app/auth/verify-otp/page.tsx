@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -11,13 +11,33 @@ import {
   Sparkles,
   Phone,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
+import { useHingoStore } from "@/lib/store";
 
-export default function VerifyOtpPage() {
+function VerifyOtpContent() {
   const router = useRouter();
-  const [otp, setOtp] = useState(["4", "8", "2", "1", "", ""]);
-  const [countdown, setCountdown] = useState(42);
+  const searchParams = useSearchParams();
+  const targetParam = searchParams.get("target") || "+62 812 3456 7890";
+  const devOtpParam = searchParams.get("devOtp") || "123456";
+
+  const { setUser, refreshSession, showToast } = useHingoStore();
+
+  const [target, setTarget] = useState(targetParam);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [countdown, setCountdown] = useState(60);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activeOtpCode, setActiveOtpCode] = useState<string>(devOtpParam);
+
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Pre-fill with first digits if demo
+  useEffect(() => {
+    if (activeOtpCode && activeOtpCode.length === 6) {
+      setOtp(activeOtpCode.split(""));
+    }
+  }, [activeOtpCode]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -27,6 +47,7 @@ export default function VerifyOtpPage() {
   }, [countdown]);
 
   const handleChange = (index: number, value: string) => {
+    setErrorMsg(null);
     if (value.length > 1) {
       value = value.slice(-1);
     }
@@ -46,13 +67,93 @@ export default function VerifyOtpPage() {
     }
   };
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    router.push("/auth/verify-identity");
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length > 0) {
+      const newOtp = [...otp];
+      for (let i = 0; i < 6; i++) {
+        newOtp[i] = pasted[i] || "";
+      }
+      setOtp(newOtp);
+      const nextIndex = Math.min(pasted.length, 5);
+      inputRefs.current[nextIndex]?.focus();
+    }
+  };
+
+  const handleResend = async () => {
+    setCountdown(60);
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target }),
+      });
+      const data = await res.json();
+      if (data.otpCode) {
+        setActiveOtpCode(data.otpCode);
+        setOtp(data.otpCode.split(""));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const fullOtp = otp.join("");
+    if (fullOtp.length !== 6) {
+      setErrorMsg("Mohon masukkan 6 digit kode OTP secara lengkap");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target, otpCode: fullOtp }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        await refreshSession();
+        showToast("Login berhasil!");
+        const callbackUrl = searchParams.get("callbackUrl") || "/";
+        router.push(callbackUrl);
+      } else {
+        setErrorMsg(data.error || "Kode OTP salah atau tidak cocok");
+      }
+    } catch (err: any) {
+      setErrorMsg("Gagal menghubungi server database");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:py-14">
+      {/* Dev OTP Helper */}
+      <div className="mb-6 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-xs flex items-center justify-between text-neutral-800">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-amber-700" />
+          <span>
+            <strong>Dev Test OTP Database:</strong> Kode aktif di database: <code className="font-mono font-bold text-amber-900 bg-amber-200/60 px-2 py-0.5 rounded text-sm">{activeOtpCode}</code>
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOtp(activeOtpCode.split(""))}
+          className="text-amber-800 font-bold hover:underline"
+        >
+          Isi Otomatis
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* Left Editorial Panel */}
         <div className="hidden lg:flex lg:col-span-6 flex-col gap-6 rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-10">
@@ -73,7 +174,7 @@ export default function VerifyOtpPage() {
           <div className="rounded-2xl bg-white p-5 shadow-xs border border-neutral-100 flex flex-col gap-3">
             <div className="flex items-center gap-2 text-xs font-bold text-[#16A34A]">
               <ShieldCheck className="h-4 w-4" />
-              <span>Verifikasi WhatsApp Terenkripsi</span>
+              <span>Verifikasi Database Terenkripsi</span>
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
               Kami tidak pernah meminta PIN kartu ATM atau kode rahasia melalui panggilan
@@ -87,10 +188,10 @@ export default function VerifyOtpPage() {
           <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-10 shadow-xs">
             <div className="flex flex-col gap-1.5 mb-6">
               <h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">
-                Verifikasi nomor HP
+                Verifikasi kode OTP
               </h1>
               <p className="text-sm text-neutral-500">
-                Masukkan 6 digit kode yang kami kirim melalui WhatsApp.
+                Masukkan 6 digit kode yang tersimpan di database untuk target ini.
               </p>
             </div>
 
@@ -98,90 +199,100 @@ export default function VerifyOtpPage() {
             <div className="flex items-center justify-between rounded-xl bg-[#F6F6F4] px-4 py-3 mb-6 border border-neutral-200">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-                  <Phone className="h-4 w-4" />
+                  <Phone className="h-3.5 w-3.5" />
                 </div>
-                <span className="text-sm font-bold text-[#1A1A1A]">
-                  +62 812 3456 7890
+                <span className="text-xs sm:text-sm font-bold text-[#1A1A1A]">
+                  {target}
                 </span>
               </div>
               <Link
                 href="/auth/login"
-                className="text-xs font-bold text-amber-700 hover:text-amber-800 hover:underline"
+                className="text-xs font-bold text-neutral-500 hover:text-black underline"
               >
                 Ubah
               </Link>
             </div>
 
-            {/* 6-box OTP Form */}
+            {errorMsg && (
+              <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-medium">
+                {errorMsg}
+              </div>
+            )}
+
+            {/* Form OTP 6 Boxes */}
             <form onSubmit={handleVerify} className="flex flex-col gap-6">
-              <div className="flex justify-between gap-2 sm:gap-3">
-                {otp.map((digit, index) => (
+              <div
+                className="flex items-center justify-between gap-2 sm:gap-3"
+                onPaste={handlePaste}
+              >
+                {otp.map((digit, idx) => (
                   <input
-                    key={index}
+                    key={idx}
                     ref={(el) => {
-                      inputRefs.current[index] = el;
+                      inputRefs.current[idx] = el;
                     }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
                     value={digit}
-                    onChange={(e) => handleChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    className="h-12 sm:h-14 w-10 sm:w-12 rounded-xl border border-neutral-300 text-center text-xl font-black text-[#1A1A1A] outline-none transition focus:border-[#FFC629] focus:bg-[#FFFBEB] focus:ring-2 focus:ring-[#FFC629]/40"
+                    onChange={(e) => handleChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    className="h-12 w-11 sm:h-14 sm:w-13 rounded-xl border border-neutral-300 text-center text-lg sm:text-xl font-black text-[#1A1A1A] outline-none focus:border-[#FFC629] focus:ring-2 focus:ring-[#FFC629]/30 transition"
                   />
                 ))}
               </div>
 
-              {/* Submit CTA */}
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99]"
-              >
-                <span>Verifikasi & lanjutkan</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </form>
-
-            {/* Resend & Countdown */}
-            <div className="mt-6 flex flex-col items-center gap-2 text-center text-xs text-neutral-500">
-              {countdown > 0 ? (
-                <div className="flex items-center gap-1.5 text-neutral-600 font-medium">
-                  <Clock className="h-3.5 w-3.5 text-amber-600" />
-                  <span>
-                    Belum menerima kode? Kirim ulang dalam{" "}
-                    <strong className="text-neutral-900">
-                      00:{countdown < 10 ? `0${countdown}` : countdown}
-                    </strong>
-                  </span>
+              {/* Countdown / Resend */}
+              <div className="flex items-center justify-between text-xs text-neutral-500">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Clock className="h-3.5 w-3.5" />
+                  {countdown > 0 ? (
+                    <span>Kirim ulang dalam {countdown} detik</span>
+                  ) : (
+                    <span className="text-neutral-700 font-bold">Waktu habis</span>
+                  )}
                 </div>
-              ) : (
+
                 <button
                   type="button"
-                  onClick={() => setCountdown(42)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:underline"
+                  disabled={countdown > 0}
+                  onClick={handleResend}
+                  className="inline-flex items-center gap-1 font-bold text-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed hover:underline"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Kirim ulang kode OTP sekarang
+                  <RotateCcw className="h-3 w-3" />
+                  Kirim ulang OTP
                 </button>
-              )}
-              <span className="text-[11px] text-neutral-400">
-                Kode berlaku selama 5 menit
-              </span>
-            </div>
-
-            {/* Routing Guidance Box */}
-            <div className="mt-6 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-xs text-neutral-700 leading-relaxed">
-              <strong className="text-black block mb-1">
-                Alur setelah verifikasi berhasil:
-              </strong>
-              <div className="flex flex-col gap-1 text-[11px]">
-                <p>• <strong>Akun lama:</strong> Langsung kembali ke keranjang / belanja.</p>
-                <p>• <strong>Akun baru:</strong> Verifikasi identitas (KYC) untuk pencairan dana & perlindungan transaksi.</p>
               </div>
-            </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99] disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Memvalidasi ke database...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Verifikasi & lanjutkan</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center text-xs text-neutral-400">Memuat verifikasi OTP...</div>}>
+      <VerifyOtpContent />
+    </Suspense>
   );
 }

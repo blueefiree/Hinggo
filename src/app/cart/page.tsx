@@ -9,17 +9,21 @@ import {
   ArrowRight,
   ArrowLeft,
   Info,
-  CheckSquare,
-  Square,
   AlertCircle,
+  ShoppingBag,
 } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
 
 export default function CartPage() {
   const router = useRouter();
-  const { cart, removeFromCart } = useHingoStore();
-  const [selectAll, setSelectAll] = useState(true);
+  const {
+    cart,
+    removeFromCart,
+    toggleCartItemSelection,
+    toggleSelectAllCart,
+    clearCart,
+  } = useHingoStore();
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -29,17 +33,32 @@ export default function CartPage() {
     }).format(val);
   };
 
-  const itemPrice = cart.reduce(
+  const allSelected = cart.length > 0 && cart.every((c) => c.selected !== false);
+  const selectedItems = cart.filter((c) => c.selected !== false);
+
+  const itemPrice = selectedItems.reduce(
     (acc, curr) => acc + curr.product.price * curr.quantity,
     0
   );
-  const shippingCost = cart.length > 0 ? 18000 : 0;
-  const shippingProtection = cart.length > 0 ? 5000 : 0;
-  const serviceFee = cart.length > 0 ? 2500 : 0;
+  const shippingCost = selectedItems.length > 0 ? 18000 : 0;
+  const shippingProtection = selectedItems.length > 0 ? 5000 : 0;
+  const serviceFee = selectedItems.length > 0 ? 2500 : 0;
   const totalAmount =
     itemPrice > 0
       ? itemPrice + shippingCost + shippingProtection + serviceFee
       : 0;
+
+  const handleSelectAllToggle = () => {
+    toggleSelectAllCart(!allSelected);
+  };
+
+  const handleDeleteSelected = () => {
+    if (confirm("Hapus semua barang yang dipilih dari keranjang?")) {
+      selectedItems.forEach((item) => {
+        removeFromCart(item.id || item.product.id);
+      });
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
@@ -65,120 +84,111 @@ export default function CartPage() {
               <label className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#1A1A1A] cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={selectAll}
-                  onChange={(e) => setSelectAll(e.target.checked)}
-                  className="h-4 w-4 rounded-md accent-[#FFC629]"
+                  checked={allSelected}
+                  onChange={handleSelectAllToggle}
+                  className="h-4 w-4 rounded-md accent-[#FFC629] cursor-pointer"
                 />
                 <span>Pilih semua ({cart.length} barang)</span>
               </label>
 
               <button
                 type="button"
-                onClick={() => removeFromCart(cart[0].product.id)}
-                className="text-xs font-semibold text-neutral-400 hover:text-red-600 transition"
+                onClick={handleDeleteSelected}
+                className="text-xs font-semibold text-neutral-400 hover:text-red-600 transition cursor-pointer"
               >
-                Hapus
+                Hapus ({selectedItems.length})
               </button>
             </div>
 
             {/* Cart item cards */}
-            {cart.map((item) => (
-              <div
-                key={item.product.id}
-                className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-4"
-              >
-                {/* Store origin badge */}
-                <div className="flex items-center justify-between pb-3 border-b border-neutral-100 text-xs">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectAll}
-                      onChange={() => setSelectAll(!selectAll)}
-                      className="h-4 w-4 rounded-md accent-[#FFC629]"
-                    />
-                    <StatusBadge
-                      label="Dikelola Hingo · Jakarta Selatan"
-                      variant="verified"
-                      size="sm"
-                    />
-                  </div>
-                  <span className="text-neutral-400 font-medium">Stok Preloved: 1 unit</span>
-                </div>
+            {cart.map((item) => {
+              const isSelected = item.selected !== false;
+              const itemId = item.id || item.product.id;
 
-                <div className="flex gap-4 sm:gap-6">
-                  {/* Thumbnail */}
-                  <div className="relative aspect-square w-20 sm:w-28 shrink-0 overflow-hidden rounded-2xl bg-[#F6F6F4] border border-neutral-200">
-                    <img
-                      src={item.product.images[0]}
-                      alt={item.product.name}
-                      className="h-full w-full object-cover"
-                    />
+              return (
+                <div
+                  key={itemId}
+                  className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-4"
+                >
+                  {/* Store origin badge */}
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-100 text-xs">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleCartItemSelection(itemId, !isSelected)}
+                        className="h-4 w-4 rounded-md accent-[#FFC629] cursor-pointer"
+                      />
+                      <StatusBadge
+                        label="Dikelola Hingo · Jakarta Selatan"
+                        variant="verified"
+                        size="sm"
+                      />
+                    </div>
+                    <span className="text-neutral-400 font-medium">Stok Preloved: 1 unit</span>
                   </div>
 
-                  {/* Info */}
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                        {item.product.brand}
-                      </span>
-                      <h3 className="text-sm sm:text-base font-bold text-[#1A1A1A]">
-                        {item.product.name}
-                      </h3>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        {item.product.condition} · {item.product.switchOrVariant}
-                      </p>
+                  <div className="flex gap-4 sm:gap-6">
+                    {/* Thumbnail */}
+                    <div className="relative aspect-square w-20 sm:w-28 shrink-0 overflow-hidden rounded-2xl bg-[#F6F6F4] border border-neutral-200">
+                      <img
+                        src={item.product.images[0]}
+                        alt={item.product.name}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-base sm:text-lg font-black text-[#1A1A1A]">
-                        {formatRupiah(item.product.price)}
-                      </span>
+                    {/* Info */}
+                    <div className="flex flex-1 flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                          {item.product.brand}
+                        </span>
+                        <h3 className="text-sm sm:text-base font-bold text-[#1A1A1A]">
+                          {item.product.name}
+                        </h3>
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          {item.product.condition} · {item.product.switchOrVariant}
+                        </p>
+                      </div>
 
-                      {/* Stepper (disabled because preloved stock is 1) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center rounded-xl bg-[#F6F6F4] border border-neutral-200 p-1">
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-base sm:text-lg font-black text-[#1A1A1A]">
+                          {formatRupiah(item.product.price)}
+                        </span>
+
+                        {/* Stepper (fixed to 1 because preloved stock is 1) */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center rounded-xl bg-[#F6F6F4] border border-neutral-200 p-1">
+                            <span className="px-3 text-xs font-bold text-[#1A1A1A]">
+                              1 unit
+                            </span>
+                          </div>
+
                           <button
                             type="button"
-                            disabled
-                            className="h-7 w-7 rounded-lg text-neutral-400 opacity-50 cursor-not-allowed font-bold"
+                            onClick={() => removeFromCart(itemId)}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 hover:text-red-500 transition cursor-pointer"
+                            title="Hapus barang"
                           >
-                            -
-                          </button>
-                          <span className="px-3 text-xs font-bold text-[#1A1A1A]">
-                            1
-                          </span>
-                          <button
-                            type="button"
-                            disabled
-                            className="h-7 w-7 rounded-lg text-neutral-400 opacity-50 cursor-not-allowed font-bold"
-                          >
-                            +
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 hover:text-red-500 transition"
-                          title="Hapus barang"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Preloved notice */}
-                <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-3 flex items-center gap-2 text-xs text-amber-900">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-700" />
-                  <span>
-                    Barang preloved hanya tersedia <strong>1 unit</strong>. Selesaikan checkout
-                    sebelum dibeli antusias lain.
-                  </span>
+                  {/* Preloved notice */}
+                  <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-3 flex items-center gap-2 text-xs text-amber-900">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-700" />
+                    <span>
+                      Barang preloved hanya tersedia <strong>1 unit</strong>. Selesaikan checkout
+                      sebelum dibeli antusias lain.
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Trust box & continue shopping */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-[#F6F6F4] p-4 text-xs text-neutral-600">
@@ -205,7 +215,7 @@ export default function CartPage() {
 
               <div className="flex flex-col gap-2.5 text-xs text-neutral-600 pb-4 border-b border-neutral-100">
                 <div className="flex justify-between">
-                  <span>Harga barang ({cart.length})</span>
+                  <span>Harga barang ({selectedItems.length})</span>
                   <span className="font-semibold text-neutral-900">
                     {formatRupiah(itemPrice)}
                   </span>
@@ -239,10 +249,15 @@ export default function CartPage() {
 
               <button
                 type="button"
+                disabled={selectedItems.length === 0}
                 onClick={() => router.push("/checkout")}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99]"
+                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold shadow-xs transition active:scale-[0.99] cursor-pointer ${
+                  selectedItems.length > 0
+                    ? "bg-[#FFC629] hover:bg-[#FFC420] text-[#1A1A1A]"
+                    : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                }`}
               >
-                <span>Lanjut checkout ({cart.length})</span>
+                <span>Lanjut checkout ({selectedItems.length})</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
 
@@ -254,15 +269,21 @@ export default function CartPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-3xl border border-dashed border-neutral-300 p-12 text-center flex flex-col items-center justify-center gap-4">
-          <p className="text-base font-bold text-neutral-700">
-            Keranjangmu masih kosong.
+        <div className="rounded-3xl border border-neutral-200 bg-white p-12 text-center flex flex-col items-center justify-center gap-4">
+          <div className="h-16 w-16 rounded-3xl bg-[#FFFBEB] flex items-center justify-center text-amber-600 border border-[#FDE68A]">
+            <ShoppingBag className="h-8 w-8" />
+          </div>
+          <h2 className="text-lg font-black text-[#1A1A1A]">
+            Keranjangmu masih kosong
+          </h2>
+          <p className="text-xs text-neutral-500 max-w-sm">
+            Temukan keyboard mekanikal, mouse gaming, headset, atau monitor terverifikasi di katalog Hingo.
           </p>
           <Link
             href="/catalog"
-            className="rounded-xl bg-[#FFC629] px-6 py-3 text-xs sm:text-sm font-bold text-black shadow-xs"
+            className="mt-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-6 py-3 text-xs sm:text-sm font-bold text-black shadow-xs transition"
           >
-            Mulai Belanja Gear Preloved
+            Mulai Belanja
           </Link>
         </div>
       )}

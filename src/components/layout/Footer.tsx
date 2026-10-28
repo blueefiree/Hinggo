@@ -101,8 +101,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/catalog?cat=ACCESSORIES" className="hover:text-white transition">
-                  Aksesoris & Keycaps
+                <Link href="/promo" className="hover:text-white transition text-amber-400 font-semibold">
+                  Promo & Voucher Diskon
+                </Link>
+              </li>
+              <li>
+                <Link href="/wishlist" className="hover:text-white transition">
+                  Gear Impian (Wishlist)
                 </Link>
               </li>
             </ul>
@@ -116,7 +121,7 @@ export default function Footer() {
             <ul className="flex flex-col gap-2.5 text-sm text-neutral-400">
               <li>
                 <Link href="/chat/support" className="hover:text-white transition">
-                  Pusat Bantuan & Tiket
+                  Pusat Bantuan & Tiket CS
                 </Link>
               </li>
               <li>
@@ -125,18 +130,18 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/seller/consignments/new" className="hover:text-white transition">
-                  Cara Titip Jual di Hingo
+                <Link href="/how-it-works" className="hover:text-white transition">
+                  Panduan Cara Titip Jual
                 </Link>
               </li>
               <li>
-                <Link href="/orders/GRL-20261022-0842" className="hover:text-white transition">
-                  Pelacakan & Pengembalian
+                <Link href="/orders" className="hover:text-white transition">
+                  Daftar Pesanan & Status Escrow
                 </Link>
               </li>
               <li>
-                <Link href="/auth/verify-identity" className="hover:text-white transition">
-                  Verifikasi Identitas (KYC)
+                <Link href="/account" className="hover:text-white transition">
+                  Pengaturan Akun & Rekening
                 </Link>
               </li>
             </ul>
@@ -149,9 +154,9 @@ export default function Footer() {
             </h4>
             <ul className="flex flex-col gap-2.5 text-sm text-neutral-400">
               <li>
-                <span className="text-neutral-400 hover:text-white cursor-pointer">
-                  Tentang Hingo
-                </span>
+                <Link href="/how-it-works" className="hover:text-white transition">
+                  Tentang Layanan Konsinyasi
+                </Link>
               </li>
               <li>
                 <Link href="/seller/consignments" className="hover:text-white transition">
@@ -159,14 +164,14 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <span className="text-neutral-400 hover:text-white cursor-pointer">
-                  Kebijakan Privasi
-                </span>
+                <Link href="/seller/payouts" className="hover:text-white transition">
+                  Riwayat Pencairan Dana
+                </Link>
               </li>
               <li>
-                <span className="text-neutral-400 hover:text-white cursor-pointer">
-                  Syarat & Ketentuan Konsinyasi
-                </span>
+                <Link href="/admin" className="hover:text-white transition text-amber-400 font-bold">
+                  Panel Internal Admin
+                </Link>
               </li>
             </ul>
           </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Heart, Star, ShieldCheck } from "lucide-react";
 import { Product } from "@/lib/data";
+import { useHingoStore } from "@/lib/store";
 
 interface ProductCardProps {
   product: Product;
@@ -12,7 +12,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, compact = false }: ProductCardProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isInWishlist, toggleWishlist } = useHingoStore();
+  const isWishlisted = isInWishlist(product.id);
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -20,6 +21,12 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
       currency: "IDR",
       maximumFractionDigits: 0,
     }).format(val);
+  };
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product);
   };
 
   return (
@@ -44,17 +51,15 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
           {/* Top-Right Favorite Button */}
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsFavorite(!isFavorite);
-            }}
-            aria-label="Simpan ke favorit"
-            className="absolute top-2.5 right-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-neutral-600 shadow-xs backdrop-blur-xs transition hover:bg-white hover:text-red-500"
+            onClick={handleHeartClick}
+            aria-label={isWishlisted ? "Hapus dari wishlist" : "Simpan ke wishlist"}
+            className="absolute top-2.5 right-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-neutral-600 shadow-xs backdrop-blur-xs transition hover:bg-white hover:text-red-500 cursor-pointer"
           >
             <Heart
-              className={`h-4 w-4 ${
-                isFavorite ? "fill-red-500 text-red-500" : "text-neutral-600"
+              className={`h-4 w-4 transition-colors ${
+                isWishlisted
+                  ? "fill-red-500 text-red-500 scale-110"
+                  : "text-neutral-600 hover:text-red-500"
               }`}
             />
           </button>
@@ -106,7 +111,7 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
 
         <div className="flex items-center justify-between text-[11px] text-[#16A34A] font-medium bg-[#F0FDF4] px-2.5 py-1 rounded-lg">
           <span className="flex items-center gap-1">
-            <ShieldCheck className="h-3 w-3" />
+            <ShieldCheck className="h-3.5 w-3.5" />
             Dikelola Hingo
           </span>
           <span className="text-[#555555]">Jakarta</span>

@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import RoleSwitcherWidget from "@/components/ui/RoleSwitcherWidget";
 
 import { Suspense } from "react";
 import { HingoProvider } from "@/lib/store";
@@ -39,6 +40,9 @@ export default function RootLayout({
           <Footer />
           <Suspense fallback={null}>
             <MobileBottomNav />
+          </Suspense>
+          <Suspense fallback={null}>
+            <RoleSwitcherWidget />
           </Suspense>
         </HingoProvider>
       </body>

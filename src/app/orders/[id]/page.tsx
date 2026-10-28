@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -16,15 +16,18 @@ import {
   ExternalLink,
   ChevronRight,
   Headphones,
+  Loader2,
 } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
 
 export default function OrderDetailPage() {
   const params = useParams();
-  const orderId = (params?.id as string) || "GRL-20261022-0842";
-  const { order, confirmOrderReceived, reportOrderIssue } = useHingoStore();
+  const orderId = (params?.id as string) || "";
+  const { showToast } = useHingoStore();
 
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [copiedResi, setCopiedResi] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [issueText, setIssueText] = useState("");
@@ -35,31 +38,187 @@ export default function OrderDetailPage() {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
+    }).format(val || 0);
   };
+
+  useEffect(() => {
+    async function fetchOrder() {
+      if (!orderId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/orders/${orderId}`);
+        if (!res.ok) {
+          setOrder(null);
+          return;
+        }
+        const data = await res.json();
+        if (data.order) {
+          const ord = data.order;
+          const formattedTimeline = ord.timeline && ord.timeline.length > 0
+            ? ord.timeline.map((t: any) => ({
+                step: t.stepOrder,
+                title: t.title,
+                status: t.isCompleted ? "completed" : "upcoming",
+                timestamp: t.timestampText || "",
+                detail: t.description || "",
+              }))
+            : [
+                {
+                  step: 1,
+                  title: "Pembayaran terverifikasi",
+                  status: "completed",
+                  timestamp: "Hari ini",
+                  detail: "Pembayaran otomatis via BCA Virtual Account terverifikasi.",
+                },
+                {
+                  step: 2,
+                  title: "Pengemasan aman & kurir",
+                  status: "completed",
+                  timestamp: "Hari ini",
+                  detail: "Dikemas double bubble wrap & dus tebal oleh tim kurasi.",
+                },
+                {
+                  step: 3,
+                  title: "Paket tiba — masa uji 48 jam",
+                  status: ord.orderStatus === "COMPLETED" ? "completed" : "current",
+                  timestamp: "Sekarang",
+                  detail: "Uji fungsi tombol, switch, sensor, dan kelengkapan sebelum konfirmasi.",
+                },
+                {
+                  step: 4,
+                  title: "Konfirmasi & pencairan dana",
+                  status: ord.orderStatus === "COMPLETED" ? "completed" : "upcoming",
+                  timestamp: ord.orderStatus === "COMPLETED" ? "Selesai" : "Menunggu konfirmasi pembeli",
+                  detail: "Setelah dikonfirmasi sesuai, dana escrow diteruskan ke pemilik gear.",
+                },
+              ];
+
+          setOrder({
+            ...ord,
+            itemPrice: ord.itemPrice || ord.totalAmount,
+            timeline: formattedTimeline,
+            shippingCourier: ord.shippingCourier || "JNE REG",
+            buyerAddress: ord.address
+              ? `${ord.address.recipientName} (${ord.address.city}, ${ord.address.province}) — ${ord.address.street}`
+              : "Alamat Penerima",
+            inspectionDeadline: ord.inspectionDeadline || "2 × 24 Jam sejak paket diterima",
+            trackingNumber: ord.trackingNumber || "HGO-JNE-88291039",
+            paymentMethod: ord.paymentMethod || "BCA Virtual Account",
+            product: ord.product || {
+              name: "Peripheral Gaming Hingo",
+              subtitle: "Unit titip jual terverifikasi",
+              images: ["/images/placeholder.png"],
+            },
+          });
+        } else {
+          setOrder(null);
+        }
+      } catch (err) {
+        console.error("Error fetching order:", err);
+        setOrder(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchOrder();
+  }, [orderId]);
 
   const copyTracking = () => {
-    navigator.clipboard.writeText(order.trackingNumber);
-    setCopiedResi(true);
-    setTimeout(() => setCopiedResi(false), 2000);
-  };
-
-  const handleConfirm = () => {
-    confirmOrderReceived();
-    alert("Terima kasih! Pesanan telah selesai dan dana diteruskan ke pemilik gear.");
-  };
-
-  const submitIssue = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (issueText.trim()) {
-      reportOrderIssue(issueText.trim());
-      setShowIssueModal(false);
-      alert("Laporan kendala telah dibuat. CS Mira akan segera membalasmu di Pusat Bantuan.");
+    if (order?.trackingNumber) {
+      navigator.clipboard.writeText(order.trackingNumber);
+      setCopiedResi(true);
+      setTimeout(() => setCopiedResi(false), 2000);
     }
   };
 
+  const handleConfirm = async () => {
+    if (!order) return;
+    try {
+      const res = await fetch(`/api/orders/${order.id || order.orderCode}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "CONFIRM_RECEIVED" }),
+      });
+      if (res.ok) {
+        setOrder((prev: any) => ({
+          ...prev,
+          orderStatus: "COMPLETED",
+          timeline: prev.timeline.map((t: any) => ({ ...t, status: "completed" })),
+        }));
+        showToast("Terima kasih! Pesanan telah selesai dan dana diteruskan ke pemilik gear.");
+      } else {
+        alert("Gagal mengonfirmasi pesanan");
+      }
+    } catch (e) {
+      alert("Terjadi kesalahan saat mengonfirmasi pesanan");
+    }
+  };
+
+  const submitIssue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!order || !issueText.trim()) return;
+    try {
+      const res = await fetch(`/api/orders/${order.id || order.orderCode}/dispute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reasonCategory: "FUNCTION_DEFECT",
+          description: issueText.trim(),
+        }),
+      });
+      if (res.ok) {
+        setOrder((prev: any) => ({
+          ...prev,
+          orderStatus: "COMPLAINT",
+        }));
+        setShowIssueModal(false);
+        showToast("Laporan kendala telah dibuat. CS Mira akan segera membalasmu di Pusat Bantuan.");
+      } else {
+        alert("Gagal mengirim laporan kendala");
+      }
+    } catch (e) {
+      alert("Terjadi kesalahan pengiriman laporan");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-24 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
+        <p className="text-sm font-semibold text-neutral-500">Memuat detail pesanan...</p>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-24 flex flex-col items-center justify-center gap-4 text-center">
+        <div className="h-16 w-16 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
+          <Package className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-neutral-800">Pesanan Tidak Ditemukan</h2>
+        <p className="text-sm text-neutral-500 max-w-md">
+          Pesanan dengan kode <span className="font-mono font-bold text-neutral-700">{orderId}</span> tidak ditemukan atau kamu belum memiliki transaksi ini.
+        </p>
+        <Link
+          href="/orders"
+          className="rounded-xl bg-[#1A1A1A] text-white px-5 py-2.5 text-xs font-bold hover:bg-neutral-800 transition"
+        >
+          Kembali ke Daftar Transaksi
+        </Link>
+      </div>
+    );
+  }
+
   const isCompleted = order.orderStatus === "COMPLETED";
-  const isDisputed = order.orderStatus === "ISSUE_REPORTED";
+  const isDisputed =
+    order.orderStatus === "COMPLAINT" ||
+    order.orderStatus === "ISSUE_REPORTED" ||
+    order.escrowStatus === "DISPUTED";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
@@ -78,7 +237,7 @@ export default function OrderDetailPage() {
                 : "Barang tiba. Cek dulu, ya."}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-              {order.orderCode} · Dibuat {order.createdAt}
+              {order.orderCode} · Dibuat {order.createdAt ? new Date(order.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "Hari ini"}
             </p>
           </div>
 
@@ -148,19 +307,18 @@ export default function OrderDetailPage() {
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99]"
+                  className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99] cursor-pointer"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   <span>Barang sesuai, konfirmasi terima</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowIssueModal(true)}
+                <Link
+                  href={`/orders/${order.orderCode}/dispute`}
                   className="w-full sm:flex-none flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-3.5 px-5 text-sm font-bold text-neutral-700 hover:bg-neutral-50 transition"
                 >
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                   <span>Ada kendala? Laporkan masalah</span>
-                </button>
+                </Link>
               </div>
             </div>
           )}
@@ -172,7 +330,7 @@ export default function OrderDetailPage() {
             </h2>
 
             <div className="relative flex flex-col gap-6 pl-6 sm:pl-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-200">
-              {order.timeline.map((step) => {
+              {order.timeline?.map((step: any) => {
                 const isStepCompleted = step.status === "completed";
                 const isStepCurrent = step.status === "current";
 
@@ -221,16 +379,16 @@ export default function OrderDetailPage() {
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <img
-                  src={order.product.images[0]}
-                  alt={order.product.name}
+                  src={order.product?.images?.[0] || "/images/placeholder.png"}
+                  alt={order.product?.name || "Product"}
                   className="h-16 w-16 rounded-xl object-cover border border-neutral-200"
                 />
                 <div>
                   <h3 className="text-sm font-bold text-[#1A1A1A]">
-                    {order.product.name}
+                    {order.product?.name}
                   </h3>
                   <p className="text-xs text-neutral-500">
-                    {order.product.subtitle}
+                    {order.product?.subtitle}
                   </p>
                   <span className="text-sm font-black text-[#1A1A1A] mt-1 block">
                     {formatRupiah(order.itemPrice)}
@@ -257,7 +415,7 @@ export default function OrderDetailPage() {
               <button
                 type="button"
                 onClick={() => setTrackingModalOpen(true)}
-                className="text-xs font-bold text-amber-700 hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-amber-700 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>Lacak pengiriman</span>
                 <ExternalLink className="h-3 w-3" />
@@ -274,7 +432,7 @@ export default function OrderDetailPage() {
                   <button
                     type="button"
                     onClick={copyTracking}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-neutral-500 hover:text-black bg-neutral-100 px-2 py-0.5 rounded-md"
+                    className="flex items-center gap-1 text-[11px] font-semibold text-neutral-500 hover:text-black bg-neutral-100 px-2 py-0.5 rounded-md cursor-pointer"
                   >
                     {copiedResi ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                     <span>{copiedResi ? "Tersalin" : "Salin"}</span>
@@ -330,8 +488,8 @@ export default function OrderDetailPage() {
 
             <button
               type="button"
-              onClick={() => alert("Bukti transaksi digital: BCA VA Sukses terverifikasi pada 22 Okt 2026 10:32 WIB.")}
-              className="text-xs font-bold text-neutral-600 hover:text-black underline text-center"
+              onClick={() => alert(`Bukti transaksi digital: Pembayaran ${order.paymentMethod} lunas terverifikasi.`)}
+              className="text-xs font-bold text-neutral-600 hover:text-black underline text-center cursor-pointer"
             >
               Lihat bukti pembayaran
             </button>
@@ -402,7 +560,7 @@ export default function OrderDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-[#1A1A1A] px-5 py-2.5 text-xs font-bold text-white hover:bg-neutral-800"
+                  className="rounded-xl bg-[#1A1A1A] px-5 py-2.5 text-xs font-bold text-white hover:bg-neutral-800 cursor-pointer"
                 >
                   Kirim Laporan ke CS
                 </button>
@@ -426,7 +584,7 @@ export default function OrderDetailPage() {
               <button
                 type="button"
                 onClick={() => setTrackingModalOpen(false)}
-                className="text-xs font-bold text-neutral-400 hover:text-black"
+                className="text-xs font-bold text-neutral-400 hover:text-black cursor-pointer"
               >
                 ✕
               </button>
@@ -434,15 +592,15 @@ export default function OrderDetailPage() {
 
             <div className="flex flex-col gap-3 text-xs">
               <div className="border-l-2 border-emerald-500 pl-3">
-                <span className="font-bold text-emerald-700">24 Okt 2026 13:56 WIB</span>
-                <p className="text-neutral-700 font-medium">Paket telah diterima oleh Naya Putri (Tebet, Jaksel)</p>
+                <span className="font-bold text-emerald-700">Paket dalam perjalanan / tiba</span>
+                <p className="text-neutral-700 font-medium">Tiba di alamat penerima</p>
               </div>
               <div className="border-l-2 border-neutral-300 pl-3">
-                <span className="font-bold text-neutral-500">23 Okt 2026 18:20 WIB</span>
+                <span className="font-bold text-neutral-500">Dalam proses kurir</span>
                 <p className="text-neutral-600">Paket sedang diantar kurir ke alamat tujuan</p>
               </div>
               <div className="border-l-2 border-neutral-300 pl-3">
-                <span className="font-bold text-neutral-500">23 Okt 2026 09:15 WIB</span>
+                <span className="font-bold text-neutral-500">Gudang Hingo</span>
                 <p className="text-neutral-600">Diserahkan oleh Tim Logistik Gudang Hingo Jakarta Selatan</p>
               </div>
             </div>
@@ -450,7 +608,7 @@ export default function OrderDetailPage() {
             <button
               type="button"
               onClick={() => setTrackingModalOpen(false)}
-              className="mt-2 w-full rounded-xl bg-[#F6F6F4] py-2.5 text-xs font-bold text-neutral-800"
+              className="mt-2 w-full rounded-xl bg-[#F6F6F4] py-2.5 text-xs font-bold text-neutral-800 cursor-pointer"
             >
               Tutup
             </button>
