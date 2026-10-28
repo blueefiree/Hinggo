@@ -466,17 +466,3 @@ export default function CatalogPage() {
   );
 }
 
-export default function CatalogPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-7xl px-4 py-24 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
-        </div>
-      }
-    >
-      <CatalogContent />
-    </Suspense>
-  );
-}
-
