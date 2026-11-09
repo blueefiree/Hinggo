@@ -374,3 +374,4 @@ SMTP_FROM="Hingo Indonesia <no-reply@hingo.id>"
    npm run build
    ```
    *Catatan: Seluruh 40 rute halaman dan API berhasil dikompilasi 100% tanpa error TypeScript maupun Turbopack.*
+
