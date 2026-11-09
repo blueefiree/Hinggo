@@ -1,373 +1,103 @@
-# Master Prompt Google Antigravity — Perbaikan Full CRUD Tambah Barang, Dashboard Admin (`/admin`) & Pembuatan Tabel Supabase (`obdczozspvkdebhtyhoh`)
+# Master Prompt Google Antigravity — Sesi & Penyimpanan Data Berbasis Email Pengguna (Anti-Hilang Saat Refresh)
 
-Dokumen ini berisi:
-1. **Bagian 1 (Copy-Paste ke Agent Chat Antigravity)**: Prompt untuk memperbaiki **Full CRUD Produk (Tambah, Lihat, Edit, Hapus Barang + Upload Foto)**, **Dashboard Admin Lengkap (`/admin`)**, serta **Sinkronisasi Otomatis Prisma ↔ Supabase**.
-2. **Bagian 2 (Copy-Paste 1 Kali ke SQL Editor Supabase Kamu)**: Script SQL untuk membuat 12 tabel di project Supabase `obdczozspvkdebhtyhoh` kamu (karena `DATABASE_URL="file:./dev.db"` di proyekmu sebelumnya hanya membuat tabel di file SQLite lokal, belum di cloud Supabase).
+Dokumen ini berisi **Prompt Perbaikan Permanen (Bagian 1)** agar:
+1. **Setiap sesi login dikunci langsung berdasarkan `email` pengguna** (`hingo_user_email` di Cookie 30 hari + Database Session).
+2. **Seluruh data di setiap tabel (terutama Barang Titipan / `ConsignmentItem`, Keranjang, Wishlist, Pesanan, Alamat, Rekening, dan Chat) disimpan & dipanggil berdasarkan `email` masing-masing pengguna**, sehingga **tidak akan pernah hilang saat halaman di-refresh** dan tidak akan tertukar antar-akun.
+3. **Form Pengajuan Titip Jual (`/seller/consignments/new`) memiliki fitur Auto-Save per Email**, sehingga jika halaman ter-refresh saat sedang mengisi form sekalipun, isian barang yang mau diajukan tetap tersimpan utuh.
 
 ---
 
-## 1. Prompt Antigravity: "Perbaiki Full CRUD Tambah/Edit/Hapus Barang, Dashboard Admin Lengkap & Sinkronisasi Supabase"
+## 1. Prompt Antigravity: "Kunci Sesi & Seluruh Tabel Database Berdasarkan Email Pengguna (Data Tidak Hilang Saat Refresh)"
 
 Salin **seluruh blok prompt di bawah ini** dan tempelkan langsung ke **Agent Chat di Google Antigravity IDE**:
 
 ````markdown
-# TASK: FIX FULL PRODUCT CRUD (CREATE, READ, UPDATE, DELETE WITH IMAGE UPLOAD), UPGRADE COMPLETE ADMIN DASHBOARD (`/admin`), AND FIX SUPABASE TABLE SYNC
+# TASK: BIND USER SESSION AND ALL DATABASE RECORDS DIRECTLY TO USER EMAIL SO SUBMITTED CONSIGNMENTS, FORMS, CART, AND PROFILE DATA NEVER DISAPPEAR ON REFRESH
 
-Saat ini kami ingin memastikan **fungsi CRUD untuk menambah, mengedit, dan menghapus barang** serta **seluruh fitur di Dashboard Admin (`/admin`)** berjalan 100% tanpa error, dan tersinkronisasi penuh ke database **Supabase (`https://obdczozspvkdebhtyhoh.supabase.co`)** maupun **Prisma (`dev.db`)**.
+Saat ini terdapat bug kritis: ketika pengguna yang sudah login mengajukan barang titip jual (atau mengisi data) lalu me-refresh halaman, barang yang diajukan / data halamannya hilang karena:
+1. Data hanya tersimpan sementara di React state (`store.tsx`) tanpa di-fetch ulang dengan benar dari database saat refresh, ATAU
+2. Terjadi ketidaksinkronan `userId` acak antara cookie, Prisma (`dev.db`), dan Supabase (`public.consignments`) sehingga query `WHERE sellerId = ...` gagal menemukan barang milik user tersebut saat halaman di-refresh.
 
-Tolong kerjakan perbaikan menyeluruh berikut:
-
-====================================================================
-BAGIAN 1: PERBAIKI API & FUNGSI FULL CRUD PRODUK (`src/app/api/products/*` & `src/app/api/admin/route.ts`)
-====================================================================
-
-1. **CREATE — Tambah Barang Baru (`POST /api/products` & `POST /api/admin`)**:
-   - Pastikan endpoint `POST /api/products` menerima input lengkap:
-     - `name` (wajib, misal `"Keychron K2 V2"`)
-     - `brand` (wajib, misal `"KEYCHRON"`)
-     - `category` (wajib: `"Keyboard"` | `"Mouse"` | `"Headset"` | `"Monitor"` | `"Aksesoris"`)
-     - `subtitle` / `switchOrVariant` (misal `"Wireless mechanical keyboard · Brown switch"`)
-     - `condition` (`"Sangat baik"` | `"Baik"`)
-     - `usageDuration` (misal `"8 bulan"`)
-     - `completeness` (misal `"Box, kabel, keycap puller"`)
-     - `description` (deskripsi & laporan uji fungsi tim Hingo)
-     - `defectNotes` (catatan cacat kosmetik halus)
-     - `price` (angka integer harga jual, misal `850000`)
-     - `originalNewPrice` (angka integer harga baru, misal `1499000`)
-     - `location` (default `"Jakarta Selatan"`)
-     - `stock` (default `1`)
-     - `images` (mendukung array foto berupa **File Upload gambar dari perangkat yang dikonversi ke Base64 Data URL / disimpan ke `/public/uploads/products/`** MAUPUN input link URL gambar).
-   - **Auto-Generate `code` & `slug` Unik**:
-     - Buat `code` unik otomatis (misal `HG-PRD-8492`) dan `slug` URL-friendly unik (misal `keychron-k2-v2-8492`) agar tidak pernah terjadi error `Unique constraint failed` meskipun ada 2 barang dengan nama yang mirip!
-   - **Dual-Write (Supabase + Prisma)**:
-     - Simpan barang baru ke tabel `public.products` di Supabase (`supabase.from('products').insert(...)`) DAN ke tabel `Product` di Prisma (`prisma.product.create(...)`).
-     - Panggil `revalidatePath('/')`, `revalidatePath('/catalog')`, dan `revalidatePath('/admin')` agar barang yang baru ditambahkan **detik itu juga langsung tampil di Beranda (`/`), Katalog (`/catalog`), dan Admin (`/admin`)**!
-
-2. **READ — Ambil Daftar & Detail Barang (`GET /api/products` & `GET /api/products/[slug]`)**:
-   - Baca daftar produk dari Supabase (`public.products`) dan gabungkan/fallback dengan Prisma (`prisma.product.findMany`) agar tidak pernah kosong jika salah satu database baru diisi.
-   - Hitung jumlah produk per kategori (`Keyboard`, `Mouse`, `Headset`, `Monitor`, `Aksesoris`) secara real-time berdasarkan barang yang berstatus `AVAILABLE` dan `stock > 0`.
-
-3. **UPDATE — Edit Data Barang & Ubah Status (`PATCH /api/products/[slug]` & `PATCH /api/admin`)**:
-   - Sediakan fungsi untuk mengedit seluruh field barang (Nama, Brand, Kategori, Harga, Kondisi, Kelengkapan, Deskripsi, Foto, serta Status `AVAILABLE` / `SOLD` / `ARCHIVED`) baik di Supabase (`public.products`) maupun Prisma (`Product`).
-
-4. **DELETE — Hapus Barang (`DELETE /api/products/[slug]` & `DELETE /api/admin`)**:
-   - Sediakan fungsi hapus barang berdasarkan `id` atau `slug` yang menghapus baris produk dari Supabase (`supabase.from('products').delete()`) dan Prisma (`prisma.product.delete()`), lalu langsung memperbarui tampilan di `/admin`, `/catalog`, dan `/`.
+Tolong rombak dan perbaiki arsitektur penyimpanan sesi & relasi data dengan aturan **Email-Based Session & Persistence** berikut:
 
 ====================================================================
-BAGIAN 2: PERBAIKI & LENGKAPI DASHBOARD ADMIN (`/admin` — `src/app/admin/page.tsx`)
+ATURAN 1: SESI LOGIN DIKUNCI BERDASARKAN EMAIL PENGGUNA (`hingo_user_email`)
 ====================================================================
 
-Jadikan halaman **`/admin`** sebagai pusat kendali operasional Hingo yang lengkap, rapi, responsif (Desktop & Mobile), dan bebas bug dengan **6 Tab Utama**:
-
-1. **Tab 1: "Manajemen Produk Katalog (Full CRUD)"**:
-   - **Tombol & Modal/Form `"+ Tambah Barang ke Katalog"`**:
-     - Form interaktif untuk menambahkan produk baru secara langsung (Nama Barang, Brand, Kategori, Varian/Switch, Kondisi `Sangat baik`/`Baik`, Lama Pemakaian, Kelengkapan, Harga Jual `Rp`, Harga Baru Referensi `Rp`, Lokasi, Deskripsi Inspeksi, Catatan Cacat, serta **Upload Foto Gambar langsung dari file laptop/HP + preview gambar**).
-     - Saat disubmit, tampilkan loading state, simpan ke database, tampilkan toast sukses, dan langsung munculkan produk baru di tabel bawahnya serta di `/catalog`!
-   - **Tabel Daftar Produk Katalog Aktif**:
-     - Menampilkan foto thumbnail, Kode & Nama Barang, Kategori, Kondisi, Harga Jual, Status (`Tersedia` / `Terjual`), serta 3 tombol aksi di setiap baris:
-       - **`Lihat`** (membuka `/product/[slug]`)
-       - **`Edit`** (membuka modal edit barang dengan data yang sudah terisi untuk diubah & disimpan)
-       - **`Hapus`** (menghapus barang dari database dengan konfirmasi).
-
-2. **Tab 2: "Antrean Titip Jual & Inspeksi Penjual" (Terhubung ke `/seller/consignments`)**:
-   - Menampilkan seluruh pengajuan titip jual (`ConsignmentItem`) yang disubmit oleh pengguna dari `/seller/consignments/new`.
-   - Di setiap kartu/baris barang titipan, sediakan tombol aksi tahapan Admin:
-     - **Tahap 1 (`ONLINE_CHECK`)**: Tombol **`"Loloskan Cek Online (Minta Penjual Kirim Barang)"`** atau **`"Minta Revisi Foto"`**.
-     - **Tahap 2 (`SHIPPING_TO_HINGO`)**: Tombol **`"Konfirmasi Paket Diterima di Gudang Hingo"`**.
-     - **Tahap 3 (`INSPECTION_COMPLETED`)**: Form/Modal **`"Input Laporan Inspeksi Fisik & Usulan Harga"`** (Admin mengisi Uji Fungsi, Catatan Cacat Kosmetik, Usulan Harga Jual `Rp`, Biaya Komisi Konsinyasi, dan Estimasi Hasil Bersih Penjual).
-     - **Tahap 4 (`PUBLISH TO CATALOG`)**: Tombol kuning **`"Tayangkan Barang ke Katalog Belanja"`** yang **otomatis menyalin data & foto barang titipan tersebut menjadi produk baru di tabel `Product` (`public.products`)**, sehingga barang titipan penjual langsung muncul di halaman `/catalog` untuk dibeli pengguna lain!
-
-3. **Tab 3: "Pesanan Pembeli & Escrow Rekber" (Terhubung ke `/orders`)**:
-   - Menampilkan semua pesanan (`Order`) yang masuk dari pembeli.
-   - Sediakan tombol aksi Admin:
-     - **`"Verifikasi Pembayaran Lunas"`** (mengubah status `UNPAID` → `PAID_PACKING`).
-     - **`"Input Nomor Resi & Kirim Barang"`** (input kurir `JNE REG`/`J&T` & nomor resi → mengubah status ke `SHIPPED` dan menambahkan log ke `OrderTimeline`).
-     - **`"Tandai Paket Tiba di Pembeli"`** (mengubah status ke `DELIVERED_CHECKING` agar pembeli bisa menekan tombol *"Barang sesuai, konfirmasi terima"*).
-     - **`"Cairkan Dana Escrow ke Penjual"`** (melepas dana ke tabel `Payout` penjual).
-
-4. **Tab 4: "Verifikasi Identitas KYC User" (Terhubung ke `/auth/verify-identity` & `/account`)**:
-   - Menampilkan daftar dokumen KYC (`KycDocument`) yang diunggah pengguna (Nama KTP, NIK, preview Foto KTP & Selfie).
-   - Sediakan tombol hijau **`"Setujui KYC (Verified)"`** (mengubah `user.kycStatus = 'VERIFIED'`) dan tombol merah **`"Tolak / Minta Upload Ulang"`**.
-
-5. **Tab 5: "Live Chat Admin Produk & CS" (Terhubung ke `/chat/product` & `/chat/support`)**:
-   - Menampilkan seluruh thread percakapan dari pengguna dan memungkinkan Admin membalas pesan secara langsung sebagai `Admin Hingo` maupun `CS Mira`.
-
-6. **Tab 6: "Status Database Supabase & Sinkronisasi 1-Klik"**:
-   - Tampilkan indikator status koneksi ke `https://obdczozspvkdebhtyhoh.supabase.co` (mengecek apakah tabel `public.products`, `public.users`, `public.consignments`, `public.orders` sudah ada di Supabase).
-   - Sediakan tombol **`"Sinkronkan Data Lokal (Prisma) ke Cloud Supabase"`** (yang mendorong/meng-upsert semua produk, user, dan barang titipan dari SQLite lokal ke Supabase begitu tabel Supabase dibuat) serta tombol **`"Copy Script SQL Pembuatan Tabel Supabase"`** langsung dari UI!
+1. **Simpan Identitas Email di Cookie & Session (`src/lib/auth.ts` & `/api/auth/verify-otp`)**:
+   - Saat user berhasil login / verifikasi OTP di `/auth/verify-otp`:
+     - Pastikan setiap user memiliki identitas `email` yang konsisten di tabel `User` (jika login via email gunakan email asli yang dinormalisasi `email.trim().toLowerCase()`; jika login via Nomor HP dan belum mengisi email, buatkan identifier email standar `628xxx@wa.hingo.id` sampai user menautkan email aslinya).
+     - Pasang HTTP-Only Cookie **`hingo_user_email`** (berisi email user tersebut, `maxAge: 30 hari`, `path: '/'`) bersama `hingo_user_id` dan `hingo_session`.
+2. **Resolusi User Saat Refresh (`GET /api/auth/session` & `getCurrentUser()`)**:
+   - Setiap kali halaman di-refresh, `getCurrentUser()` mencari user di database (Prisma `dev.db` & Supabase `public.users`) menggunakan **`email: cookieEmail`** (dengan fallback ke `id: cookieUserId`).
+   - Dengan mengunci pencarian user berdasarkan `email`, meskipun database disinkronkan ulang antara lokal dan Supabase, akun user yang sedang login **100% selalu ditemukan dengan tepat**!
 
 ====================================================================
-BAGIAN 3: PASTIKAN AKSES KE `/admin` MUDAH DIUJI
+ATURAN 2: SIMPAN & FILTER SEMUA TABEL BERDASARKAN EMAIL MASING-MASING PENGGUNA
 ====================================================================
-- Di `Navbar.tsx` (pada dropdown profil user yang sedang login) dan di halaman `/account`, tambahkan tombol/link **`"Buka Panel Admin (/admin)"`** (atau gunakan `RoleSwitcherWidget` untuk mengubah role user aktif menjadi `ADMIN` di database) supaya pemilik proyek bisa langsung masuk ke `/admin` untuk menambah barang dan mengelola pengajuan tanpa terkunci.
+
+1. **Pastikan Setiap Tabel Menyimpan Email Pemilik Data**:
+   - Di `prisma/schema.prisma` (jalankan `npx prisma db push`) dan query Supabase, pastikan setiap record transaksi selalu menyertakan dan mengindeks email pemiliknya (atau berelasi langsung ke `User.email`):
+     - **`ConsignmentItem` (`public.consignments`)**: Simpan `sellerEmail` (`user.email`) dan `sellerId` (`user.id`).
+     - **`Product` (`public.products`)**: Simpan `sellerEmail` dan `sellerId`.
+     - **`CartItem` (`public.cart_items`)**: Simpan `userEmail` dan `userId`.
+     - **`Wishlist` (`public.wishlists`)**: Simpan `userEmail` dan `userId`.
+     - **`Order` (`public.orders`)**: Simpan `buyerEmail` dan `buyerId`.
+     - **`Address` (`public.addresses`)**, **`BankAccount` (`public.bank_accounts`)**, **`KycDocument` (`public.kyc_documents`)**, dan **`ChatThread` (`public.chat_threads`)**: Simpan `userEmail` dan `userId`.
+
+2. **Query `GET` Wajib Memanggil Data berdasarkan Email User yang Sedang Login**:
+   - Di **`GET /api/consignments`**:
+     - Ambil semua barang titipan dari database (Prisma & Supabase) dimana **`sellerEmail === currentUser.email` ATAU `sellerId === currentUser.id`** (diurutkan dari `createdAt: 'desc'`).
+     - Jangan pernah mengembalikan array kosong jika di database ada barang dengan `sellerEmail` milik user tersebut!
+   - Di **`GET /api/cart`**, **`GET /api/wishlist`**, **`GET /api/orders`**, **`GET /api/chat`**, dan **`GET /api/user/profile`**:
+     - Filter seluruh data berdasarkan `userEmail === currentUser.email` (atau `userId === currentUser.id`) sehingga setiap email pengguna memiliki ruang data pribadinya masing-masing di database dan tidak pernah hilang saat browser di-refresh!
 
 ====================================================================
-BAGIAN 4: VERIFIKASI WAJIB
+ATURAN 3: PERBAIKI ALUR "PENGAJUAN TITIP JUAL" (`/seller/consignments/new` & `/seller/consignments`) AGAR ANTI-HILANG SAAT REFRESH
 ====================================================================
-1. Buka `/admin` → masuk ke **Tab Manajemen Produk Katalog** → klik **`"+ Tambah Barang ke Katalog"`**, isi data barang beserta upload foto, lalu klik Simpan.
-2. Pastikan barang baru langsung muncul di tabel `/admin`, langsung tampil di halaman `/catalog` serta Beranda (`/`), dan angka jumlah kategori otomatis bertambah (`0 produk` → `1 produk`).
-3. Uji klik **`Edit`** (ubah harga barang) dan pastikan harganya langsung berubah di `/catalog`.
-4. Uji klik **`Hapus`** pada barang percobaan dan pastikan barang langsung terhapus dari database dan hilang dari `/catalog`.
+
+1. **Auto-Save Form Draft per Email di `/seller/consignments/new`**:
+   - Saat user sedang mengetik/mengisi form pengajuan barang di `/seller/consignments/new` (Kategori, Nama/Merek/Model, Varian, Lama Pemakaian, Kondisi, Cacat, Kelengkapan, Foto Barang, Harapan Harga, Kota Asal, Pilihan Penyerahan):
+     - Simpan progres isian form secara otomatis ke `localStorage` dengan key spesifik email user: **`hingo_consignment_draft_${user.email}`** setiap kali ada perubahan input.
+     - Saat halaman `/seller/consignments/new` dibuka atau **tidak sengaja ke-refresh**, otomatis pulihkan (*restore*) isian form dan foto dari `hingo_consignment_draft_${user.email}` sehingga ketikan user **TIDAK PERNAH HILANG saat di-refresh**!
+2. **Simpan Permanen ke Database Saat Klik `"Simpan draf"` atau `"Kirim untuk review"` (`POST /api/consignments`)**:
+   - Saat tombol **`"Simpan draf"`** atau **`"Kirim untuk review"`** diklik:
+     - Kirim request `POST /api/consignments` dan tunggu (`await`) hingga benar-benar tersimpan ke **Database Prisma (`prisma.consignmentItem.create`)** DAN **Database Supabase (`supabase.from('consignments').insert`)** lengkap dengan `sellerEmail: currentUser.email`, `sellerId: currentUser.id`, dan `ConsignmentTimeline` tahap pertama (`Pengajuan dikirim`).
+     - Setelah sukses tersimpan di database, hapus draft sementara `hingo_consignment_draft_${user.email}` dan arahkan user ke `/seller/consignments` (atau `/seller/consignments/[code]`).
+3. **Fetch Langsung dari Database Saat Halaman `/seller/consignments` & `/seller/consignments/[code]` Di-refresh**:
+   - Di `/seller/consignments/page.tsx` dan `src/lib/store.tsx`:
+     - Pastikan setiap kali halaman dimuat ulang (refresh), aplikasi memanggil `GET /api/consignments` dengan `cache: 'no-store'` (tidak menggunakan cache lama) dan langsung merender seluruh barang titipan milik email user tersebut dari database!
+     - Di `/seller/consignments/[code]/page.tsx`, baca detail barang titipan langsung dari `GET /api/consignments/[code]` di database (bukan hanya mencari dari memory React state yang kosong saat di-refresh), sehingga halaman detail barang titipan **tidak pernah hilang atau 404 saat di-refresh**!
+
+====================================================================
+ATURAN 4: VERIFIKASI WAJIB END-TO-END
+====================================================================
+1. Login dengan akun Email A (misal `user1@gmail.com`).
+2. Buka `/seller/consignments/new`, isi data barang titipan baru (misal `Keychron V1`), coba **refresh halaman di tengah pengisian** → pastikan isian form tidak hilang.
+3. Klik **`"Kirim untuk review"`** → masuk ke `/seller/consignments` dan `/seller/consignments/[code]`.
+4. **Refresh browser berkali-kali (`F5` / `Ctrl+R`)** pada halaman `/seller/consignments` dan `/seller/consignments/[code]` → pastikan sesi login tetap aktif, halaman tidak hilang, dan barang titipan `Keychron V1` milik `user1@gmail.com` tetap tampil utuh dari database!
+5. Logout lalu login dengan Email B (misal `user2@gmail.com`) → pastikan daftar barang titipan Email B mulai dari 0 (terpisah sesuai email masing-masing), dan saat login kembali ke Email A, barang titipan Email A tadi tetap ada!
 ````
 
 ---
 
-## 2. Kenapa di Dashboard Supabase Kamu Tadi Belum Ada Tabel? (Cara Membuatnya dalam 10 Detik)
+## 2. Script SQL Tambahan untuk Kolom Email di Supabase (`obdczozspvkdebhtyhoh`)
 
-Alasan kenapa di dashboard Supabase kamu belum muncul tabel adalah karena di file `.env` proyekmu tertulis `DATABASE_URL="file:./dev.db"` (SQLite lokal). Jadi waktu agen menjalankan `npx prisma db push`, Prisma hanya membuat tabel di dalam file `prisma/dev.db` di laptopmu, **bukan** di server cloud Supabase.
-
-Supaya ke-12 tabel langsung terbuat di dashboard Supabase kamu (`obdczozspvkdebhtyhoh`):
-1. Klik link ini untuk membuka SQL Editor project Supabase kamu: **[Buka SQL Editor obdczozspvkdebhtyhoh](https://www.google.com/search?q=https://supabase.com/dashboard/project/obdczozspvkdebhtyhoh/sql/new)**
-2. *Copy-paste* seluruh blok SQL di bawah ini ke dalam kotak editor di sana, lalu klik tombol hijau **Run** (di pojok kanan bawah):
+Jika kamu sudah menjalankan SQL di dashboard Supabase sebelumnya, jalankan blok `ALTER TABLE` singkat ini di **[SQL Editor Supabase (obdczozspvkdebhtyhoh)](https://www.google.com/search?q=https://supabase.com/dashboard/project/obdczozspvkdebhtyhoh/sql/new)** agar setiap tabel di Supabase memiliki kolom indeks `user_email` / `seller_email` / `buyer_email`:
 
 ```sql
--- 1. Tabel Users (Profil & Role Pengguna)
-CREATE TABLE IF NOT EXISTS public.users (
-  id TEXT PRIMARY KEY,
-  name TEXT DEFAULT 'Pengguna Hingo',
-  phone TEXT UNIQUE,
-  email TEXT UNIQUE,
-  city TEXT DEFAULT '',
-  bio TEXT DEFAULT '',
-  avatar_url TEXT DEFAULT '',
-  role TEXT DEFAULT 'USER',
-  phone_verified BOOLEAN DEFAULT FALSE,
-  email_verified BOOLEAN DEFAULT FALSE,
-  kyc_status TEXT DEFAULT 'UNVERIFIED',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+ALTER TABLE public.consignments ADD COLUMN IF NOT EXISTS seller_email TEXT DEFAULT '';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_email TEXT DEFAULT '';
+ALTER TABLE public.wishlists ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.cart_items ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS buyer_email TEXT DEFAULT '';
+ALTER TABLE public.addresses ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.bank_accounts ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.kyc_documents ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.chat_threads ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
 
--- 2. Tabel Sessions (Sesi Login 30 Hari)
-CREATE TABLE IF NOT EXISTS public.sessions (
-  id TEXT PRIMARY KEY,
-  token TEXT UNIQUE NOT NULL,
-  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  user_agent TEXT DEFAULT '',
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 3. Tabel OTP Verifications
-CREATE TABLE IF NOT EXISTS public.otp_verifications (
-  id TEXT PRIMARY KEY,
-  target TEXT NOT NULL,
-  otp_code TEXT NOT NULL,
-  channel TEXT NOT NULL DEFAULT 'WHATSAPP',
-  verified BOOLEAN DEFAULT FALSE,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 4. Tabel Dokumen KYC
-CREATE TABLE IF NOT EXISTS public.kyc_documents (
-  id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  full_name_ktp TEXT NOT NULL,
-  nik_number TEXT NOT NULL,
-  masked_nik TEXT NOT NULL,
-  ktp_image_url TEXT NOT NULL,
-  ktp_file_size TEXT DEFAULT '1.5 MB',
-  selfie_image_url TEXT NOT NULL,
-  selfie_file_size TEXT DEFAULT '1.8 MB',
-  status TEXT DEFAULT 'PENDING_REVIEW',
-  rejection_reason TEXT DEFAULT '',
-  uploaded_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 5. Tabel Buku Alamat
-CREATE TABLE IF NOT EXISTS public.addresses (
-  id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  label TEXT DEFAULT 'Rumah',
-  recipient_name TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  full_address TEXT NOT NULL,
-  city TEXT NOT NULL,
-  postal_code TEXT DEFAULT '',
-  is_primary BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 6. Tabel Rekening Bank Pencairan
-CREATE TABLE IF NOT EXISTS public.bank_accounts (
-  id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  bank_name TEXT NOT NULL,
-  account_number TEXT NOT NULL,
-  account_holder TEXT NOT NULL,
-  is_primary BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 7. Tabel Katalog Produk (Full CRUD)
-CREATE TABLE IF NOT EXISTS public.products (
-  id TEXT PRIMARY KEY,
-  code TEXT UNIQUE NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  consignment_item_id TEXT,
-  seller_id TEXT REFERENCES public.users(id) ON DELETE SET NULL,
-  brand TEXT NOT NULL,
-  name TEXT NOT NULL,
-  subtitle TEXT DEFAULT '',
-  category TEXT NOT NULL,
-  condition TEXT NOT NULL DEFAULT 'Sangat baik',
-  usage_duration TEXT DEFAULT '',
-  switch_or_variant TEXT DEFAULT '',
-  completeness TEXT DEFAULT '',
-  description TEXT DEFAULT '',
-  defect_notes TEXT DEFAULT '',
-  price BIGINT NOT NULL,
-  original_new_price BIGINT DEFAULT 0,
-  stock INT DEFAULT 1,
-  location TEXT DEFAULT 'Jakarta Selatan',
-  rating NUMERIC(3,1) DEFAULT 5.0,
-  sold_count INT DEFAULT 0,
-  is_verified_by_team BOOLEAN DEFAULT TRUE,
-  images JSONB DEFAULT '[]'::jsonb,
-  status TEXT DEFAULT 'AVAILABLE',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 8. Tabel Wishlist
-CREATE TABLE IF NOT EXISTS public.wishlists (
-  id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  product_id TEXT REFERENCES public.products(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, product_id)
-);
-
--- 9. Tabel Keranjang Belanja
-CREATE TABLE IF NOT EXISTS public.cart_items (
-  id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  product_id TEXT REFERENCES public.products(id) ON DELETE CASCADE,
-  quantity INT DEFAULT 1,
-  selected BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, product_id)
-);
-
--- 10. Tabel Barang Titipan (Consignments)
-CREATE TABLE IF NOT EXISTS public.consignments (
-  id TEXT PRIMARY KEY,
-  code TEXT UNIQUE NOT NULL,
-  seller_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  category TEXT NOT NULL,
-  brand_model TEXT NOT NULL,
-  variant_spec TEXT DEFAULT '',
-  usage_duration TEXT DEFAULT '',
-  additional_specs TEXT DEFAULT '',
-  current_condition TEXT DEFAULT 'Bekas · berfungsi normal',
-  defect_details TEXT DEFAULT '',
-  completeness TEXT DEFAULT '',
-  photos JSONB DEFAULT '[]'::jsonb,
-  expected_price BIGINT NOT NULL,
-  proposed_price BIGINT,
-  consignment_fee BIGINT,
-  estimated_net_payout BIGINT,
-  origin_city TEXT DEFAULT '',
-  handover_method TEXT DEFAULT 'SHIP_AFTER_ONLINE_CHECK',
-  inbound_courier TEXT DEFAULT '',
-  inbound_tracking_number TEXT DEFAULT '',
-  stage TEXT DEFAULT 'ONLINE_CHECK',
-  badge_label TEXT DEFAULT 'Menunggu review',
-  status_summary TEXT DEFAULT 'Data sudah terkirim. Jangan kirim barang sebelum ada instruksi.',
-  inspection_specs TEXT DEFAULT '',
-  inspection_function_test TEXT DEFAULT '',
-  inspection_condition_defect TEXT DEFAULT '',
-  inspection_completeness TEXT DEFAULT '',
-  inspected_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 11. Tabel Pesanan & Escrow (Orders)
-CREATE TABLE IF NOT EXISTS public.orders (
-  id TEXT PRIMARY KEY,
-  order_code TEXT UNIQUE NOT NULL,
-  buyer_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
-  address_id TEXT REFERENCES public.addresses(id) ON DELETE SET NULL,
-  item_price BIGINT NOT NULL,
-  shipping_courier TEXT DEFAULT 'JNE REG',
-  shipping_cost BIGINT DEFAULT 18000,
-  shipping_protection BIGINT DEFAULT 5000,
-  service_fee BIGINT DEFAULT 2500,
-  total_amount BIGINT NOT NULL,
-  payment_method TEXT DEFAULT 'BCA_VA',
-  va_number TEXT DEFAULT '',
-  buyer_note TEXT DEFAULT '',
-  tracking_number TEXT DEFAULT '',
-  escrow_status TEXT DEFAULT 'HELD_BY_HINGO',
-  order_status TEXT DEFAULT 'PAID_PACKING',
-  inspection_deadline TEXT DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 12. Tabel Chat Threads & Messages
-CREATE TABLE IF NOT EXISTS public.chat_threads (
-  id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
-  type TEXT DEFAULT 'PRODUCT_ADMIN',
-  title TEXT DEFAULT 'Admin Hingo',
-  agent_name TEXT DEFAULT 'Tim Hingo · Online',
-  ticket_code TEXT DEFAULT '',
-  related_product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
-  related_order_id TEXT REFERENCES public.orders(id) ON DELETE SET NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.chat_messages (
-  id TEXT PRIMARY KEY,
-  thread_id TEXT REFERENCES public.chat_threads(id) ON DELETE CASCADE,
-  sender_role TEXT NOT NULL,
-  content TEXT NOT NULL,
-  is_read BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Aktifkan RLS & Buka Policy untuk Aplikasi Hingo
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.otp_verifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bank_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.wishlists ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.consignments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_threads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.users;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.sessions;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.otp_verifications;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.kyc_documents;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.addresses;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.bank_accounts;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.products;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.wishlists;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.cart_items;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.consignments;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.orders;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.chat_threads;
-DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.chat_messages;
-
-CREATE POLICY "Allow all access for Hingo app" ON public.users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.sessions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.otp_verifications FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.kyc_documents FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.addresses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.bank_accounts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.wishlists FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.cart_items FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.consignments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.orders FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.chat_threads FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access for Hingo app" ON public.chat_messages FOR ALL USING (true) WITH CHECK (true);
+CREATE INDEX IF NOT EXISTS idx_consignments_seller_email ON public.consignments(seller_email);
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_email ON public.cart_items(user_email);
+CREATE INDEX IF NOT EXISTS idx_wishlists_user_email ON public.wishlists(user_email);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer_email ON public.orders(buyer_email);
 ```

@@ -10,8 +10,14 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     const addresses = await prisma.address.findMany({
-      where: { userId: user.id },
+      where: {
+        OR: [
+          ...(userEmailNorm ? [{ userEmail: userEmailNorm }] : []),
+          { userId: user.id },
+        ],
+      },
       orderBy: [{ isPrimary: "desc" }, { id: "desc" }],
     });
 
@@ -47,9 +53,11 @@ export async function POST(req: Request) {
     const count = await prisma.address.count({ where: { userId: user.id } });
     const shouldBePrimary = isPrimary || count === 0;
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     const address = await prisma.address.create({
       data: {
         userId: user.id,
+        userEmail: userEmailNorm,
         label: label || "Rumah",
         recipientName: recipientName.trim(),
         phone: phone.trim(),
@@ -64,6 +72,7 @@ export async function POST(req: Request) {
     try {
       await supabase.from("addresses").insert({
         user_id: user.id,
+        user_email: userEmailNorm,
         label: label || "Rumah",
         recipient_name: recipientName.trim(),
         phone: phone.trim(),

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
@@ -9,8 +10,14 @@ export async function GET() {
       return NextResponse.json({ wishlists: [], wishlistIds: [] });
     }
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     const wishlists = await prisma.wishlist.findMany({
-      where: { userId: user.id },
+      where: {
+        OR: [
+          ...(userEmailNorm ? [{ userEmail: userEmailNorm }] : []),
+          { userId: user.id },
+        ],
+      },
       include: { product: true },
       orderBy: { createdAt: "desc" },
     });
@@ -42,6 +49,7 @@ export async function POST(req: Request) {
     }
 
     const { productId } = await req.json();
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
 
     const existing = await prisma.wishlist.findUnique({
       where: {
@@ -53,13 +61,29 @@ export async function POST(req: Request) {
       await prisma.wishlist.delete({
         where: { id: existing.id },
       });
+      try {
+        await supabase.from("wishlists").delete().match({ user_id: user.id, product_id: productId });
+      } catch {}
       const count = await prisma.wishlist.count({ where: { userId: user.id } });
       return NextResponse.json({ isWishlisted: false, count });
     }
 
     await prisma.wishlist.create({
-      data: { userId: user.id, productId },
+      data: {
+        userId: user.id,
+        userEmail: userEmailNorm,
+        productId,
+      },
     });
+
+    try {
+      await supabase.from("wishlists").insert({
+        user_id: user.id,
+        user_email: userEmailNorm,
+        product_id: productId,
+      });
+    } catch {}
+
     const count = await prisma.wishlist.count({ where: { userId: user.id } });
 
     return NextResponse.json({ isWishlisted: true, count });

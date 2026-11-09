@@ -143,7 +143,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
   // Refresh methods
   const refreshWishlist = useCallback(async () => {
     try {
-      const res = await fetch("/api/wishlist");
+      const res = await fetch("/api/wishlist", { cache: "no-store" });
       const data = await res.json();
       if (data?.wishlists) {
         setWishlist(data.wishlists.map((w: any) => w.product || w));
@@ -160,7 +160,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCart = useCallback(async () => {
     try {
-      const res = await fetch("/api/cart");
+      const res = await fetch("/api/cart", { cache: "no-store" });
       const data = await res.json();
       if (data?.items) {
         setCart(
@@ -181,7 +181,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
 
   const refreshOrders = useCallback(async () => {
     try {
-      const res = await fetch("/api/orders");
+      const res = await fetch("/api/orders", { cache: "no-store" });
       const data = await res.json();
       if (data?.orders) {
         setOrders(data.orders);
@@ -195,7 +195,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
 
   const refreshConsignments = useCallback(async () => {
     try {
-      const res = await fetch("/api/consignments");
+      const res = await fetch("/api/consignments", { cache: "no-store" });
       const data = await res.json();
       if (data?.consignments) {
         setConsignments(data.consignments);
@@ -209,7 +209,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPayouts = useCallback(async () => {
     try {
-      const res = await fetch("/api/payouts");
+      const res = await fetch("/api/payouts", { cache: "no-store" });
       const data = await res.json();
       if (data?.payouts) {
         setPayouts(data.payouts);
@@ -223,7 +223,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
 
   const refreshChat = useCallback(async () => {
     try {
-      const res = await fetch("/api/chat");
+      const res = await fetch("/api/chat", { cache: "no-store" });
       const data = await res.json();
       if (data?.threads) {
         setChatThreads(data.threads);
@@ -238,7 +238,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
   const refreshSession = useCallback(async () => {
     setIsLoadingUser(true);
     try {
-      const res = await fetch("/api/auth/session");
+      const res = await fetch("/api/auth/session", { cache: "no-store" });
       const data = await res.json();
 
       if (data?.user) {

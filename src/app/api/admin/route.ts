@@ -174,6 +174,7 @@ export async function POST(req: Request) {
             rating: p.rating,
             sold_count: p.soldCount,
             is_verified_by_team: p.isVerifiedByTeam,
+            seller_email: p.sellerEmail || null,
             images: parsedImages,
             status: p.status,
           });
@@ -198,6 +199,7 @@ export async function POST(req: Request) {
             id: c.id,
             code: c.code,
             seller_id: c.sellerId,
+            seller_email: c.sellerEmail || null,
             category: c.category,
             brand_model: c.brandModel,
             variant_spec: c.variantSpec,
@@ -228,6 +230,7 @@ export async function POST(req: Request) {
             id: o.id,
             order_code: o.orderCode,
             buyer_id: o.buyerId,
+            buyer_email: o.buyerEmail || null,
             product_id: o.productId,
             item_price: o.itemPrice,
             shipping_courier: o.shippingCourier,

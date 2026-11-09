@@ -14,10 +14,14 @@ export async function GET(req: Request) {
     const search = searchParams.get("search");
 
     const isAdmin = user.role === "ADMIN";
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
 
     const where: any = {};
     if (!isAdmin) {
-      where.buyerId = user.id;
+      where.OR = [
+        ...(userEmailNorm ? [{ buyerEmail: userEmailNorm }] : []),
+        { buyerId: user.id },
+      ];
     }
 
     if (status && status !== "ALL") {

@@ -10,8 +10,14 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     const bankAccounts = await prisma.bankAccount.findMany({
-      where: { userId: user.id },
+      where: {
+        OR: [
+          ...(userEmailNorm ? [{ userEmail: userEmailNorm }] : []),
+          { userId: user.id },
+        ],
+      },
       orderBy: [{ isPrimary: "desc" }, { id: "desc" }],
     });
 
@@ -47,9 +53,11 @@ export async function POST(req: Request) {
     const count = await prisma.bankAccount.count({ where: { userId: user.id } });
     const shouldBePrimary = isPrimary || count === 0;
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     const bankAccount = await prisma.bankAccount.create({
       data: {
         userId: user.id,
+        userEmail: userEmailNorm,
         bankName: bankName.trim(),
         accountNumber: accountNumber.trim(),
         accountHolder: accountHolder.trim(),
@@ -61,6 +69,7 @@ export async function POST(req: Request) {
     try {
       await supabase.from("bank_accounts").insert({
         user_id: user.id,
+        user_email: userEmailNorm,
         bank_name: bankName.trim(),
         account_number: accountNumber.trim(),
         account_holder: accountHolder.trim(),

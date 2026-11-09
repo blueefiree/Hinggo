@@ -208,6 +208,22 @@ CREATE TABLE IF NOT EXISTS public.orders (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 12. Kolom Indeks Email Pengguna (Anti-Hilang Saat Refresh)
+ALTER TABLE public.consignments ADD COLUMN IF NOT EXISTS seller_email TEXT DEFAULT '';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_email TEXT DEFAULT '';
+ALTER TABLE public.wishlists ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.cart_items ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS buyer_email TEXT DEFAULT '';
+ALTER TABLE public.addresses ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.bank_accounts ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.kyc_documents ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.chat_threads ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+
+CREATE INDEX IF NOT EXISTS idx_consignments_seller_email ON public.consignments(seller_email);
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_email ON public.cart_items(user_email);
+CREATE INDEX IF NOT EXISTS idx_wishlists_user_email ON public.wishlists(user_email);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer_email ON public.orders(buyer_email);
+
 -- Aktifkan RLS & Buka Policy untuk Aplikasi Hingo
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;

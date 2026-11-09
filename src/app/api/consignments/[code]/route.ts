@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   req: Request,
@@ -15,13 +16,65 @@ export async function GET(
     });
 
     if (!item) {
+      // Fallback cek Supabase cloud
+      try {
+        const { data: sbItems } = await supabase
+          .from("consignments")
+          .select("*")
+          .eq("code", code)
+          .limit(1);
+
+        if (sbItems && sbItems.length > 0) {
+          const s = sbItems[0];
+          return NextResponse.json({
+            consignment: {
+              id: s.id,
+              code: s.code,
+              sellerId: s.seller_id,
+              sellerEmail: s.seller_email,
+              category: s.category,
+              brandModel: s.brand_model || s.brandModel,
+              variantSpec: s.variant_spec || s.variantSpec,
+              usageDuration: s.usage_duration || s.usageDuration,
+              additionalSpecs: s.additional_specs || s.additionalSpecs || "",
+              currentCondition: s.current_condition || s.currentCondition,
+              defectDetails: s.defect_details || s.defectDetails,
+              completeness: s.completeness,
+              photos: typeof s.photos === "string" ? JSON.parse(s.photos || "[]") : (s.photos || []),
+              expectedPrice: s.expected_price || s.expectedPrice,
+              proposedPrice: s.proposed_price || s.proposedPrice,
+              consignmentFeePercent: s.consignment_fee_percent || 8,
+              consignmentFeeAmount: s.consignment_fee_amount || null,
+              adminHandlingFee: s.admin_handling_fee || 19000,
+              estimatedNetPayout: s.estimated_net_payout || null,
+              actualNetPayout: s.actual_net_payout || null,
+              originCity: s.origin_city || "Jakarta",
+              handoverMethod: s.handover_method || "Kirim via kurir",
+              stage: s.stage || "ONLINE_CHECK",
+              actionActor: s.action_actor || "HINGO",
+              badgeLabel: s.badge_label || "Menunggu kurasi",
+              statusSummary: s.status_summary || "",
+              timeline: [],
+              updatedAt: s.updated_at ? new Date(s.updated_at) : new Date(),
+            },
+          });
+        }
+      } catch {}
+
       return NextResponse.json({ error: "Barang titipan tidak ditemukan" }, { status: 404 });
+    }
+
+    let parsedPhotos: string[] = [];
+    try {
+      parsedPhotos = typeof item.photos === "string" ? JSON.parse(item.photos || "[]") : item.photos;
+    } catch {
+      parsedPhotos = [];
     }
 
     return NextResponse.json({
       consignment: {
         ...item,
-        photos: JSON.parse(item.photos || "[]"),
+        photos: parsedPhotos,
       },
     });
   } catch (error: any) {

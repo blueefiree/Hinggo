@@ -51,10 +51,13 @@ export async function POST(req: Request) {
       address = await prisma.address.findFirst({ where: { userId: user.id } });
     }
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase() || null;
+
     if (!address) {
       address = await prisma.address.create({
         data: {
           userId: user.id,
+          userEmail: userEmailNorm,
           label: "Rumah",
           recipientName: user.name,
           phone: user.phone || "081234567890",
@@ -82,6 +85,7 @@ export async function POST(req: Request) {
         data: {
           orderCode,
           buyerId: user.id,
+          buyerEmail: userEmailNorm,
           productId: product.id,
           addressId: address.id,
           itemPrice: product.price,

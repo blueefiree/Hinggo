@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "hinggo-secret-session-key-2026";
 
@@ -65,20 +66,107 @@ export async function getCurrentUser() {
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("hingo_session")?.value;
     const userId = cookieStore.get("hingo_user_id")?.value;
+    const userEmail = cookieStore.get("hingo_user_email")?.value;
 
-    const tokenOrId = sessionToken || userId;
-    if (!tokenOrId || tokenOrId === "user-naya") {
+    const tokenOrIdOrEmail = sessionToken || userId || userEmail;
+    if (!tokenOrIdOrEmail || tokenOrIdOrEmail === "user-naya") {
       return null;
     }
 
-    // 1. Primary: Verified Signed Session Token (Instant, 0 network hops, 100% resilient across lambdas)
+    // ====================================================================
+    // ATURAN 1: RESOLUSI UTAMA BERBASIS EMAIL PENGGUNA (Anti-Hilang saat refresh)
+    // ====================================================================
+    if (userEmail && userEmail.includes("@")) {
+      const normEmail = userEmail.trim().toLowerCase();
+      try {
+        const dbUser = await prisma.user.findFirst({
+          where: { email: normEmail },
+          include: {
+            kycDocument: true,
+            addresses: true,
+            bankAccounts: true,
+          },
+        });
+        if (dbUser) {
+          return dbUser;
+        }
+      } catch (err) {
+        console.warn("Prisma user by email lookup error:", err);
+      }
+
+      // Cek Supabase jika di Prisma lokal belum ada (Sinkronisasi cloud ke lokal)
+      try {
+        const { data: sbUsers } = await supabase
+          .from("users")
+          .select("*")
+          .eq("email", normEmail)
+          .limit(1);
+
+        if (sbUsers && sbUsers.length > 0) {
+          const su = sbUsers[0];
+          try {
+            const created = await prisma.user.upsert({
+              where: { email: normEmail },
+              update: {},
+              create: {
+                id: su.id || crypto.randomUUID(),
+                name: su.name || normEmail.split("@")[0],
+                email: normEmail,
+                phone: su.phone || null,
+                city: su.city || "Jakarta Selatan",
+                role: su.role || "USER",
+                emailVerified: Boolean(su.email_verified),
+                phoneVerified: Boolean(su.phone_verified),
+                kycStatus: su.kyc_status || "UNVERIFIED",
+                avatarUrl: su.avatar_url || null,
+              },
+              include: {
+                kycDocument: true,
+                addresses: true,
+                bankAccounts: true,
+              },
+            });
+            return created;
+          } catch {
+            return {
+              id: su.id || `user-${Date.now()}`,
+              name: su.name || normEmail.split("@")[0],
+              email: normEmail,
+              phone: su.phone || null,
+              city: su.city || "Jakarta Selatan",
+              role: su.role || "USER",
+              emailVerified: true,
+              phoneVerified: Boolean(su.phone_verified),
+              kycStatus: su.kyc_status || "UNVERIFIED",
+              avatarUrl: su.avatar_url || null,
+              bio: null,
+              createdAt: new Date(),
+              addresses: [],
+              bankAccounts: [],
+              kycDocument: null,
+            };
+          }
+        }
+      } catch (sbErr) {
+        console.warn("Supabase user by email lookup bypassed:", sbErr);
+      }
+    }
+
+    // ====================================================================
+    // RESOLUSI KEDUA: VERIFIED SIGNED SESSION TOKEN (30 Hari)
+    // ====================================================================
     if (sessionToken && sessionToken.includes(".")) {
       const payload = verifySessionToken(sessionToken);
       if (payload) {
-        // Coba perkaya relasi dari Prisma (alamat, rekening, kyc, dsb) jika database lokal aktif
+        const targetEmail = payload.email?.trim()?.toLowerCase();
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: payload.userId },
+          const dbUser = await prisma.user.findFirst({
+            where: {
+              OR: [
+                ...(targetEmail ? [{ email: targetEmail }] : []),
+                { id: payload.userId },
+              ],
+            },
             include: {
               kycDocument: true,
               addresses: true,
@@ -97,7 +185,7 @@ export async function getCurrentUser() {
           id: payload.userId,
           name: payload.name,
           phone: payload.phone || null,
-          email: payload.email || null,
+          email: payload.email || (payload.phone ? `${payload.phone.replace(/\D/g, "")}@wa.hingo.id` : null),
           city: payload.city || "Jakarta Selatan",
           role: payload.role || "USER",
           phoneVerified: Boolean(payload.phoneVerified),
@@ -113,29 +201,9 @@ export async function getCurrentUser() {
       }
     }
 
-    // 2. Fallback: Cek Session DB Prisma (untuk token UUID lama jika ada)
-    if (sessionToken) {
-      try {
-        const session = await prisma.session.findUnique({
-          where: { token: sessionToken },
-          include: {
-            user: {
-              include: {
-                kycDocument: true,
-                addresses: true,
-                bankAccounts: true,
-              },
-            },
-          },
-        });
-
-        if (session && session.expiresAt > new Date()) {
-          return session.user;
-        }
-      } catch (err) {}
-    }
-
-    // 3. Fallback: Cek Direct User ID di Prisma
+    // ====================================================================
+    // RESOLUSI KETIGA: FALLBACK DIRECT USER ID DI PRISMA
+    // ====================================================================
     const targetUserId = userId || (sessionToken && !sessionToken.includes(".") ? sessionToken : null);
     if (targetUserId && targetUserId !== "user-naya") {
       try {

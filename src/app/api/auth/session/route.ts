@@ -110,6 +110,16 @@ export async function POST(req: Request) {
       });
     } catch {}
 
+    const userEmail = user.email || (user.phone ? `${user.phone.replace(/\D/g, "")}@wa.hingo.id` : null);
+    if (userEmail) {
+      cookieStore.set("hingo_user_email", userEmail, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 30, // 30 hari
+      });
+    }
+
     cookieStore.set("hingo_session", sessionToken, {
       path: "/",
       httpOnly: true,
@@ -142,5 +152,6 @@ export async function DELETE() {
 
   cookieStore.delete("hingo_session");
   cookieStore.delete("hingo_user_id");
+  cookieStore.delete("hingo_user_email");
   return NextResponse.json({ success: true, message: "Logged out" });
 }

@@ -22,11 +22,14 @@ export async function POST(req: Request) {
 
     const maskedNik = `•••• •••• •••• ${cleanNik.slice(-4)}`;
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
+
     // Upsert KycDocument
     const kycDoc = await prisma.kycDocument.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
+        userEmail: userEmailNorm,
         fullNameKtp: fullNameKtp.trim(),
         nikNumber: cleanNik,
         maskedNik,
@@ -37,6 +40,7 @@ export async function POST(req: Request) {
         status: "PENDING_REVIEW",
       },
       update: {
+        userEmail: userEmailNorm,
         fullNameKtp: fullNameKtp.trim(),
         nikNumber: cleanNik,
         maskedNik,

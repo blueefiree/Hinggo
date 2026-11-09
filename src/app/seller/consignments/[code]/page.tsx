@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -21,6 +21,7 @@ import {
   PackageCheck,
   CreditCard,
   Megaphone,
+  Loader2,
 } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
@@ -32,20 +33,66 @@ export default function ConsignmentDetailPage() {
   const { user, consignments, approveConsignmentPrice, sendMessage, requestConsignmentReturn } = useHingoStore();
 
   const code = (params?.code as string) || "HG-261018-031";
-  const item: ConsignmentItem =
-    consignments.find((c) => c.code === code) || CONSIGNMENT_ITEMS[0];
 
-  const isAlreadyMarketing = item.stage === "PRICE_AGREED_MARKETING";
-  const [requestedBreakdown, setRequestedBreakdown] = useState(
-    isAlreadyMarketing || Boolean(item.proposedPriceAfterInspection)
-  );
+  // Database-first state sesuai Aturan 3
+  const [dbItem, setDbItem] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadItem() {
+      try {
+        const res = await fetch(`/api/consignments/${code}`, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.consignment && isMounted) {
+            setDbItem(data.consignment);
+          }
+        }
+      } catch (e) {
+        console.warn("Fetch consignment error:", e);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadItem();
+    return () => {
+      isMounted = false;
+    };
+  }, [code]);
+
+  const item: any =
+    dbItem || consignments.find((c) => c.code === code) || (isLoading ? null : CONSIGNMENT_ITEMS[0]);
+
+  const isAlreadyMarketing = item?.stage === "PRICE_AGREED_MARKETING";
+  const [requestedBreakdown, setRequestedBreakdown] = useState(false);
 
   const [feeBreakdown, setFeeBreakdown] = useState({
-    proposedPrice: item.proposedPriceAfterInspection || 950000,
-    consignmentFee: item.consignmentFee || 76000, // 8% of 950k
+    proposedPrice: 950000,
+    consignmentFee: 76000,
     handlingFee: 19000,
-    netPayout: item.estimatedNetPayout || 855000,
+    netPayout: 855000,
   });
+
+  useEffect(() => {
+    if (item) {
+      const pPrice = item.proposedPrice || item.proposedPriceAfterInspection || item.expectedPrice || 950000;
+      const cFee = item.consignmentFeeAmount || Math.round(pPrice * 0.08);
+      const hFee = item.adminHandlingFee || 19000;
+      const nPay = item.actualNetPayout || item.estimatedNetPayout || (pPrice - cFee - hFee);
+
+      setFeeBreakdown({
+        proposedPrice: pPrice,
+        consignmentFee: cFee,
+        handlingFee: hFee,
+        netPayout: nPay,
+      });
+
+      if (item.stage === "PRICE_AGREED_MARKETING" || Boolean(item.proposedPrice || item.proposedPriceAfterInspection)) {
+        setRequestedBreakdown(true);
+      }
+    }
+  }, [item]);
 
   const [negotiateModalOpen, setNegotiateModalOpen] = useState(false);
   const [counterPrice, setCounterPrice] = useState("980000");
@@ -104,6 +151,33 @@ export default function ConsignmentDetailPage() {
     setCancelModalOpen(false);
     alert("Permohonan pengembalian gear telah diajukan ke tim logistik gudang Hingo.");
   };
+
+  if (isLoading && !item) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-20 text-center flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 text-[#FFC629] animate-spin" />
+        <p className="text-sm font-bold text-neutral-700">Memuat detail barang titipan dari database...</p>
+      </div>
+    );
+  }
+
+  if (!item) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-20 text-center flex flex-col items-center justify-center gap-3">
+        <AlertCircle className="h-10 w-10 text-neutral-400" />
+        <h2 className="text-lg font-black text-[#1A1A1A]">Barang Titipan Tidak Ditemukan</h2>
+        <p className="text-xs text-neutral-500 max-w-md">
+          Kode barang {code} tidak terdaftar di database akun ini atau telah selesai diproses.
+        </p>
+        <Link
+          href="/seller/consignments"
+          className="rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-5 py-2.5 text-xs font-bold text-black transition"
+        >
+          Kembali ke Daftar Titipan
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">

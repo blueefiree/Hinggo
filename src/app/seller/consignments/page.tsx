@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -21,9 +21,16 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
 
 export default function SellerConsignmentsPage() {
-  const { user, consignments, payouts } = useHingoStore();
+  const { user, consignments, payouts, refreshConsignments } = useHingoStore();
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // ====================================================================
+  // ATURAN 3: FETCH LANGSUNG DARI DATABASE SAAT REFRESH
+  // ====================================================================
+  useEffect(() => {
+    refreshConsignments();
+  }, [refreshConsignments]);
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {

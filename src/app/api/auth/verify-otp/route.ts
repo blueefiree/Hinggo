@@ -62,7 +62,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Upsert User di Supabase public.users (Fault-Tolerant)
+    // 2. Tentukan Email Unik & Konsisten Pengguna (Anti-Hilang saat refresh)
+    const cleanDigits = cleanTarget.replace(/\D/g, "");
+    const userEmail = isEmail
+      ? cleanTarget.trim().toLowerCase()
+      : `${cleanDigits || cleanTarget}@wa.hingo.id`;
+    const userPhone = isEmail ? null : cleanTarget.trim();
+
     const generatedName = isEmail
       ? cleanTarget.split("@")[0].replace(/[._-]/g, " ")
       : `Pengguna ${cleanTarget.slice(-4)}`;
@@ -74,8 +80,8 @@ export async function POST(req: Request) {
     try {
       // Cek user yang sudah ada di Supabase
       const userQuery = isEmail
-        ? supabase.from("users").select("*").eq("email", cleanTarget).limit(1)
-        : supabase.from("users").select("*").eq("phone", cleanTarget).limit(1);
+        ? supabase.from("users").select("*").eq("email", userEmail).limit(1)
+        : supabase.from("users").select("*").eq("phone", userPhone).limit(1);
 
       const { data: existingUsers } = await userQuery;
 
@@ -83,7 +89,7 @@ export async function POST(req: Request) {
         const exUser = existingUsers[0];
         userId = exUser.id;
         const updatePayload: any = isEmail
-          ? { email_verified: true, updated_at: new Date().toISOString() }
+          ? { email: userEmail, email_verified: true, updated_at: new Date().toISOString() }
           : { phone_verified: true, updated_at: new Date().toISOString() };
 
         const { data: updated } = await supabase
@@ -97,8 +103,8 @@ export async function POST(req: Request) {
         // Buat user baru di Supabase
         const newPayload = {
           name: formattedName,
-          email: isEmail ? cleanTarget : null,
-          phone: isEmail ? null : cleanTarget,
+          email: userEmail,
+          phone: userPhone,
           city: "Jakarta Selatan",
           role: "USER",
           phone_verified: !isEmail,
@@ -123,14 +129,23 @@ export async function POST(req: Request) {
 
     // 3. Sinkronkan ke Prisma lokal
     let localUser = await prisma.user.findFirst({
-      where: isEmail ? { email: cleanTarget } : { phone: cleanTarget },
+      where: {
+        OR: [
+          { email: userEmail },
+          ...(userPhone ? [{ phone: userPhone }] : []),
+        ],
+      },
       include: { kycDocument: true, addresses: true, bankAccounts: true },
     });
 
     if (localUser) {
       localUser = await prisma.user.update({
         where: { id: localUser.id },
-        data: isEmail ? { emailVerified: true } : { phoneVerified: true },
+        data: {
+          email: localUser.email || userEmail,
+          emailVerified: isEmail ? true : localUser.emailVerified,
+          phoneVerified: !isEmail ? true : localUser.phoneVerified,
+        },
         include: { kycDocument: true, addresses: true, bankAccounts: true },
       });
     } else {
@@ -138,8 +153,8 @@ export async function POST(req: Request) {
         data: {
           id: userId,
           name: formattedName,
-          email: isEmail ? cleanTarget : null,
-          phone: isEmail ? null : cleanTarget,
+          email: userEmail,
+          phone: userPhone,
           emailVerified: isEmail,
           phoneVerified: !isEmail,
           city: "Jakarta Selatan",
@@ -178,8 +193,15 @@ export async function POST(req: Request) {
       });
     } catch {}
 
-    // 5. Pasang HTTP-Only Cookie 30 Hari
+    // 5. Pasang HTTP-Only Cookie 30 Hari (Termasuk hingo_user_email sesuai Aturan 1)
     const cookieStore = await cookies();
+    cookieStore.set("hingo_user_email", userEmail, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 hari
+    });
+
     cookieStore.set("hingo_user_id", localUser.id, {
       path: "/",
       httpOnly: false,

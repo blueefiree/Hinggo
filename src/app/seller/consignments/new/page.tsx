@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,12 +13,21 @@ import {
   Camera,
   MessageSquare,
   Sparkles,
+  Trash2,
+  Plus,
+  X,
+  FileCheck2,
 } from "lucide-react";
 import { useHingoStore } from "@/lib/store";
 
 export default function NewConsignmentPage() {
   const router = useRouter();
-  const { addConsignment, user } = useHingoStore();
+  const { user, refreshConsignments } = useHingoStore();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Key draf spesifik email user sesuai Aturan 3
+  const draftKey = `hingo_consignment_draft_${user?.email ? user.email.trim().toLowerCase() : (user?.id || "guest")}`;
 
   const [category, setCategory] = useState<"KEYBOARD" | "MOUSE" | "HEADSET" | "MONITOR" | "ACCESSORIES">("KEYBOARD");
   const [brandModel, setBrandModel] = useState("Keychron V1");
@@ -36,6 +45,11 @@ export default function NewConsignmentPage() {
   );
   const [expectedPrice, setExpectedPrice] = useState(850000);
   const [handoverMethod, setHandoverMethod] = useState("SHIP_AFTER_ONLINE");
+  const [photos, setPhotos] = useState<string[]>([
+    "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=800&auto=format&fit=crop",
+  ]);
+  const [urlInput, setUrlInput] = useState("");
   const [consentCheck, setConsentCheck] = useState({
     original: true,
     inspection: true,
@@ -43,7 +57,106 @@ export default function NewConsignmentPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
 
+  // ====================================================================
+  // ATURAN 3: PULIHKAN DRAF SAAT HALAMAN DIBUKA / DI-REFRESH
+  // ====================================================================
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.category) setCategory(parsed.category);
+        if (parsed.brandModel) setBrandModel(parsed.brandModel);
+        if (parsed.variantSpec) setVariantSpec(parsed.variantSpec);
+        if (parsed.usageDuration) setUsageDuration(parsed.usageDuration);
+        if (parsed.additionalSpecs !== undefined) setAdditionalSpecs(parsed.additionalSpecs);
+        if (parsed.currentCondition) setCurrentCondition(parsed.currentCondition);
+        if (parsed.defectDetails !== undefined) setDefectDetails(parsed.defectDetails);
+        if (parsed.completeness) setCompleteness(parsed.completeness);
+        if (parsed.expectedPrice) setExpectedPrice(Number(parsed.expectedPrice));
+        if (parsed.handoverMethod) setHandoverMethod(parsed.handoverMethod);
+        if (Array.isArray(parsed.photos) && parsed.photos.length > 0) setPhotos(parsed.photos);
+        setDraftSavedAt("Draf terakhir dipulihkan otomatis");
+      }
+    } catch (err) {
+      console.warn("Failed to restore draft:", err);
+    }
+    setHasRestoredDraft(true);
+  }, [draftKey]);
+
+  // ====================================================================
+  // ATURAN 3: AUTO-SAVE KE LOCALSTORAGE PER EMAIL SETIAP PERUBAHAN INPUT
+  // ====================================================================
+  useEffect(() => {
+    if (!hasRestoredDraft) return;
+    try {
+      const payload = {
+        category,
+        brandModel,
+        variantSpec,
+        usageDuration,
+        additionalSpecs,
+        currentCondition,
+        defectDetails,
+        completeness,
+        expectedPrice,
+        handoverMethod,
+        photos,
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(draftKey, JSON.stringify(payload));
+      setDraftSavedAt("Tersimpan otomatis");
+    } catch (err) {
+      console.warn("Auto-save draft failed:", err);
+    }
+  }, [
+    hasRestoredDraft,
+    draftKey,
+    category,
+    brandModel,
+    variantSpec,
+    usageDuration,
+    additionalSpecs,
+    currentCondition,
+    defectDetails,
+    completeness,
+    expectedPrice,
+    handoverMethod,
+    photos,
+  ]);
+
+  // Upload Foto dari Perangkat (Base64)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          setPhotos((prev) => [...prev, ev.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (e.target) e.target.value = "";
+  };
+
+  const handleAddPhotoUrl = () => {
+    if (!urlInput.trim()) return;
+    setPhotos((prev) => [...prev, urlInput.trim()]);
+    setUrlInput("");
+  };
+
+  const handleRemovePhoto = (idx: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Simpan Draf atau Kirim Pengajuan ke Database
   const handleSave = async (isDraft: boolean) => {
     setIsSubmitting(true);
     const payload = {
@@ -56,15 +169,12 @@ export default function NewConsignmentPage() {
       defectDetails,
       completeness,
       expectedPrice,
-      originCity: "Jakarta Selatan",
+      originCity: user?.city || "Jakarta Selatan",
       handoverMethod:
         handoverMethod === "SHIP_AFTER_ONLINE"
           ? "Kirim via kurir setelah online check"
           : "Antar langsung ke gudang Jakarta",
-      photos: [
-        "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=800&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=800&auto=format&fit=crop",
-      ],
+      photos,
       isDraft,
     };
 
@@ -76,17 +186,25 @@ export default function NewConsignmentPage() {
       });
 
       const data = await res.json();
-      addConsignment(payload);
+      if (!res.ok) {
+        throw new Error(data.error || "Gagal menyimpan pengajuan titip jual ke database");
+      }
+
+      // Hapus draf sementara karena sudah sukses tersimpan permanen di database
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {}
+
+      await refreshConsignments();
       alert(
         data.message ||
           (isDraft
-            ? "Draf berhasil disimpan di database Hingo."
+            ? "Draf berhasil disimpan permanen di akunmu."
             : "Pengajuan titip jual berhasil dikirim ke database! Tim kurator Hingo akan mereview dalam 1×24 jam.")
       );
       router.push("/seller/consignments");
-    } catch (e) {
-      addConsignment(payload);
-      router.push("/seller/consignments");
+    } catch (e: any) {
+      alert(e.message || "Terjadi kesalahan saat menyimpan ke database.");
     } finally {
       setIsSubmitting(false);
     }
@@ -101,9 +219,17 @@ export default function NewConsignmentPage() {
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
       {/* Eyebrow & Title */}
       <div className="flex flex-col gap-2 mb-6">
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
-          RUANG PENJUAL / PENGAJUAN BARU
-        </span>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+            RUANG PENJUAL / PENGAJUAN BARU
+          </span>
+          {draftSavedAt && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-200 animate-in fade-in">
+              <FileCheck2 className="h-3.5 w-3.5 text-emerald-600" />
+              <span>{draftSavedAt} (Anti-Hilang)</span>
+            </span>
+          )}
+        </div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
             Gear menganggur? Titip jual aja.
@@ -133,7 +259,7 @@ export default function NewConsignmentPage() {
         <div className="text-xs sm:text-sm text-neutral-800 leading-relaxed">
           <strong className="text-black font-bold">Tahap saat ini: Pengecekan online — </strong>
           Jangan kirim barang fisik sebelum pengajuanmu dinyatakan <strong>lolos review kurasi</strong> oleh tim Hingo.
-          Kami akan memberikan instruksi pengemasan dan alamat gudang penerima setelahnya.
+          Isian form ini memiliki fitur <strong>Auto-Save per Akun</strong>, sehingga tidak akan hilang sekalipun halaman browser di-refresh.
         </div>
       </div>
 
@@ -271,45 +397,104 @@ export default function NewConsignmentPage() {
               </div>
             </div>
 
-            {/* Part 03: Foto Barang Asli */}
+            {/* Part 03: Foto Barang Asli (Upload Lokal & URL) */}
             <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-4">
-              <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-                <h2 className="text-base font-black text-[#1A1A1A]">
-                  03 · Foto barang asli
-                </h2>
-                <span className="text-xs text-neutral-400">Minimal 3 sudut</span>
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-100 flex-wrap gap-2">
+                <div>
+                  <h2 className="text-base font-black text-[#1A1A1A]">
+                    03 · Foto barang asli
+                  </h2>
+                  <p className="text-[11px] text-neutral-400">
+                    Bisa unggah dari galeri HP/laptop atau masukkan URL foto. Minimal 1 foto.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#FFC629] hover:bg-[#FFC420] text-black font-extrabold px-3 py-1.5 text-xs shadow-xs transition"
+                >
+                  <UploadCloud className="h-3.5 w-3.5" />
+                  <span>+ Unggah dari Perangkat</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-2xl border border-neutral-200 p-3 bg-[#F6F6F4] flex flex-col gap-2">
-                  <img
-                    src="https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=400&auto=format&fit=crop"
-                    alt="Tampak depan"
-                    className="aspect-4/3 w-full rounded-xl object-cover"
-                  />
-                  <span className="text-[11px] font-bold text-[#1A1A1A] text-center">
-                    Tampak depan & tombol
-                  </span>
-                </div>
-
-                <div className="rounded-2xl border border-neutral-200 p-3 bg-[#F6F6F4] flex flex-col gap-2">
-                  <img
-                    src="https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=400&auto=format&fit=crop"
-                    alt="Casing bawah"
-                    className="aspect-4/3 w-full rounded-xl object-cover"
-                  />
-                  <span className="text-[11px] font-bold text-[#1A1A1A] text-center">
-                    Casing bawah · gores halus
-                  </span>
-                </div>
-
-                <div className="rounded-2xl border border-dashed border-neutral-300 p-3 bg-neutral-50 flex flex-col items-center justify-center gap-2 aspect-4/3 sm:aspect-auto">
-                  <Camera className="h-6 w-6 text-neutral-400" />
-                  <span className="text-[11px] font-bold text-neutral-600 text-center">
-                    + Tambah / ganti foto
-                  </span>
-                </div>
+              {/* URL Input */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="url"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="Atau tempel link URL foto langsung di sini..."
+                  className="flex-1 rounded-xl border border-neutral-300 py-2 px-3 text-xs text-[#1A1A1A] outline-none focus:border-[#FFC629]"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddPhotoUrl}
+                  className="rounded-xl border border-neutral-300 bg-neutral-100 hover:bg-neutral-200 px-3.5 py-2 text-xs font-bold text-neutral-700 transition"
+                >
+                  + Tambah Link
+                </button>
               </div>
+
+              {/* Photo Grid Preview */}
+              {photos.length === 0 ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-2xl border-2 border-dashed border-neutral-300 p-8 text-center bg-neutral-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-neutral-100 transition"
+                >
+                  <Camera className="h-8 w-8 text-neutral-400" />
+                  <span className="text-xs font-bold text-neutral-700">
+                    Belum ada foto ditambahkan
+                  </span>
+                  <span className="text-[11px] text-neutral-400">
+                    Klik di sini untuk memilih foto dari galeri HP / laptop
+                  </span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {photos.map((src, index) => (
+                    <div
+                      key={index}
+                      className="group relative rounded-2xl border border-neutral-200 bg-[#F6F6F4] p-1.5 overflow-hidden aspect-4/3 flex items-center justify-center"
+                    >
+                      <img
+                        src={src}
+                        alt={`Foto ke-${index + 1}`}
+                        className="h-full w-full rounded-xl object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhoto(index)}
+                        className="absolute top-2.5 right-2.5 h-6 w-6 rounded-full bg-red-600/90 hover:bg-red-700 text-white flex items-center justify-center shadow-md transition"
+                        title="Hapus foto ini"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                        #{index + 1}
+                      </span>
+                    </div>
+                  ))}
+
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="rounded-2xl border-2 border-dashed border-neutral-300 p-3 bg-neutral-50 flex flex-col items-center justify-center gap-1.5 aspect-4/3 cursor-pointer hover:bg-neutral-100 transition"
+                  >
+                    <Plus className="h-5 w-5 text-neutral-500" />
+                    <span className="text-[11px] font-bold text-neutral-600 text-center">
+                      + Tambah Foto
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Part 04: Harga yang Diharapkan */}
@@ -356,8 +541,8 @@ export default function NewConsignmentPage() {
                   <strong className="text-sm font-bold text-[#1A1A1A]">{user?.phone || "-"}</strong>
                 </div>
                 <div>
-                  <span className="text-neutral-400 block text-[11px]">Email</span>
-                  <strong className="text-sm font-bold text-[#1A1A1A]">{user?.email || "-"}</strong>
+                  <span className="text-neutral-400 block text-[11px]">Email Terkunci (Identitas Sesi)</span>
+                  <strong className="text-sm font-bold text-amber-900">{user?.email || "-"}</strong>
                 </div>
                 <div>
                   <span className="text-neutral-400 block text-[11px]">Kota Asal Pemilik</span>
@@ -444,9 +629,10 @@ export default function NewConsignmentPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-6 py-3 text-xs font-bold text-black shadow-xs transition"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-6 py-3 text-xs font-bold text-black shadow-xs transition disabled:opacity-50"
                 >
-                  <span>Kirim untuk review</span>
+                  <span>{isSubmitting ? "Mengirim..." : "Kirim untuk review"}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>

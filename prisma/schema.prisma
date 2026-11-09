@@ -55,6 +55,7 @@ model OtpVerification {
 model KycDocument {
   id              String   @id @default(uuid())
   userId          String   @unique
+  userEmail       String?
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullNameKtp     String
   nikNumber       String?
@@ -71,6 +72,7 @@ model KycDocument {
 model Address {
   id            String   @id @default(uuid())
   userId        String
+  userEmail     String?
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   label         String   // Rumah | Kantor | Kos
   recipientName String
@@ -85,6 +87,7 @@ model Address {
 model BankAccount {
   id            String   @id @default(uuid())
   userId        String
+  userEmail     String?
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   bankName      String   // BCA | Mandiri | BRI | GoPay
   accountNumber String
@@ -98,6 +101,7 @@ model Product {
   slug              String     @unique
   consignmentItemId String?
   sellerId          String?
+  sellerEmail       String?
   brand             String
   name              String
   subtitle          String
@@ -127,6 +131,7 @@ model Product {
 model Wishlist {
   id        String   @id @default(uuid())
   userId    String
+  userEmail String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -138,6 +143,7 @@ model Wishlist {
 model CartItem {
   id        String   @id @default(uuid())
   userId    String
+  userEmail String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -150,6 +156,7 @@ model Order {
   id                 String          @id @default(uuid())
   orderCode          String          @unique // format GRL-YYYYMMDD-XXXX
   buyerId            String
+  buyerEmail         String?
   buyer              User            @relation(fields: [buyerId], references: [id])
   productId          String
   product            Product         @relation(fields: [productId], references: [id])
@@ -203,6 +210,7 @@ model ConsignmentItem {
   id                       String                @id @default(uuid())
   code                     String                @unique // format HG-YYMMDD-XXX
   sellerId                 String
+  sellerEmail              String?
   seller                   User                  @relation(fields: [sellerId], references: [id])
   category                 String                // KEYBOARD | MOUSE | HEADSET | MONITOR | ACCESSORIES
   brandModel               String
@@ -253,6 +261,7 @@ model ConsignmentTimeline {
 model Payout {
   id              String           @id @default(uuid())
   sellerId        String
+  sellerEmail     String?
   seller          User             @relation(fields: [sellerId], references: [id])
   consignmentId   String?
   consignment     ConsignmentItem? @relation(fields: [consignmentId], references: [id])
@@ -270,6 +279,7 @@ model Payout {
 model ChatThread {
   id               String        @id @default(uuid())
   userId           String?
+  userEmail        String?
   type             String        @default("PRODUCT_ADMIN") // PRODUCT_ADMIN | CS_SUPPORT | SYSTEM_INFO
   title            String
   agentName        String?

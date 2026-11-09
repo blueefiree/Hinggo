@@ -10,8 +10,14 @@ export async function GET() {
       return NextResponse.json({ items: [] });
     }
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     const items = await prisma.cartItem.findMany({
-      where: { userId: user.id },
+      where: {
+        OR: [
+          ...(userEmailNorm ? [{ userEmail: userEmailNorm }] : []),
+          { userId: user.id },
+        ],
+      },
       include: {
         product: true,
       },
@@ -74,9 +80,11 @@ export async function POST(req: Request) {
       });
     }
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     const created = await prisma.cartItem.create({
       data: {
         userId: user.id,
+        userEmail: userEmailNorm,
         productId,
         quantity: 1,
         selected: true,
@@ -90,6 +98,7 @@ export async function POST(req: Request) {
     try {
       await supabase.from("cart_items").insert({
         user_id: user.id,
+        user_email: userEmailNorm,
         product_id: productId,
         quantity: 1,
         selected: true,

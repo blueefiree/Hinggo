@@ -27,6 +27,7 @@ export async function POST() {
     // Delete cookies
     cookieStore.delete("hingo_session");
     cookieStore.delete("hingo_user_id");
+    cookieStore.delete("hingo_user_email");
 
     return NextResponse.json({ success: true, message: "Berhasil keluar dari akun" });
   } catch (error: any) {

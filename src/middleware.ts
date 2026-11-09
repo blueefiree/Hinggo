@@ -11,7 +11,7 @@ const PROTECTED_PREFIXES = [
   "/admin",
 ];
 
-function isSessionValid(sessionCookie?: string, userIdCookie?: string): boolean {
+function isSessionValid(sessionCookie?: string, userIdCookie?: string, userEmailCookie?: string): boolean {
   if (sessionCookie && sessionCookie.includes(".")) {
     try {
       const parts = sessionCookie.split(".");
@@ -28,8 +28,8 @@ function isSessionValid(sessionCookie?: string, userIdCookie?: string): boolean 
     }
   }
 
-  const tokenOrId = sessionCookie || userIdCookie;
-  return Boolean(tokenOrId && tokenOrId !== "user-naya" && tokenOrId.length > 5);
+  const tokenOrIdOrEmail = sessionCookie || userIdCookie || userEmailCookie;
+  return Boolean(tokenOrIdOrEmail && tokenOrIdOrEmail !== "user-naya" && tokenOrIdOrEmail.length > 5);
 }
 
 export function middleware(request: NextRequest) {
@@ -37,8 +37,9 @@ export function middleware(request: NextRequest) {
 
   const sessionCookie = request.cookies.get("hingo_session")?.value;
   const userIdCookie = request.cookies.get("hingo_user_id")?.value;
+  const userEmailCookie = request.cookies.get("hingo_user_email")?.value;
 
-  const isAuthenticated = isSessionValid(sessionCookie, userIdCookie);
+  const isAuthenticated = isSessionValid(sessionCookie, userIdCookie, userEmailCookie);
 
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)

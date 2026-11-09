@@ -15,9 +15,15 @@ export async function GET(req: Request) {
     const productId = searchParams.get("productId");
     const threadId = searchParams.get("threadId");
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
     // Fetch all threads for current user
     const userThreads = await prisma.chatThread.findMany({
-      where: { userId: user.id },
+      where: {
+        OR: [
+          ...(userEmailNorm ? [{ userEmail: userEmailNorm }] : []),
+          { userId: user.id },
+        ],
+      },
       include: {
         messages: { orderBy: { createdAt: "asc" } },
       },
@@ -120,6 +126,7 @@ export async function POST(req: Request) {
       thread = await prisma.chatThread.create({
         data: {
           userId: user.id,
+          userEmail: user.email?.trim()?.toLowerCase() || null,
           type,
           title,
           agentName,
