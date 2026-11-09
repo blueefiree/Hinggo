@@ -1,2 +1,1 @@
-export * from "../../src/utils/supabase/client";
-
+export * from "@/utils/supabase/client";

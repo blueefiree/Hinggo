@@ -178,17 +178,15 @@ function CatalogContent() {
           <button
             key={pill.value}
             onClick={() => setSelectedCategory(pill.value)}
-            className={`whitespace-nowrap rounded-full px-3.5 sm:px-4 py-1.5 text-xs font-bold transition shadow-xs flex items-center gap-1 cursor-pointer active:scale-95 ${
-              selectedCategory === pill.value
+            className={`whitespace-nowrap rounded-full px-3.5 sm:px-4 py-1.5 text-xs font-bold transition shadow-xs flex items-center gap-1 cursor-pointer active:scale-95 ${selectedCategory === pill.value
                 ? "bg-[#FFC629] text-[#1A1A1A] border border-[#F59E0B]"
                 : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
-            }`}
+              }`}
           >
             <span>{pill.label}</span>
             <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                selectedCategory === pill.value ? "bg-black/10 text-black font-extrabold" : "bg-neutral-200 text-neutral-500"
-              }`}
+              className={`text-[10px] px-1.5 py-0.2 rounded-full ${selectedCategory === pill.value ? "bg-black/10 text-black font-extrabold" : "bg-neutral-200 text-neutral-500"
+                }`}
             >
               {pill.count}
             </span>
@@ -258,11 +256,10 @@ function CatalogContent() {
                     key={c}
                     type="button"
                     onClick={() => setSelectedCondition(c)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
-                      selectedCondition === c
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${selectedCondition === c
                         ? "bg-[#1A1A1A] text-white"
                         : "bg-[#F6F6F4] text-neutral-700 hover:bg-neutral-200"
-                    }`}
+                      }`}
                   >
                     {c === "ALL" ? "Semua kondisi" : c}
                   </button>
@@ -403,7 +400,7 @@ function CatalogContent() {
               Jakarta Selatan
               <button
                 type="button"
-                onClick={() => {}}
+                onClick={() => { }}
                 className="hover:text-black font-bold ml-0.5"
               >
                 ×
@@ -497,11 +494,10 @@ function CatalogContent() {
                         setSelectedCategory(item.value);
                         setMobileFilterOpen(false);
                       }}
-                      className={`p-2.5 rounded-xl border text-center transition ${
-                        selectedCategory === item.value
+                      className={`p-2.5 rounded-xl border text-center transition ${selectedCategory === item.value
                           ? "border-[#FFC629] bg-[#FFFBEB] font-bold text-[#1A1A1A]"
                           : "border-neutral-200 text-neutral-600"
-                      }`}
+                        }`}
                     >
                       {item.label}
                     </button>
