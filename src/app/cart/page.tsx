@@ -61,13 +61,13 @@ export default function CartPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
+    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
       {/* Header */}
-      <div className="flex flex-col gap-1 mb-8">
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+      <div className="flex flex-col gap-0.5 mb-4 sm:mb-8">
+        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-800">
           BELANJA / KERANJANG
         </span>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
+        <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-[#1A1A1A]">
           Keranjangmu
         </h1>
         <p className="text-xs sm:text-sm text-neutral-500">
@@ -76,12 +76,12 @@ export default function CartPage() {
       </div>
 
       {cart.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column: Cart items */}
-          <div className="lg:col-span-8 flex flex-col gap-5">
+          <div className="lg:col-span-8 flex flex-col gap-3.5 sm:gap-5">
             {/* Select-all bar */}
-            <div className="flex items-center justify-between rounded-2xl border border-[#E5E5E5] bg-white p-4 shadow-xs">
-              <label className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#1A1A1A] cursor-pointer">
+            <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-[#E5E5E5] bg-white p-3 sm:p-4 shadow-xs">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-bold text-[#1A1A1A] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -108,10 +108,10 @@ export default function CartPage() {
               return (
                 <div
                   key={itemId}
-                  className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-4"
+                  className="rounded-2xl sm:rounded-3xl border border-[#E5E5E5] bg-white p-3.5 sm:p-6 shadow-xs flex flex-col gap-3"
                 >
                   {/* Store origin badge */}
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-100 text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-100 text-xs">
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -125,12 +125,12 @@ export default function CartPage() {
                         size="sm"
                       />
                     </div>
-                    <span className="text-neutral-400 font-medium">Stok Preloved: 1 unit</span>
+                    <span className="text-neutral-400 font-medium text-[11px]">Stok: 1 unit</span>
                   </div>
 
-                  <div className="flex gap-4 sm:gap-6">
+                  <div className="flex gap-3 sm:gap-5">
                     {/* Thumbnail */}
-                    <div className="relative aspect-square w-20 sm:w-28 shrink-0 overflow-hidden rounded-2xl bg-[#F6F6F4] border border-neutral-200">
+                    <div className="relative aspect-square w-18 h-18 sm:w-28 sm:h-28 shrink-0 overflow-hidden rounded-xl sm:rounded-2xl bg-[#F6F6F4] border border-neutral-200">
                       <img
                         src={item.product.images[0]}
                         alt={item.product.name}
@@ -141,19 +141,19 @@ export default function CartPage() {
                     {/* Info */}
                     <div className="flex flex-1 flex-col justify-between">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                           {item.product.brand}
                         </span>
-                        <h3 className="text-sm sm:text-base font-bold text-[#1A1A1A]">
+                        <h3 className="text-xs sm:text-base font-bold text-[#1A1A1A] leading-snug">
                           {item.product.name}
                         </h3>
-                        <p className="text-xs text-neutral-500 mt-0.5">
+                        <p className="text-[11px] sm:text-xs text-neutral-500 mt-0.5">
                           {item.product.condition} · {item.product.switchOrVariant}
                         </p>
                       </div>
 
-                      <div className="mt-3 flex items-baseline justify-between">
-                        <span className="text-base sm:text-lg font-black text-[#1A1A1A]">
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <span className="text-sm sm:text-lg font-black text-[#1A1A1A]">
                           {formatRupiah(item.product.price)}
                         </span>
                       </div>
@@ -162,7 +162,7 @@ export default function CartPage() {
 
                   {/* Baris bawah: Stepper [- 1 +] di kiri dan Hapus barang di kanan sesuai Figma */}
                   <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-                    <div className="flex items-center rounded-xl bg-[#F6F6F4] border border-neutral-200 px-2 py-1">
+                    <div className="flex items-center rounded-lg bg-[#F6F6F4] border border-neutral-200 px-2 py-0.5">
                       <span className="text-neutral-400 font-bold px-1.5 text-xs">−</span>
                       <span className="px-2 text-xs font-bold text-[#1A1A1A]">1</span>
                       <span className="text-neutral-400 font-bold px-1.5 text-xs">+</span>
@@ -171,7 +171,7 @@ export default function CartPage() {
                     <button
                       type="button"
                       onClick={() => removeFromCart(itemId)}
-                      className="flex items-center gap-1 text-xs font-bold text-neutral-400 hover:text-red-600 transition cursor-pointer"
+                      className="flex items-center gap-1 text-xs font-bold text-neutral-400 hover:text-red-600 transition active:scale-95 cursor-pointer"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       <span>Hapus barang</span>
@@ -179,7 +179,7 @@ export default function CartPage() {
                   </div>
 
                   {/* Preloved notice */}
-                  <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-3 flex items-center gap-2 text-xs text-amber-900">
+                  <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-2.5 flex items-center gap-2 text-xs text-amber-900 leading-snug">
                     <AlertCircle className="h-4 w-4 shrink-0 text-amber-700" />
                     <span>
                       Barang preloved hanya tersedia <strong>1 unit</strong>. Selesaikan checkout

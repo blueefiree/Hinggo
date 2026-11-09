@@ -37,7 +37,7 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
   };
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-2xl border border-[#E5E5E5] bg-white p-3 md:p-4 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-[#FFC629] hover:shadow-lg">
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-[#E5E5E5] bg-white p-2.5 sm:p-3.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-[#FFC629] hover:shadow-md">
       <div>
         {/* Image Container with Badges (Square Aspect Ratio) */}
         <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F6F6F4]">
@@ -48,9 +48,9 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
           />
 
           {/* Top-Left Verified Badge */}
-          <div className="absolute top-2 left-2 z-10">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#16A34A] shadow-xs backdrop-blur-xs">
-              <ShieldCheck className="h-3 w-3 text-[#16A34A]" />
+          <div className="absolute top-1.5 left-1.5 z-10">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#16A34A] shadow-xs backdrop-blur-xs">
+              <ShieldCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#16A34A]" />
               Dicek tim
             </span>
           </div>
@@ -60,7 +60,7 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
             type="button"
             onClick={handleHeartClick}
             aria-label={isWishlisted ? "Hapus dari wishlist" : "Simpan ke wishlist"}
-            className="absolute top-2 right-2 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-neutral-600 shadow-xs backdrop-blur-xs transition hover:bg-white hover:text-red-500 cursor-pointer"
+            className="absolute top-1.5 right-1.5 z-10 flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-neutral-600 shadow-xs backdrop-blur-xs transition hover:bg-white hover:text-red-500 active:scale-90 cursor-pointer"
           >
             <Heart
               className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors ${
@@ -73,19 +73,19 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
         </div>
 
         {/* Content info */}
-        <div className="mt-2.5 flex flex-col gap-0.5">
-          <span className="text-[10px] font-bold tracking-wider text-[#8A8A8A] uppercase">
+        <div className="mt-2 flex flex-col gap-0.5">
+          <span className="text-[9px] sm:text-[10px] font-bold tracking-wider text-[#8A8A8A] uppercase">
             {product.brand}
           </span>
           <Link
             href={`/product/${product.slug}`}
-            className="line-clamp-2 text-xs sm:text-sm font-bold text-[#1A1A1A] transition-colors group-hover:text-[#D97706] leading-tight"
+            className="line-clamp-2 text-xs sm:text-sm font-bold text-[#1A1A1A] transition-colors group-hover:text-[#D97706] leading-snug"
           >
             {product.name}
           </Link>
 
           {/* Condition: Sangat baik · 1 barang */}
-          <div className="flex items-center gap-1 text-[11px] text-neutral-500 mt-1">
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-neutral-500 mt-0.5">
             <span className="font-semibold text-neutral-700">{product.condition}</span>
             <span>·</span>
             <span>1 barang</span>
@@ -94,24 +94,24 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
       </div>
 
       {/* Price & Managed Tag */}
-      <div className="mt-2.5 pt-2 border-t border-neutral-100 flex flex-col gap-1.5">
+      <div className="mt-2 pt-1.5 border-t border-neutral-100 flex flex-col gap-1">
         <div className="flex items-baseline justify-between gap-1">
-          <span className="text-sm sm:text-base font-black text-[#1A1A1A]">
+          <span className="text-xs sm:text-base font-black text-[#1A1A1A]">
             {formatRupiah(product.price)}
           </span>
           {product.originalNewPrice && (
-            <span className="text-[10px] text-[#8A8A8A] line-through truncate">
+            <span className="text-[9px] sm:text-[10px] text-[#8A8A8A] line-through truncate">
               {formatRupiah(product.originalNewPrice)}
             </span>
           )}
         </div>
 
-        <div className="flex items-center justify-between text-[10px] text-[#16A34A] font-semibold bg-[#F0FDF4] px-2 py-0.5 rounded-lg">
-          <span className="flex items-center gap-1">
-            <ShieldCheck className="h-3 w-3" />
+        <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-[#16A34A] font-semibold bg-[#F0FDF4] px-1.5 py-0.5 rounded-lg">
+          <span className="flex items-center gap-0.5">
+            <ShieldCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             Hingo
           </span>
-          <span className="text-neutral-600 font-medium">Jakarta Selatan</span>
+          <span className="text-neutral-600 font-medium truncate max-w-[80px] sm:max-w-none">Jakarta Selatan</span>
         </div>
       </div>
     </div>

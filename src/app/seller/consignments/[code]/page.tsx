@@ -106,34 +106,34 @@ export default function ConsignmentDetailPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 md:py-10">
+    <div className="mx-auto max-w-4xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
       {/* 1. Header Status & Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs font-semibold text-neutral-500 mb-4">
+      <nav className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-neutral-500 mb-3">
         <Link href="/seller/consignments" className="hover:text-black">
           BARANG TITIPAN SAYA
         </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="h-3 w-3" />
         <span className="text-[#1A1A1A] font-bold font-mono">{item.code}</span>
       </nav>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-800">
             DETAIL TITIP JUAL
           </span>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
+          <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-[#1A1A1A]">
             Inspeksi selesai. Tunggu rincian admin.
           </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
+          <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
             {item.brandModel} · Kode: <span className="font-mono font-bold text-neutral-800">{item.code}</span>
           </p>
         </div>
 
-        <StatusBadge label={item.badgeLabel} variant="warning" />
+        <StatusBadge label={item.badgeLabel} variant="warning" size="sm" />
       </div>
 
       {/* 2. Kartu Krem Info Inspeksi */}
-      <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-5 sm:p-6 mb-6 shadow-xs flex flex-col gap-3">
+      <div className="rounded-2xl sm:rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-4 sm:p-6 mb-4 sm:mb-6 shadow-xs flex flex-col gap-2.5">
         <div className="text-xs sm:text-sm text-neutral-800 leading-relaxed font-medium">
           <strong className="text-black font-bold">
             Inspeksi fisik selesai, hasil akhir belum dicatat:{" "}
@@ -142,60 +142,60 @@ export default function ConsignmentDetailPage() {
           di bawah sebelum menyepakati harga jual final.
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-bold">
-          <span className="rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 flex items-center gap-1 border border-emerald-300">
-            <Check className="h-3.5 w-3.5" /> Inspeksi fisik selesai
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] sm:text-xs font-bold">
+          <span className="rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 flex items-center gap-1 border border-emerald-300">
+            <Check className="h-3 w-3" /> Inspeksi selesai
           </span>
-          <span className="rounded-full bg-white text-neutral-600 px-3 py-1 border border-neutral-300">
-            {requestedBreakdown ? "Rincian biaya tersedia" : "Belum ada rincian biaya"}
+          <span className="rounded-full bg-white text-neutral-600 px-2.5 py-0.5 border border-neutral-300">
+            {requestedBreakdown ? "Rincian biaya keluar" : "Belum ada rincian"}
           </span>
-          <span className="rounded-full bg-white text-neutral-600 px-3 py-1 border border-neutral-300">
-            {requestedBreakdown ? `Hasil bersih ${formatRupiah(feeBreakdown.netPayout)}` : "Belum ada hasil bersih"}
+          <span className="rounded-full bg-white text-neutral-600 px-2.5 py-0.5 border border-neutral-300">
+            {requestedBreakdown ? `Bersih ${formatRupiah(feeBreakdown.netPayout)}` : "Belum ada hasil"}
           </span>
-          <span className="rounded-full bg-white text-neutral-600 px-3 py-1 border border-neutral-300">
-            Ketentuan titip jual standar
+          <span className="rounded-full bg-white text-neutral-600 px-2.5 py-0.5 border border-neutral-300">
+            Ketentuan standar
           </span>
         </div>
       </div>
 
       {/* Vertical Single-Column Sequence (13 cards) */}
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3.5 sm:gap-6">
         {/* 3. Kartu 4 Tahap Pengajuan */}
-        <div className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-4">
+        <div className="rounded-2xl sm:rounded-3xl border border-[#E5E5E5] bg-white p-4 sm:p-6 shadow-xs flex flex-col gap-3">
           <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+            <h3 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-neutral-400">
               4 Tahap Pengajuan Titip Jual
             </h3>
-            <span className="text-xs font-bold text-amber-800">Tahap 3 dari 4</span>
+            <span className="text-[11px] sm:text-xs font-bold text-amber-800">Tahap 3 dari 4</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-            <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-emerald-800 uppercase">Tahap 1</span>
-              <strong className="text-emerald-950 font-bold">Pengajuan Online</strong>
-              <span className="text-[10px] text-emerald-700 font-semibold">✓ Disetujui</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold text-emerald-800 uppercase">Tahap 1</span>
+              <strong className="text-emerald-950 font-bold text-xs">Pengajuan Online</strong>
+              <span className="text-[9px] text-emerald-700 font-semibold">✓ Disetujui</span>
             </div>
-            <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-emerald-800 uppercase">Tahap 2</span>
-              <strong className="text-emerald-950 font-bold">Kirim ke Hingo</strong>
-              <span className="text-[10px] text-emerald-700 font-semibold">✓ Diterima Gudang</span>
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold text-emerald-800 uppercase">Tahap 2</span>
+              <strong className="text-emerald-950 font-bold text-xs">Kirim ke Hingo</strong>
+              <span className="text-[9px] text-emerald-700 font-semibold">✓ Diterima Gudang</span>
             </div>
-            <div className="rounded-2xl bg-[#FFFBEB] border-2 border-[#FFC629] p-3 flex flex-col gap-1 shadow-xs">
-              <span className="text-[10px] font-bold text-amber-800 uppercase">Tahap 3</span>
-              <strong className="text-black font-black">Inspeksi Fisik</strong>
-              <span className="text-[10px] text-amber-900 font-bold">● Selesai dicek</span>
+            <div className="rounded-xl bg-[#FFFBEB] border-2 border-[#FFC629] p-2.5 flex flex-col gap-0.5 shadow-xs">
+              <span className="text-[9px] font-bold text-amber-800 uppercase">Tahap 3</span>
+              <strong className="text-black font-black text-xs">Inspeksi Fisik</strong>
+              <span className="text-[9px] text-amber-900 font-bold">● Selesai dicek</span>
             </div>
-            <div className="rounded-2xl bg-[#F6F6F4] border border-neutral-200 p-3 flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase">Tahap 4</span>
-              <strong className="text-neutral-600 font-bold">Disetujui & Tayang</strong>
-              <span className="text-[10px] text-neutral-400">Menunggu konfirmasi</span>
+            <div className="rounded-xl bg-[#F6F6F4] border border-neutral-200 p-2.5 flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold text-neutral-400 uppercase">Tahap 4</span>
+              <strong className="text-neutral-600 font-bold text-xs">Disetujui & Tayang</strong>
+              <span className="text-[9px] text-neutral-400">Menunggu konfirmasi</span>
             </div>
           </div>
         </div>
 
         {/* 4. Kartu Foto Barang & 3 Foto Dokumentasi Inspeksi */}
-        <div className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-7 shadow-xs flex flex-col gap-5">
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+        <div className="rounded-2xl sm:rounded-3xl border border-[#E5E5E5] bg-white p-4 sm:p-7 shadow-xs flex flex-col gap-4">
+          <div className="flex items-center justify-between pb-2.5 border-b border-neutral-100">
             <div>
               <span className="text-xs font-mono font-bold text-neutral-400">
                 {item.code}

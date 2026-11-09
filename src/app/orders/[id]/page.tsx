@@ -221,22 +221,22 @@ export default function OrderDetailPage() {
     order.escrowStatus === "DISPUTED";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
+    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
       {/* Header */}
-      <div className="flex flex-col gap-2 mb-6">
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+      <div className="flex flex-col gap-1 mb-4 sm:mb-6">
+        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-800">
           TRANSAKSI / DETAIL PESANAN
         </span>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
+            <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-[#1A1A1A]">
               {isCompleted
                 ? "Transaksi selesai. Terima kasih!"
                 : isDisputed
                 ? "Kendala dilaporkan ke Tim CS Hingo."
                 : "Barang tiba. Cek dulu, ya."}
             </h1>
-            <p className="text-xs sm:text-sm text-neutral-500 mt-1">
+            <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
               {order.orderCode} · Dibuat {order.createdAt ? new Date(order.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "Hari ini"}
             </p>
           </div>
@@ -255,12 +255,12 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Escrow Banner */}
-      <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-5 sm:p-6 mb-8 flex items-start gap-4 shadow-xs">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#FFC629] text-black">
-          <ShieldCheck className="h-6 w-6" />
+      <div className="rounded-2xl sm:rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-4 sm:p-6 mb-4 sm:mb-8 flex items-start gap-3 sm:gap-4 shadow-xs">
+        <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-[#FFC629] text-black">
+          <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="flex-1 text-xs sm:text-sm text-neutral-800 leading-relaxed">
-          <strong className="text-black text-sm font-bold block mb-1">
+          <strong className="text-black text-xs sm:text-sm font-bold block mb-0.5">
             {isCompleted
               ? "Dana telah diteruskan ke pemilik barang"
               : isDisputed
@@ -275,24 +275,24 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
         {/* Left Column */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
+        <div className="lg:col-span-8 flex flex-col gap-3.5 sm:gap-6">
           {/* Card 1: Periksa Sebelum Konfirmasi */}
           {!isCompleted && !isDisputed && (
-            <div className="rounded-3xl border border-[#FFC629] bg-[#FFFBEB]/50 p-6 shadow-xs flex flex-col gap-4">
+            <div className="rounded-2xl sm:rounded-3xl border border-[#FFC629] bg-[#FFFBEB]/50 p-4 sm:p-6 shadow-xs flex flex-col gap-3 sm:gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-900">
                   Periksa sebelum konfirmasi
                 </span>
-                <span className="rounded-full bg-amber-100 text-amber-900 px-3 py-0.5 text-xs font-bold border border-amber-300">
+                <span className="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold border border-amber-300">
                   Menunggu konfirmasi pembeli
                 </span>
               </div>
 
-              <div className="rounded-2xl bg-white p-4 border border-amber-200 flex items-center justify-between text-xs">
+              <div className="rounded-xl sm:rounded-2xl bg-white p-3 sm:p-4 border border-amber-200 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 text-neutral-700">
-                  <Clock className="h-4 w-4 text-amber-600" />
+                  <Clock className="h-4 w-4 text-amber-600 shrink-0" />
                   <span>
                     Batas pemeriksaan otomatis:{" "}
                     <strong className="text-black">{order.inspectionDeadline}</strong>
@@ -303,18 +303,18 @@ export default function OrderDetailPage() {
                 </span>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 pt-1">
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99] cursor-pointer"
+                  className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.98] cursor-pointer"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   <span>Barang sesuai, konfirmasi terima</span>
                 </button>
                 <Link
                   href={`/orders/${order.orderCode}/dispute`}
-                  className="w-full sm:flex-none flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-3.5 px-5 text-sm font-bold text-neutral-700 hover:bg-neutral-50 transition"
+                  className="w-full sm:flex-none flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-3 px-4 text-xs sm:text-sm font-bold text-neutral-700 hover:bg-neutral-50 transition active:scale-[0.98]"
                 >
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                   <span>Ada kendala? Laporkan masalah</span>

@@ -117,10 +117,10 @@ function CatalogContent() {
   }, [products, selectedCategory, selectedCondition, minPrice, maxPrice, sortBy, searchQuery]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-4 md:py-10">
+    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-20 md:pb-10">
       {/* 0. KOTAK PENCARIAN DI BAWAH HEADER (Mobile < 768px sesuai Figma) */}
-      <div className="md:hidden mb-4">
-        <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+      <div className="md:hidden mb-3">
+        <label className="block text-[11px] font-bold text-neutral-600 mb-1">
           Cari barang preloved
         </label>
         <div className="relative">
@@ -129,22 +129,22 @@ function CatalogContent() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Peripheral komputer"
-            className="w-full rounded-2xl border border-neutral-300 bg-[#F6F6F4] py-2.5 pl-10 pr-4 text-xs font-bold text-[#1A1A1A] outline-none transition focus:border-[#FFC629] focus:bg-white"
+            className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] py-2 pl-9 pr-3 text-xs font-semibold text-[#1A1A1A] outline-none transition focus:border-[#FFC629] focus:bg-white"
           />
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
         </div>
       </div>
 
       {/* 1. TOP BANNER (#FFFBEB) - Kartu putih disembunyikan di mobile */}
-      <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-5 sm:p-10 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xs">
+      <div className="rounded-2xl sm:rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-4 sm:p-8 md:p-10 mb-4 sm:mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 shadow-xs">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-800">
             KURASI HINGO / PRELOVED PILIHAN
           </span>
-          <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
+          <h1 className="mt-0.5 text-xl sm:text-2xl md:text-4xl font-black text-[#1A1A1A]">
             Upgrade gear, bukan anggaran.
           </h1>
-          <p className="mt-2 text-xs sm:text-sm text-neutral-600 max-w-lg">
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-neutral-600 max-w-lg leading-relaxed">
             Semua peripheral telah melalui 12 poin inspeksi fungsi, switch, sensor,
             dan kelengkapan original sebelum diterbitkan di katalog.
           </p>
@@ -166,7 +166,7 @@ function CatalogContent() {
       </div>
 
       {/* 2. CATEGORY PILL TABS (Wrap rapi di mobile sesuai Figma) */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-4 sm:mb-6">
         {[
           { label: "Semua gear", value: "ALL", count: categoryCounts.TOTAL },
           { label: "Keyboard", value: "KEYBOARD", count: categoryCounts.KEYBOARD },
@@ -178,7 +178,7 @@ function CatalogContent() {
           <button
             key={pill.value}
             onClick={() => setSelectedCategory(pill.value)}
-            className={`whitespace-nowrap rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer ${
+            className={`whitespace-nowrap rounded-full px-3.5 sm:px-4 py-1.5 text-xs font-bold transition shadow-xs flex items-center gap-1 cursor-pointer active:scale-95 ${
               selectedCategory === pill.value
                 ? "bg-[#FFC629] text-[#1A1A1A] border border-[#F59E0B]"
                 : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
@@ -186,8 +186,8 @@ function CatalogContent() {
           >
             <span>{pill.label}</span>
             <span
-              className={`text-[11px] px-1.5 py-0.2 rounded-full ${
-                selectedCategory === pill.value ? "bg-black/10 text-black" : "bg-neutral-200 text-neutral-500"
+              className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                selectedCategory === pill.value ? "bg-black/10 text-black font-extrabold" : "bg-neutral-200 text-neutral-500"
               }`}
             >
               {pill.count}
@@ -430,8 +430,8 @@ function CatalogContent() {
               <p className="text-xs font-bold text-neutral-500">Memuat katalog peripheral...</p>
             </div>
           ) : filteredProducts.length > 0 ? (
-            /* Products Grid: 2 kolom rapat di mobile (gap-3), 3 kolom di desktop */
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
+            /* Products Grid: 2 kolom rapat di mobile (gap-2.5), 3 kolom di desktop */
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 md:gap-5">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

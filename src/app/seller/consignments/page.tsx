@@ -95,30 +95,30 @@ export default function SellerConsignmentsPage() {
   }, [consignments, activeFilter, searchQuery]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
+    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
       {/* Mobile Sub-Navbar Penjual */}
-      <div className="flex md:hidden items-center gap-2 border-b border-neutral-200 pb-3 mb-5">
+      <div className="flex md:hidden items-center gap-2 border-b border-neutral-200 pb-2.5 mb-3.5">
         <Link
           href="/seller/consignments"
-          className="rounded-full bg-[#1A1A1A] px-4 py-1.5 text-xs font-bold text-white"
+          className="rounded-full bg-[#1A1A1A] px-3.5 py-1 text-xs font-bold text-white"
         >
           Barang titipan saya
         </Link>
         <Link
           href="/seller/consignments/new"
-          className="rounded-full bg-[#F6F6F4] px-4 py-1.5 text-xs font-bold text-neutral-600 hover:bg-neutral-200"
+          className="rounded-full bg-[#F6F6F4] px-3.5 py-1 text-xs font-bold text-neutral-600 hover:bg-neutral-200"
         >
           Ajukan titip jual
         </Link>
       </div>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-800">
             RUANG PENJUAL / DASHBOARD
           </span>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
+          <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-[#1A1A1A]">
             Barang titipan saya
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
@@ -128,7 +128,7 @@ export default function SellerConsignmentsPage() {
 
         <Link
           href="/seller/consignments/new"
-          className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-5 py-3 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99]"
+          className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
           <span>+ Ajukan titip jual</span>
@@ -136,55 +136,55 @@ export default function SellerConsignmentsPage() {
       </div>
 
       {/* 4 KPI Summary Cards - 1 column on mobile, 4 columns on desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mb-4 sm:mb-6">
         {/* Card 1: Total */}
-        <div className="rounded-2xl border border-[#E5E5E5] bg-white p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-neutral-500">Total barang</span>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-3xl font-black text-[#1A1A1A]">{totalCount}</span>
-            <span className="text-[11px] font-semibold text-neutral-400">Seluruh pengajuan</span>
+        <div className="rounded-xl sm:rounded-2xl border border-[#E5E5E5] bg-white p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] sm:text-xs font-bold text-neutral-500">Total barang</span>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">{totalCount}</span>
+            <span className="text-[10px] sm:text-[11px] font-semibold text-neutral-400">Seluruh pengajuan</span>
           </div>
         </div>
 
         {/* Card 2: Perlu Tindakan */}
         <div
-          className={`rounded-2xl border-2 p-5 shadow-xs flex flex-col justify-between ${
+          className={`rounded-xl sm:rounded-2xl border-2 p-3.5 sm:p-5 shadow-xs flex flex-col justify-between ${
             actionCount > 0
               ? "border-[#FFC629] bg-[#FFFBEB]"
               : "border-[#E5E5E5] bg-white"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${actionCount > 0 ? "text-amber-900" : "text-neutral-500"}`}>
+            <span className={`text-[11px] sm:text-xs font-bold ${actionCount > 0 ? "text-amber-900" : "text-neutral-500"}`}>
               Perlu tindakan
             </span>
             {actionCount > 0 && <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-ping" />}
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className={`text-3xl font-black ${actionCount > 0 ? "text-amber-900" : "text-[#1A1A1A]"}`}>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className={`text-2xl sm:text-3xl font-black ${actionCount > 0 ? "text-amber-900" : "text-[#1A1A1A]"}`}>
               {actionCount}
             </span>
-            <span className="text-[11px] font-bold text-amber-800">
+            <span className="text-[10px] sm:text-[11px] font-bold text-amber-800">
               Persetujuan & kirim
             </span>
           </div>
         </div>
 
         {/* Card 3: Dipasarkan */}
-        <div className="rounded-2xl border border-[#E5E5E5] bg-white p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-neutral-500">Dipasarkan</span>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-3xl font-black text-[#1A1A1A]">{marketingCount}</span>
-            <span className="text-[11px] font-semibold text-neutral-400">Ditangani Hingo</span>
+        <div className="rounded-xl sm:rounded-2xl border border-[#E5E5E5] bg-white p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] sm:text-xs font-bold text-neutral-500">Dipasarkan</span>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">{marketingCount}</span>
+            <span className="text-[10px] sm:text-[11px] font-semibold text-neutral-400">Ditangani Hingo</span>
           </div>
         </div>
 
         {/* Card 4: Selesai */}
-        <div className="rounded-2xl border border-[#E5E5E5] bg-white p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-neutral-500">Selesai</span>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-3xl font-black text-[#16A34A]">{completedCount}</span>
-            <span className="text-[11px] font-semibold text-emerald-700">Sudah dicairkan</span>
+        <div className="rounded-xl sm:rounded-2xl border border-[#E5E5E5] bg-white p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] sm:text-xs font-bold text-neutral-500">Selesai</span>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black text-[#16A34A]">{completedCount}</span>
+            <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-700">Sudah dicairkan</span>
           </div>
         </div>
       </div>

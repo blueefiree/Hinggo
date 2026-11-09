@@ -135,14 +135,14 @@ export default function Navbar() {
       </div>
 
       {/* Main Top Navigation */}
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:py-3.5 gap-4">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-3.5 py-2 sm:px-4 sm:py-3.5 gap-3 sm:gap-4">
         {/* Left: Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFC629] font-black text-xl text-[#1A1A1A] shadow-xs transition-transform duration-200 group-hover:scale-105 group-hover:bg-[#FFC420]">
+        <Link href="/" className="flex items-center gap-2 shrink-0 group">
+          <div className="flex h-8.5 w-8.5 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#FFC629] font-black text-lg sm:text-xl text-[#1A1A1A] shadow-xs transition-transform duration-200 group-hover:scale-105 group-hover:bg-[#FFC420]">
             H
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-extrabold tracking-tight text-[#1A1A1A]">
+            <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#1A1A1A]">
               Hingo
             </span>
             <span className="text-[10px] font-medium text-neutral-500 -mt-1 hidden sm:block">
@@ -327,7 +327,7 @@ export default function Navbar() {
         </div>
 
         {/* Right Navigation for Mobile (< 768px): TEPAT 2 IKON BERSIH SESUAI FIGMA */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-1.5">
           {isSellerRoute ? (
             <>
               {/* Ruang Penjual: Ikon Chat dan Ikon Profil */}
@@ -335,24 +335,24 @@ export default function Navbar() {
                 href={user ? "/chat/product" : "/auth/login?callbackUrl=/chat/product"}
                 onClick={(e) => handleProtectedClick(e, "/chat/product")}
                 aria-label="Chat Admin"
-                className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition active:scale-95"
               >
-                <MessageSquare className="h-5 w-5" />
+                <MessageSquare className="h-4.5 w-4.5" />
               </Link>
               <Link
                 href={user ? "/account" : "/auth/login?callbackUrl=/account"}
                 onClick={(e) => handleProtectedClick(e, "/account")}
                 aria-label="Profil"
-                className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition active:scale-95"
               >
                 {user?.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
                     alt={user.name}
-                    className="h-7 w-7 rounded-full object-cover border border-[#FFC629]"
+                    className="h-6 w-6 rounded-full object-cover border border-[#FFC629]"
                   />
                 ) : (
-                  <User className="h-5 w-5" />
+                  <User className="h-4.5 w-4.5" />
                 )}
               </Link>
             </>
@@ -363,19 +363,19 @@ export default function Navbar() {
                 href={user ? "/chat/product" : "/auth/login?callbackUrl=/chat/product"}
                 onClick={(e) => handleProtectedClick(e, "/chat/product")}
                 aria-label="Chat Admin"
-                className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition active:scale-95"
               >
-                <MessageSquare className="h-5 w-5" />
+                <MessageSquare className="h-4.5 w-4.5" />
               </Link>
               <Link
                 href={user ? "/cart" : "/auth/login?callbackUrl=/cart"}
                 onClick={(e) => handleProtectedClick(e, "/cart")}
                 aria-label="Keranjang"
-                className="relative flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition active:scale-95"
               >
-                <ShoppingBag className="h-5 w-5" />
+                <ShoppingBag className="h-4.5 w-4.5" />
                 {user && cart.length > 0 && (
-                  <span className="absolute 1 top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1A1A1A] text-[10px] font-bold text-white">
+                  <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#1A1A1A] text-[9px] font-bold text-white">
                     {cart.length}
                   </span>
                 )}
@@ -387,8 +387,8 @@ export default function Navbar() {
 
       {/* Mobile Sub-Header Ruang Penjual (< 768px): Krem #FFFBEB dengan 2 Tab Horizontal */}
       {isSellerRoute && (
-        <div className="md:hidden border-t border-b border-[#FDE68A] bg-[#FFFBEB] px-4 py-2.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-5">
+        <div className="md:hidden border-t border-b border-[#FDE68A] bg-[#FFFBEB] px-3.5 py-2 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-4">
             <Link
               href="/seller/consignments"
               className={`font-extrabold transition ${
@@ -411,7 +411,7 @@ export default function Navbar() {
             </Link>
           </div>
           {user && (
-            <span className="text-[10px] font-bold text-amber-900 bg-amber-200/60 px-2 py-0.5 rounded-md truncate max-w-[100px]">
+            <span className="text-[10px] font-bold text-amber-900 bg-amber-200/60 px-2 py-0.5 rounded-md truncate max-w-[90px]">
               {user.name.split(" ")[0]}
             </span>
           )}

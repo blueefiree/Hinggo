@@ -131,9 +131,9 @@ export default function ProductDetailPage() {
     : ["/images/placeholder.png"];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-4 md:py-10 pb-28 md:pb-10">
+    <div className="mx-auto max-w-7xl px-3.5 sm:px-4 py-3 sm:py-6 md:py-10 pb-28 md:pb-10">
       {/* 1. BREADCRUMB */}
-      <nav className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-neutral-500 mb-4 sm:mb-6 overflow-x-auto no-scrollbar whitespace-nowrap">
+      <nav className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold text-neutral-500 mb-3 sm:mb-6 overflow-x-auto no-scrollbar whitespace-nowrap">
         <Link href="/" className="hover:text-black">
           Beranda
         </Link>
@@ -151,22 +151,22 @@ export default function ProductDetailPage() {
         </span>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-12">
         {/* KOLOM KIRI (Gallery & Inspeksi di Desktop / Urutan Vertikal di Mobile) */}
-        <div className="lg:col-span-7 flex flex-col gap-5 sm:gap-6">
+        <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-6">
           {/* 2. FOTO UTAMA PERSEGI + 3 THUMBNAIL + CAPTION (Sesuai Figma Mobile) */}
-          <div className="flex flex-col gap-2.5">
-            <div className="relative aspect-square sm:aspect-4/3 w-full overflow-hidden rounded-3xl bg-[#F6F6F4] border border-[#E5E5E5] shadow-xs">
+          <div className="flex flex-col gap-2">
+            <div className="relative aspect-square sm:aspect-4/3 w-full overflow-hidden rounded-2xl sm:rounded-3xl bg-[#F6F6F4] border border-[#E5E5E5] shadow-xs">
               <img
                 src={images[activeImageIndex] || images[0]}
                 alt={product.name}
                 className="h-full w-full object-cover object-center"
               />
-              <div className="absolute top-3 left-3 z-10">
-                <StatusBadge label="Dicek tim Hingo" variant="verified" />
+              <div className="absolute top-2.5 left-2.5 z-10">
+                <StatusBadge label="Dicek tim Hingo" variant="verified" size="sm" />
               </div>
 
-              <div className="absolute top-3 right-3 z-10">
+              <div className="absolute top-2.5 right-2.5 z-10">
                 <button
                   type="button"
                   onClick={() => {
@@ -177,22 +177,22 @@ export default function ProductDetailPage() {
                     }
                     toggleWishlist(product);
                   }}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-xs backdrop-blur-xs hover:bg-white text-neutral-700 hover:text-red-500 transition cursor-pointer"
+                  className="flex h-8.5 w-8.5 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/90 shadow-xs backdrop-blur-xs hover:bg-white text-neutral-700 hover:text-red-500 transition active:scale-90 cursor-pointer"
                 >
-                  <Heart className={`h-4.5 w-4.5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+                  <Heart className={`h-4 w-4 sm:h-4.5 sm:w-4.5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
                 </button>
               </div>
             </div>
 
             {/* Clickable Thumbnails */}
             {images.length > 1 && (
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 {images.slice(0, 4).map((img, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`relative h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-2xl border-2 transition cursor-pointer ${
+                    className={`relative h-14 w-14 sm:h-20 sm:w-20 overflow-hidden rounded-xl sm:rounded-2xl border-2 transition cursor-pointer active:scale-95 ${
                       activeImageIndex === idx
                         ? "border-[#FFC629] ring-2 ring-[#FFC629]/20"
                         : "border-neutral-200 hover:border-neutral-300"
@@ -204,19 +204,19 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            <span className="text-[11px] text-neutral-400 font-medium">
+            <span className="text-[10px] sm:text-[11px] text-neutral-400 font-medium">
               Foto barang titipan · {images.length} foto · Geser untuk melihat detail
             </span>
           </div>
 
           {/* 3 & 4. INFO PRODUK (Tampil di urutan vertikal mobile) */}
-          <div className="flex flex-col gap-3 rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs">
+          <div className="flex flex-col gap-2.5 sm:gap-3 rounded-2xl sm:rounded-3xl border border-[#E5E5E5] bg-white p-4 sm:p-6 shadow-xs">
             {/* Pills: Kondisi & Stok */}
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[#1A1A1A] text-white px-3 py-1 text-xs font-black">
+              <span className="rounded-full bg-[#1A1A1A] text-white px-2.5 py-0.5 text-xs font-black">
                 {product.condition}
               </span>
-              <span className="rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 text-xs font-extrabold">
+              <span className="rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 text-xs font-extrabold">
                 Stok 1 barang
               </span>
             </div>
@@ -412,18 +412,18 @@ export default function ProductDetailPage() {
       </div>
 
       {/* 9. STICKY BOTTOM PURCHASE ACTION BAR (Mobile < 768px Sesuai Figma Mobile) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 border-t border-[#E5E5E5] p-3 px-4 backdrop-blur-md shadow-2xl flex flex-col gap-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 border-t border-[#E5E5E5] px-3.5 py-2.5 pb-3 backdrop-blur-md shadow-2xl flex flex-col gap-1.5 safe-area-bottom">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-neutral-500 font-medium">Harga barang</span>
-          <span className="text-base font-black text-[#1A1A1A]">
+          <span className="text-neutral-500 font-medium text-[11px]">Harga barang</span>
+          <span className="text-sm font-black text-[#1A1A1A]">
             {formatRupiah(product.price)}
           </span>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleChatAdmin}
-            className="w-1/3 flex items-center justify-center gap-1.5 rounded-2xl border border-neutral-300 bg-white py-3 text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition cursor-pointer"
+            className="w-1/3 h-10.5 flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition active:scale-95 cursor-pointer"
           >
             <MessageSquare className="h-4 w-4" />
             <span>Chat</span>
@@ -431,7 +431,7 @@ export default function ProductDetailPage() {
           <button
             type="button"
             onClick={handleAddToCart}
-            className="w-2/3 flex items-center justify-center gap-2 rounded-2xl bg-[#FFC629] hover:bg-[#FFC420] py-3 text-xs font-black text-[#1A1A1A] shadow-xs transition active:scale-95 cursor-pointer"
+            className="w-2/3 h-10.5 flex items-center justify-center gap-1.5 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-xs font-black text-[#1A1A1A] shadow-xs transition active:scale-95 cursor-pointer"
           >
             <ShoppingBag className="h-4 w-4" />
             <span>{isAlreadyInCart ? "Lihat Keranjang" : "Tambah keranjang"}</span>

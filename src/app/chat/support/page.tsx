@@ -338,10 +338,10 @@ function ChatSupportContent() {
           </div>
 
           {/* Input Pesan: Klip 📎 + Input Bulat + Tombol Kuning Kirim */}
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 pt-0.5 shrink-0">
+          <form onSubmit={handleFormSubmit} className="flex items-center gap-1.5 pt-0.5 shrink-0">
             <button
               type="button"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition"
+              className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition active:scale-90"
               title="Lampirkan foto"
             >
               <Paperclip className="h-4 w-4" />
@@ -351,12 +351,12 @@ function ChatSupportContent() {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder="Tulis pesan…"
-              className="flex-1 rounded-full bg-[#F6F6F4] py-2.5 px-4 text-xs font-medium text-[#1A1A1A] outline-none border border-transparent focus:border-[#FFC629] focus:bg-white"
+              className="flex-1 rounded-full bg-[#F6F6F4] py-2 px-3.5 text-xs font-medium text-[#1A1A1A] outline-none border border-transparent focus:border-[#FFC629] focus:bg-white"
             />
             <button
               type="submit"
               disabled={!inputMessage.trim() || isTyping}
-              className={`flex h-10 px-4 items-center justify-center rounded-full font-bold text-xs transition cursor-pointer ${
+              className={`flex h-9.5 px-3.5 items-center justify-center rounded-full font-bold text-xs transition active:scale-95 cursor-pointer ${
                 inputMessage.trim() && !isTyping
                   ? "bg-[#FFC629] hover:bg-[#FFC420] text-black shadow-xs font-black"
                   : "bg-neutral-200 text-neutral-400 cursor-not-allowed"

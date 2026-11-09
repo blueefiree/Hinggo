@@ -385,13 +385,13 @@ function ChatProductContent() {
           </div>
 
           {/* Baris Quick-Reply Chips */}
-          <div className="flex items-center gap-1.5 py-1.5 overflow-x-auto no-scrollbar shrink-0">
+          <div className="flex items-center gap-1.5 py-1 overflow-x-auto no-scrollbar shrink-0">
             {quickChips.map((chip, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleSendMessage(chip)}
-                className="rounded-full bg-[#F6F6F4] hover:bg-amber-100 hover:text-amber-900 border border-neutral-200 px-3 py-1 text-[11px] font-bold text-neutral-700 whitespace-nowrap transition cursor-pointer"
+                className="rounded-full bg-[#F6F6F4] hover:bg-amber-100 hover:text-amber-900 border border-neutral-200 px-2.5 py-1 text-[11px] font-bold text-neutral-700 whitespace-nowrap transition active:scale-95 cursor-pointer"
               >
                 {chip}
               </button>
@@ -399,10 +399,10 @@ function ChatProductContent() {
           </div>
 
           {/* Input Pesan: Klip 📎 + Input Bulat + Tombol Kuning Kirim */}
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 pt-1 shrink-0">
+          <form onSubmit={handleFormSubmit} className="flex items-center gap-1.5 pt-1 shrink-0">
             <button
               type="button"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition"
+              className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition active:scale-90"
               title="Lampirkan foto"
             >
               <Paperclip className="h-4 w-4" />
@@ -412,12 +412,12 @@ function ChatProductContent() {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder="Tulis pesan…"
-              className="flex-1 rounded-full bg-[#F6F6F4] py-2.5 px-4 text-xs font-medium text-[#1A1A1A] outline-none border border-transparent focus:border-[#FFC629] focus:bg-white"
+              className="flex-1 rounded-full bg-[#F6F6F4] py-2 px-3.5 text-xs font-medium text-[#1A1A1A] outline-none border border-transparent focus:border-[#FFC629] focus:bg-white"
             />
             <button
               type="submit"
               disabled={!inputMessage.trim() || isTyping}
-              className={`flex h-10 px-4 items-center justify-center rounded-full font-bold text-xs transition cursor-pointer ${
+              className={`flex h-9.5 px-3.5 items-center justify-center rounded-full font-bold text-xs transition active:scale-95 cursor-pointer ${
                 inputMessage.trim() && !isTyping
                   ? "bg-[#FFC629] hover:bg-[#FFC420] text-black shadow-xs font-black"
                   : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
@@ -429,13 +429,13 @@ function ChatProductContent() {
 
           {/* Tombol Outline Lebar Penuh: Lihat barang · Rp... Mengarah ke Detail Produk */}
           {targetProduct && (
-            <div className="pt-2 shrink-0">
+            <div className="pt-1.5 shrink-0">
               <Link
                 href={`/product/${targetProduct.slug}`}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-neutral-300 bg-white hover:bg-neutral-50 py-2.5 text-xs font-black text-neutral-800 transition shadow-2xs"
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white hover:bg-neutral-50 py-2 text-xs font-black text-neutral-800 transition active:scale-[0.98] shadow-2xs"
               >
                 <span>Lihat barang · {formatRupiah(targetProduct.price)}</span>
-                <ExternalLink className="h-3.5 w-3.5 text-neutral-400" />
+                <ExternalLink className="h-3 w-3 text-neutral-400" />
               </Link>
             </div>
           )}

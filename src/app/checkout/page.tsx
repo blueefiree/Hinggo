@@ -98,19 +98,19 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
+    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
       {/* Stepper Header */}
-      <div className="flex flex-col gap-2 mb-8">
-        <div className="flex items-center gap-2 text-xs font-bold text-neutral-400">
+      <div className="flex flex-col gap-1 mb-4 sm:mb-8">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-neutral-400">
           <Link href="/cart" className="hover:text-black">
             KERANJANG
           </Link>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-[#FFC629] font-black">CHECKOUT</span>
+          <span className="text-[#D97706] font-black">CHECKOUT</span>
           <ChevronRight className="h-3 w-3" />
           <span>PEMBAYARAN</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
+        <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-[#1A1A1A]">
           Checkout aman
         </h1>
         <p className="text-xs sm:text-sm text-neutral-500">
@@ -118,15 +118,15 @@ export default function CheckoutPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
         {/* Left Column: Form & Selection cards */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
+        <div className="lg:col-span-8 flex flex-col gap-3.5 sm:gap-6">
           {/* Card 1: Alamat Pengiriman */}
-          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 shadow-xs flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+          <div className="rounded-2xl sm:rounded-3xl border border-[#E5E5E5] bg-white p-4 sm:p-6 shadow-xs flex flex-col gap-3 sm:gap-4">
+            <div className="flex items-center justify-between pb-2.5 border-b border-neutral-100">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-[#D97706]" />
-                <h2 className="text-sm font-bold text-[#1A1A1A]">
+                <h2 className="text-xs sm:text-sm font-bold text-[#1A1A1A]">
                   Alamat pengiriman
                 </h2>
               </div>
@@ -143,10 +143,10 @@ export default function CheckoutPage() {
                 <span className="rounded-full bg-[#FFFBEB] px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-[#FDE68A]">
                   {activeAddress?.label || "Rumah · Utama"}
                 </span>
-                <strong className="text-neutral-900 text-sm">
+                <strong className="text-neutral-900 text-xs sm:text-sm">
                   {activeAddress?.recipientName || user?.name || "Penerima"}
                 </strong>
-                <span className="text-neutral-500">· {activeAddress?.phone || user?.phone || "-"}</span>
+                <span className="text-neutral-500 text-[11px]">· {activeAddress?.phone || user?.phone || "-"}</span>
               </div>
               <p className="text-neutral-600 font-medium leading-relaxed mt-1">
                 {activeAddress?.fullAddress || "Jl. Sudirman No. 45, Kebayoran Baru, Jakarta Selatan"}
