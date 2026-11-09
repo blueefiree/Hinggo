@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hingo — Platform Titip Jual Gaming Gear Preloved Terverifikasi
 
-## Getting Started
+Platform marketplace titip jual (*managed consignment*) dan rekening bersama (*escrow rekber*) khusus perlengkapan gaming (keyboard mekanikal, mouse, headset, monitor, dan aksesoris) dengan kurasi fisik ketat oleh tim Hingo.
 
-First, run the development server:
+> 📖 **Dokumentasi Lengkap Berkas & Arsitektur:** Silakan baca berkas [HINGGO_PROJECT_STRUCTURE.md](./HINGGO_PROJECT_STRUCTURE.md) untuk rincian direktori, daftar endpoint API, dan relasi database.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Fitur Unggulan
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Strict Guest-First Authentication:** Pengunjung bebas menjelajahi katalog tanpa login. Halaman pribadi otomatis diproteksi via Middleware.
+- **Real OTP Delivery (WhatsApp & Email):** Pengiriman kode OTP 6-digit asli via Baileys WhatsApp Web QR terintegrasi & Nodemailer SMTP.
+- **Dual-Layer Database:** Supabase PostgreSQL cloud sync (`obdczozspvkdebhtyhoh.supabase.co`) dan Prisma ORM (SQLite lokal fallback).
+- **Persistent Session 30 Hari:** Sesi login aman berbasis HTTP-only cookie selama 30 hari.
+- **Konsinyasi & Escrow Rekber:** Sistem penahanan dana transaksi hingga pembeli mengonfirmasi paket sesuai dalam masa uji 48 jam.
+- **Katalog Zero-Dummy:** Mulai murni dari 0 data di database Supabase.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🛠️ Panduan Memulai
 
-To learn more about Next.js, take a look at the following resources:
+1. **Instal Dependensi:**
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Setup Skema Database:**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Jalankan Development Server:**
+   ```bash
+   npm run dev
+   ```
+   Buka [http://localhost:3000](http://localhost:3000) di peramban Anda.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. **Kompilasi Build Produksi:**
+   ```bash
+   npm run build
+   ```
