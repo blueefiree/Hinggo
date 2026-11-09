@@ -153,7 +153,7 @@ export async function POST(req: Request) {
             parsedImages = p.images ? [p.images] : [];
           }
 
-          const { error } = await supabase.from("products").upsert({
+          const productPayload: any = {
             id: p.id,
             code: p.code,
             slug: p.slug,
@@ -177,7 +177,15 @@ export async function POST(req: Request) {
             seller_email: p.sellerEmail || null,
             images: parsedImages,
             status: p.status,
-          });
+          };
+
+          let { error } = await supabase.from("products").upsert(productPayload);
+          if (error && error.message?.includes("seller_email")) {
+            delete productPayload.seller_email;
+            const retry = await supabase.from("products").upsert(productPayload);
+            error = retry.error;
+          }
+
           if (!error) syncedProducts++;
           else errors.push(`Product ${p.code}: ${error.message}`);
         } catch (e: any) {
@@ -195,7 +203,7 @@ export async function POST(req: Request) {
             photos = c.photos ? [c.photos] : [];
           }
 
-          const { error } = await supabase.from("consignments").upsert({
+          const consignmentPayload: any = {
             id: c.id,
             code: c.code,
             seller_id: c.sellerId,
@@ -215,7 +223,15 @@ export async function POST(req: Request) {
             stage: c.stage,
             badge_label: c.badgeLabel,
             status_summary: c.statusSummary,
-          });
+          };
+
+          let { error } = await supabase.from("consignments").upsert(consignmentPayload);
+          if (error && error.message?.includes("seller_email")) {
+            delete consignmentPayload.seller_email;
+            const retry = await supabase.from("consignments").upsert(consignmentPayload);
+            error = retry.error;
+          }
+
           if (!error) syncedConsignments++;
           else errors.push(`Consignment ${c.code}: ${error.message}`);
         } catch (e: any) {
@@ -226,7 +242,7 @@ export async function POST(req: Request) {
       // Sync Orders
       for (const o of orders) {
         try {
-          const { error } = await supabase.from("orders").upsert({
+          const orderPayload: any = {
             id: o.id,
             order_code: o.orderCode,
             buyer_id: o.buyerId,
@@ -242,7 +258,15 @@ export async function POST(req: Request) {
             tracking_number: o.trackingNumber || "",
             escrow_status: o.escrowStatus,
             order_status: o.orderStatus,
-          });
+          };
+
+          let { error } = await supabase.from("orders").upsert(orderPayload);
+          if (error && error.message?.includes("buyer_email")) {
+            delete orderPayload.buyer_email;
+            const retry = await supabase.from("orders").upsert(orderPayload);
+            error = retry.error;
+          }
+
           if (!error) syncedOrders++;
           else errors.push(`Order ${o.orderCode}: ${error.message}`);
         } catch (e: any) {

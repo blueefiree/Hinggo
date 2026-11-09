@@ -66,14 +66,32 @@ export async function GET(req: Request) {
     // Dual-Read Fallback: Jika di Prisma kosong, cek Supabase cloud
     if (items.length === 0 && !isAdmin) {
       try {
-        let sbQuery = supabase.from("consignments").select("*");
+        let sbItems: any[] | null = null;
         if (userEmailNorm) {
-          sbQuery = sbQuery.or(`seller_email.eq.${userEmailNorm},seller_id.eq.${user.id}`);
-        } else {
-          sbQuery = sbQuery.eq("seller_id", user.id);
-        }
+          const res = await supabase
+            .from("consignments")
+            .select("*")
+            .or(`seller_email.eq.${userEmailNorm},seller_id.eq.${user.id}`)
+            .order("created_at", { ascending: false });
 
-        const { data: sbItems } = await sbQuery.order("created_at", { ascending: false });
+          if (res.error && res.error.message?.includes("seller_email")) {
+            const fallback = await supabase
+              .from("consignments")
+              .select("*")
+              .eq("seller_id", user.id)
+              .order("created_at", { ascending: false });
+            sbItems = fallback.data;
+          } else {
+            sbItems = res.data;
+          }
+        } else {
+          const res = await supabase
+            .from("consignments")
+            .select("*")
+            .eq("seller_id", user.id)
+            .order("created_at", { ascending: false });
+          sbItems = res.data;
+        }
 
         if (sbItems && sbItems.length > 0) {
           const mapped = sbItems.map((s: any) => ({
@@ -215,7 +233,7 @@ export async function POST(req: Request) {
     // DUAL-WRITE KE SUPABASE public.consignments (Cloud Backup)
     // ====================================================================
     try {
-      await supabase.from("consignments").insert({
+      const sbPayload: any = {
         id: newItem.id,
         code: newItem.code,
         seller_id: user.id,
@@ -240,7 +258,13 @@ export async function POST(req: Request) {
         action_actor: newItem.actionActor,
         badge_label: newItem.badgeLabel,
         status_summary: newItem.statusSummary,
-      });
+      };
+
+      let { error: sbErr } = await supabase.from("consignments").insert(sbPayload);
+      if (sbErr && sbErr.message?.includes("seller_email")) {
+        delete sbPayload.seller_email;
+        await supabase.from("consignments").insert(sbPayload);
+      }
     } catch (sbErr) {
       console.warn("Supabase consignment sync notice:", sbErr);
     }
