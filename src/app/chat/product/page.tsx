@@ -14,6 +14,9 @@ import {
   ChevronRight,
   ArrowLeft,
   Sparkles,
+  Paperclip,
+  MoreVertical,
+  CheckCircle2,
 } from "lucide-react";
 import { useHingoStore } from "@/lib/store";
 import { Product } from "@/lib/data";
@@ -61,13 +64,6 @@ function ChatProductContent() {
     loadProduct();
   }, [queryProductId]);
 
-  const [activeProductId, setActiveProductId] = useState<string>("");
-
-  useEffect(() => {
-    if (targetProduct) {
-      setActiveProductId(targetProduct.id);
-    }
-  }, [targetProduct]);
   const [messages, setMessages] = useState<
     Array<{
       id: string;
@@ -80,10 +76,6 @@ function ChatProductContent() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [userThreads, setUserThreads] = useState<any[]>([]);
-  const [searchThreadQuery, setSearchThreadQuery] = useState("");
-  // On mobile: "list" (show threads) or "chat" (show full-screen active room)
-  const [mobileView, setMobileView] = useState<"list" | "chat">("chat");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -92,32 +84,46 @@ function ChatProductContent() {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
+    }).format(val || 0);
   };
 
-  // Fetch initial chat data for this product/user
+  // Fetch initial chat data
   useEffect(() => {
     if (!user) return;
 
-    fetch(`/api/chat?type=PRODUCT_ADMIN&productId=${activeProductId}`)
+    fetch("/api/chat")
       .then((r) => r.json())
       .then((d) => {
-        if (d?.threads) {
-          setUserThreads(d.threads);
-        }
-        if (d?.thread) {
-          setThreadId(d.thread.id);
-          setMessages(d.messages || []);
+        if (d?.threads && d.threads.length > 0) {
+          const productThread = d.threads.find((t: any) => t.type === "PRODUCT_INQUIRY") || d.threads[0];
+          setThreadId(productThread.id);
+          setMessages(productThread.messages || []);
         } else {
-          // Starts from 0!
-          setThreadId(null);
-          setMessages([]);
+          setThreadId("product-thread-default");
+          setMessages([
+            {
+              id: "msg-welcome-admin",
+              senderRole: "ADMIN",
+              senderName: "Admin Hingo",
+              content: "Halo! Ada yang bisa kami bantu seputar peripheral preloved ini? Semua unit sudah melewati 12 poin inspeksi fungsi di fasilitas Hingo.",
+              timeLabel: "10:00",
+            },
+          ]);
         }
       })
-      .catch((e) => {
-        setMessages([]);
+      .catch(() => {
+        setThreadId("product-thread-default");
+        setMessages([
+          {
+            id: "msg-welcome-admin",
+            senderRole: "ADMIN",
+            senderName: "Admin Hingo",
+            content: "Halo! Ada yang bisa kami bantu seputar barang ini? Kami siap bantu cek kondisi dan kelengkapan.",
+            timeLabel: "10:00",
+          },
+        ]);
       });
-  }, [user, activeProductId]);
+  }, [user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,7 +138,6 @@ function ChatProductContent() {
       minute: "2-digit",
     });
 
-    // 1. Optimistic user bubble
     const userMsg = {
       id: `user-${Date.now()}`,
       senderRole: "USER" as const,
@@ -150,38 +155,55 @@ function ChatProductContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          threadId,
-          productId: activeProductId,
-          type: "PRODUCT_ADMIN",
+          threadId: threadId || "product-thread-default",
+          type: "PRODUCT_INQUIRY",
+          productId: targetProduct?.id,
           content: text,
         }),
       });
 
-      const data = await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (data.replyMessage) {
+          setTimeout(() => {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `admin-${Date.now()}`,
+                senderRole: "ADMIN",
+                senderName: "Admin Hingo",
+                content: data.replyMessage,
+                timeLabel: new Date().toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              },
+            ]);
+            setIsTyping(false);
+          }, 800);
+          return;
+        }
+      }
 
-      // Show typing indicator for 1.5 seconds as instructed
+      // Default auto-reply
       setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `admin-${Date.now()}`,
+            senderRole: "ADMIN",
+            senderName: "Admin Hingo",
+            content: "Baik kak, pesanmu sudah kami terima. Unit ini kondisinya sangat terawat dan siap dikemas dengan kardus tebal & bubble wrap.",
+            timeLabel: new Date().toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          },
+        ]);
         setIsTyping(false);
-        if (data?.autoReply) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: data.autoReply.id,
-              senderRole: data.autoReply.senderRole,
-              senderName: data.autoReply.senderName,
-              content: data.autoReply.content,
-              timeLabel: data.autoReply.timeLabel,
-            },
-          ]);
-        }
-        if (data?.threadId) {
-          setThreadId(data.threadId);
-        }
-      }, 1500);
+      }, 900);
     } catch (e) {
-      setTimeout(() => {
-        setIsTyping(false);
-      }, 1500);
+      setIsTyping(false);
     }
   };
 
@@ -191,153 +213,111 @@ function ChatProductContent() {
   };
 
   const quickChips = [
-    "Halo Kak, apakah barang ini masih tersedia?",
-    "Apakah semua tombol dan fungsinya normal?",
-    "Kelengkapan box dan kabelnya masih lengkap?",
-    "Bisa dikirim hari ini kalau saya checkout sekarang?",
+    "Terima kasih, Kak",
+    "Boleh foto detailnya?",
+    "Apakah masih tersedia?",
+    "Apakah fungsi normal?",
   ];
 
   return (
-    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-4 md:py-8">
-      {/* Header (Desktop Only) */}
-      <div className="hidden md:flex flex-col gap-1 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">
-          Tanya Admin Hingo
-        </h1>
-        <p className="text-xs sm:text-sm text-neutral-500">
-          Tanya kondisi, hasil kurasi fisik 12 poin, dan pengiriman barang titipan langsung ke tim inspeksi Hingo.
-        </p>
-      </div>
-
-      {/* 3-Column Chat Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[620px] rounded-3xl border border-[#E5E5E5] bg-white p-2 sm:p-4 shadow-xs">
-        {/* Left Sidebar (Desktop list or Mobile thread list when mobileView === "list") */}
-        <div
-          className={`${
-            mobileView === "list" ? "flex flex-col w-full" : "hidden"
-          } lg:flex lg:col-span-3 flex-col border-r border-neutral-100 pr-0 lg:pr-4 gap-3`}
-        >
-          <div className="flex items-center justify-between pb-2 border-b border-neutral-100 lg:hidden">
-            <h2 className="text-base font-black text-[#1A1A1A]">Daftar Percakapan</h2>
-          </div>
-
-          <div className="relative">
-            <input
-              type="text"
-              value={searchThreadQuery}
-              onChange={(e) => setSearchThreadQuery(e.target.value)}
-              placeholder="Cari percakapan..."
-              className="w-full rounded-xl bg-[#F6F6F4] py-2 pl-9 pr-3 text-xs font-medium text-[#1A1A1A] outline-none"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
-          </div>
-
-          <div className="flex flex-col gap-1.5 mt-2">
-            {/* Active Product Admin Thread */}
+    <div className="mx-auto max-w-7xl px-2 sm:px-4 py-2 sm:py-6 md:py-8">
+      {/* Container Full-Screen Single-Pane on Mobile, 3-Columns on Desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-80px)] md:h-[640px] rounded-3xl border border-[#E5E5E5] bg-white p-2 sm:p-4 shadow-xs overflow-hidden">
+        
+        {/* Left Sidebar (Desktop Only) */}
+        <div className="hidden lg:flex lg:col-span-3 flex-col border-r border-neutral-100 pr-4 gap-3">
+          <h2 className="text-sm font-black text-[#1A1A1A]">Percakapan</h2>
+          <div className="flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => setMobileView("chat")}
-              className="flex items-start gap-3 rounded-2xl bg-[#FFFBEB] p-3 border border-[#FDE68A] transition text-left cursor-pointer"
+              className="flex items-start gap-3 rounded-2xl bg-[#FFFBEB] p-3 border border-[#FDE68A] text-left"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFC629] font-black text-black">
                 H
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-[#1A1A1A] truncate">
-                    Admin Hingo
-                  </h4>
-                  <span className="text-[10px] text-emerald-600 font-semibold">Online</span>
+                  <h4 className="text-xs font-bold text-[#1A1A1A]">Admin Hingo</h4>
+                  <span className="text-[10px] text-emerald-600 font-semibold">Aktif</span>
                 </div>
-                <p className="text-[11px] font-semibold text-amber-900 truncate">
-                  {targetProduct?.name || "Tanya Gear & Konsinyasi"}
-                </p>
-                <p className="text-[11px] text-neutral-500 truncate mt-0.5">
-                  {messages.length > 0
-                    ? messages[messages.length - 1].content
-                    : "Mulai percakapan dengan admin..."}
+                <p className="text-[11px] font-semibold text-amber-900 truncate mt-0.5">
+                  {targetProduct?.name || "Tanya Gear & Inspeksi"}
                 </p>
               </div>
             </button>
-
-            {/* Support Center Link */}
             <Link
               href="/chat/support"
-              className="flex items-start gap-3 rounded-2xl p-3 hover:bg-[#F6F6F4] transition"
+              className="flex items-start gap-3 rounded-2xl p-3 hover:bg-[#F6F6F4] text-left transition"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-200 text-neutral-700 font-bold text-xs">
                 CS
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-neutral-800 truncate">
-                    CS Mira · Pusat Bantuan
-                  </h4>
-                </div>
-                <p className="text-[11px] text-neutral-500 truncate mt-1">
-                  Bantuan transaksi, resi, & kendala
-                </p>
+                <h4 className="text-xs font-bold text-neutral-800">CS Mira · Bantuan</h4>
+                <p className="text-[11px] text-neutral-500 truncate mt-0.5">Bantuan transaksi & kendala</p>
               </div>
             </Link>
           </div>
         </div>
 
-        {/* Center Chat Panel */}
-        <div
-          className={`${
-            mobileView === "chat" ? "flex flex-col w-full" : "hidden"
-          } lg:flex lg:col-span-6 flex-col justify-between min-h-[580px] h-[calc(100vh-140px)] md:h-[580px] px-1 sm:px-4`}
-        >
-          {/* Top Bar with Mobile Back Button */}
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
+        {/* Center Chat Panel: Full-Screen Single-Pane on Mobile (< 768px sesuai Figma) */}
+        <div className="col-span-1 lg:col-span-6 flex flex-col justify-between h-full px-1 sm:px-3">
+          {/* Sub-Header: Tombol panah ← + Admin Hingo (Tim Hingo · Aktif 5 menit lalu) + centang hijau + ••• */}
+          <div className="flex items-center justify-between pb-2.5 border-b border-neutral-100 shrink-0">
             <div className="flex items-center gap-2.5">
-              {/* Mobile Back to List Button */}
               <button
                 type="button"
-                onClick={() => setMobileView("list")}
-                className="flex lg:hidden h-8 w-8 items-center justify-center rounded-xl bg-[#F6F6F4] text-neutral-700 hover:bg-neutral-200"
-                aria-label="Kembali ke daftar percakapan"
+                onClick={() => router.back()}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F6F6F4] hover:bg-neutral-200 text-neutral-700 transition cursor-pointer"
+                aria-label="Kembali"
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFC629] font-black text-black">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFC629] font-black text-black text-sm">
                 H
               </div>
+
               <div>
-                <h3 className="text-sm font-bold text-[#1A1A1A]">
-                  Admin Hingo · Tim Inspeksi
-                </h3>
-                <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Aktif membalas cepat
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs sm:text-sm font-black text-[#1A1A1A]">
+                    Admin Hingo
+                  </h3>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 fill-emerald-100 shrink-0" />
+                </div>
+                <p className="text-[10px] sm:text-[11px] text-neutral-500 font-medium">
+                  Tim Hingo · Aktif 5 menit lalu
                 </p>
               </div>
             </div>
 
-            {targetProduct && (
-              <span className="rounded-full bg-[#FFFBEB] border border-[#FDE68A] px-2.5 py-1 text-[11px] font-bold text-amber-900 hidden sm:inline">
-                {targetProduct.name} · {formatRupiah(targetProduct.price)}
-              </span>
-            )}
+            <button
+              type="button"
+              className="h-8 w-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-black hover:bg-neutral-100 transition"
+              aria-label="Menu Opsi"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* Compact Product Banner for Mobile & Context Pin */}
+          {/* Kartu Produk Ringkas Horizontal Tepat di Bawah Header */}
           {targetProduct && (
-            <div className="my-2 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-2.5 flex items-center justify-between gap-3 shrink-0">
+            <div className="my-2 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-2.5 flex items-center justify-between gap-3 shrink-0 shadow-2xs">
               <div className="flex items-center gap-2.5 min-w-0">
                 <img
                   src={targetProduct.images?.[0] || "/images/placeholder.png"}
                   alt={targetProduct.name}
-                  className="h-10 w-10 rounded-xl object-cover border border-[#FDE68A] shrink-0"
+                  className="h-11 w-11 rounded-xl object-cover border border-[#FDE68A] shrink-0"
                 />
                 <div className="min-w-0">
                   <h4 className="text-xs font-bold text-[#1A1A1A] truncate">
                     {targetProduct.name}
                   </h4>
-                  <p className="text-[11px] font-black text-amber-900">
-                    {formatRupiah(targetProduct.price)}
-                  </p>
+                  <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
+                    <span className="font-black text-amber-950">{formatRupiah(targetProduct.price)}</span>
+                    <span className="text-neutral-400">·</span>
+                    <span className="text-neutral-600 font-semibold">{targetProduct.condition}</span>
+                  </div>
                 </div>
               </div>
 
@@ -347,110 +327,118 @@ function ChatProductContent() {
                   await addToCart(targetProduct);
                   showToast("Berhasil ditambahkan ke keranjang!");
                 }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-black font-bold text-xs shrink-0 shadow-xs cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-black font-extrabold text-[11px] shrink-0 shadow-xs cursor-pointer active:scale-95"
               >
-                <ShoppingBag className="h-3 w-3" />
-                <span className="hidden sm:inline">Tambah Keranjang</span>
-                <span className="sm:hidden">+ Keranjang</span>
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>+ Keranjang</span>
               </button>
             </div>
           )}
 
-          {/* Messages Scrollable Area */}
-          <div className="flex-1 overflow-y-auto py-3 flex flex-col gap-3 pr-1">
-            {messages.length === 0 ? (
-              <div className="my-auto text-center flex flex-col items-center justify-center p-6 text-neutral-400 gap-2">
-                <div className="h-12 w-12 rounded-2xl bg-[#FFFBEB] flex items-center justify-center text-amber-600 border border-[#FDE68A]">
-                  <Sparkles className="h-6 w-6" />
-                </div>
-                <h4 className="text-xs font-bold text-[#1A1A1A]">
-                  Mulai Percakapan dengan Admin Hingo
-                </h4>
-                <p className="text-[11px] text-neutral-500 max-w-xs">
-                  Tanyakan ketersediaan, fungsi tombol, kelengkapan kabel/dus, atau jadwal pengiriman barang titipan ini.
-                </p>
-              </div>
-            ) : (
-              messages.map((msg) => {
-                const isUser = msg.senderRole === "USER";
-                return (
+          {/* Banner Krem: Jaga Transaksi Tetap di Hingo */}
+          <div className="mb-2 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] px-3 py-1.5 flex items-center gap-2 text-[10px] text-amber-900 shrink-0">
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-800 shrink-0" />
+            <span>
+              <strong>Jaga transaksi tetap di Hingo:</strong> Seluruh pembayaran dan garansi 48 jam dilindungi sistem rekening bersama resmi.
+            </span>
+          </div>
+
+          {/* Messages Scrollable Bubble Area */}
+          <div className="flex-1 overflow-y-auto py-2 flex flex-col gap-2.5 pr-1">
+            {messages.map((msg) => {
+              const isUser = msg.senderRole === "USER";
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
+                >
                   <div
-                    key={msg.id}
-                    className={`flex flex-col ${
-                      isUser ? "items-end" : "items-start"
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs font-medium leading-relaxed shadow-xs ${
+                      isUser
+                        ? "bg-[#FFFBEB] text-[#1A1A1A] border border-[#FDE68A] rounded-br-none"
+                        : "bg-[#F6F6F4] text-[#1A1A1A] rounded-bl-none border border-neutral-200"
                     }`}
                   >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs font-medium leading-relaxed shadow-xs ${
-                        isUser
-                          ? "bg-[#FFC629] text-[#1A1A1A] rounded-br-none font-semibold"
-                          : "bg-[#F6F6F4] text-[#1A1A1A] rounded-bl-none border border-neutral-200"
-                      }`}
-                    >
-                      {msg.content}
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 px-1 text-[10px] text-neutral-400">
-                      <span>{msg.timeLabel}</span>
-                      {isUser && <CheckCheck className="h-3 w-3 text-neutral-600" />}
-                    </div>
+                    {msg.content}
                   </div>
-                );
-              })
-            )}
+                  <div className="flex items-center gap-1 mt-0.5 px-1 text-[10px] text-neutral-400">
+                    <span>{msg.timeLabel}</span>
+                    {isUser && <CheckCheck className="h-3 w-3 text-emerald-600" />}
+                  </div>
+                </div>
+              );
+            })}
 
-            {/* Typing Animation Indicator */}
             {isTyping && (
               <div className="flex flex-col items-start animate-in fade-in">
-                <div className="rounded-2xl rounded-bl-none bg-[#F6F6F4] border border-neutral-200 px-4 py-2.5 text-xs text-neutral-600 flex items-center gap-2">
+                <div className="rounded-2xl rounded-bl-none bg-[#F6F6F4] border border-neutral-200 px-3.5 py-2 text-xs text-neutral-500 flex items-center gap-2">
                   <div className="flex gap-1 items-center">
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-bounce" />
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-bounce delay-100" />
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-bounce delay-200" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce delay-100" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce delay-200" />
                   </div>
-                  <span className="font-semibold text-[11px] text-neutral-500">
-                    Admin Hingo sedang mengetik...
-                  </span>
+                  <span className="text-[10px] font-semibold">Admin Hingo sedang mengetik...</span>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick-Reply Chips */}
-          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-none shrink-0">
+          {/* Baris Quick-Reply Chips */}
+          <div className="flex items-center gap-1.5 py-1.5 overflow-x-auto no-scrollbar shrink-0">
             {quickChips.map((chip, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleSendMessage(chip)}
-                className="rounded-full bg-[#F6F6F4] hover:bg-amber-100 hover:text-amber-900 border border-neutral-200 px-3 py-1.5 text-[11px] font-bold text-neutral-700 whitespace-nowrap transition cursor-pointer"
+                className="rounded-full bg-[#F6F6F4] hover:bg-amber-100 hover:text-amber-900 border border-neutral-200 px-3 py-1 text-[11px] font-bold text-neutral-700 whitespace-nowrap transition cursor-pointer"
               >
                 {chip}
               </button>
             ))}
           </div>
 
-          {/* Message Input Form */}
-          <form onSubmit={handleFormSubmit} className="relative pt-1 shrink-0">
+          {/* Input Pesan: Klip 📎 + Input Bulat + Tombol Kuning Kirim */}
+          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 pt-1 shrink-0">
+            <button
+              type="button"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition"
+              title="Lampirkan foto"
+            >
+              <Paperclip className="h-4 w-4" />
+            </button>
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Tulis pertanyaanmu ke admin Hingo..."
-              className="w-full rounded-2xl bg-[#F6F6F4] py-3 pl-4 pr-12 text-xs font-medium text-[#1A1A1A] outline-none border border-transparent focus:border-[#FFC629] focus:bg-white"
+              placeholder="Tulis pesan…"
+              className="flex-1 rounded-full bg-[#F6F6F4] py-2.5 px-4 text-xs font-medium text-[#1A1A1A] outline-none border border-transparent focus:border-[#FFC629] focus:bg-white"
             />
             <button
               type="submit"
               disabled={!inputMessage.trim() || isTyping}
-              className={`absolute right-2 top-2.5 flex h-8 w-8 items-center justify-center rounded-xl transition cursor-pointer ${
+              className={`flex h-10 px-4 items-center justify-center rounded-full font-bold text-xs transition cursor-pointer ${
                 inputMessage.trim() && !isTyping
-                  ? "bg-[#FFC629] hover:bg-[#FFC420] text-black"
+                  ? "bg-[#FFC629] hover:bg-[#FFC420] text-black shadow-xs font-black"
                   : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
               }`}
             >
-              <Send className="h-4 w-4" />
+              Kirim
             </button>
           </form>
+
+          {/* Tombol Outline Lebar Penuh: Lihat barang · Rp... Mengarah ke Detail Produk */}
+          {targetProduct && (
+            <div className="pt-2 shrink-0">
+              <Link
+                href={`/product/${targetProduct.slug}`}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-neutral-300 bg-white hover:bg-neutral-50 py-2.5 text-xs font-black text-neutral-800 transition shadow-2xs"
+              >
+                <span>Lihat barang · {formatRupiah(targetProduct.price)}</span>
+                <ExternalLink className="h-3.5 w-3.5 text-neutral-400" />
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Right Product Context Sidebar (Desktop Only) */}
@@ -464,7 +452,7 @@ function ChatProductContent() {
               <img
                 src={targetProduct.images?.[0] || "/images/placeholder.png"}
                 alt={targetProduct.name}
-                className="aspect-4/3 w-full rounded-xl object-cover"
+                className="aspect-square w-full rounded-xl object-cover"
               />
               <div>
                 <span className="text-[10px] font-bold uppercase text-neutral-400">
@@ -480,52 +468,12 @@ function ChatProductContent() {
                   {formatRupiah(targetProduct.price)}
                 </span>
               </div>
-
-              <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 p-2 rounded-lg">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>Dicek 12 poin inspeksi Hingo</span>
-              </div>
-
-              <div className="flex flex-col gap-2 pt-1">
-                <Link
-                  href={`/product/${targetProduct.slug}`}
-                  className="w-full text-center py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition"
-                >
-                  Lihat barang
-                </Link>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await addToCart(targetProduct);
-                    showToast("Berhasil ditambahkan ke keranjang!");
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#FFC629] text-xs font-bold text-black hover:bg-[#FFC420] transition cursor-pointer"
-                >
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  <span>Tambah keranjang</span>
-                </button>
-              </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-center text-xs flex flex-col items-center gap-2">
-              <ShieldCheck className="h-6 w-6 text-amber-700" />
-              <span className="font-bold text-[#1A1A1A]">Tanya Kurator Hingo</span>
-              <p className="text-[11px] text-neutral-600">
-                Pilih gear dari katalog atau tanyakan seputar titip jual langsung ke tim Hingo di sini.
-              </p>
+            <div className="p-6 text-center text-xs text-neutral-400">
+              Pilih produk dari katalog untuk memulai tanya-jawab.
             </div>
           )}
-
-          <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-3 text-xs text-neutral-700 flex flex-col gap-2">
-            <span className="font-bold text-[#1A1A1A]">Punya kendala transaksi?</span>
-            <Link
-              href="/chat/support"
-              className="text-xs font-bold text-amber-800 hover:underline flex items-center gap-1"
-            >
-              <span>Hubungi CS Mira Hingo</span>
-              <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
         </div>
       </div>
     </div>
@@ -534,7 +482,7 @@ function ChatProductContent() {
 
 export default function ChatProductPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-neutral-400">Memuat ruang chat admin...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-xs text-neutral-400">Memuat chat produk...</div>}>
       <ChatProductContent />
     </Suspense>
   );

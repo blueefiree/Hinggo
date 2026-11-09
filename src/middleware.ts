@@ -6,6 +6,8 @@ const PROTECTED_PREFIXES = [
   "/chat",
   "/account",
   "/checkout",
+  "/cart",
+  "/wishlist",
   "/admin",
 ];
 
@@ -74,6 +76,10 @@ export const config = {
     "/account",
     "/checkout/:path*",
     "/checkout",
+    "/cart/:path*",
+    "/cart",
+    "/wishlist/:path*",
+    "/wishlist",
     "/admin/:path*",
     "/admin",
     "/auth/login",

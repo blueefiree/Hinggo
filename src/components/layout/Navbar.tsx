@@ -9,15 +9,12 @@ import {
   Heart,
   ShoppingBag,
   User,
-  Menu,
-  X,
   ChevronDown,
   ArrowRight,
   Sparkles,
   LogOut,
   Package,
   Layers,
-  Settings,
 } from "lucide-react";
 
 import { useHingoStore } from "@/lib/store";
@@ -25,9 +22,8 @@ import { useHingoStore } from "@/lib/store";
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, cart, wishlist, logout, isLoadingUser } = useHingoStore();
+  const { user, cart, wishlist, logout } = useHingoStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -67,8 +63,8 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E5E5E5] bg-white/95 backdrop-blur-md">
-      {/* Sub-header Banner */}
-      <div className="border-b border-[#F0F0EE] bg-[#FFFBEB] px-4 py-1.5 text-xs text-[#1A1A1A]">
+      {/* Desktop Sub-header Banner (Hidden on Mobile) */}
+      <div className="hidden md:block border-b border-[#F0F0EE] bg-[#FFFBEB] px-4 py-1.5 text-xs text-[#1A1A1A]">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           {isSellerRoute && user ? (
             <>
@@ -95,12 +91,12 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/how-it-works"
-                  className="font-semibold text-neutral-600 hover:text-black hidden sm:inline"
+                  className="font-semibold text-neutral-600 hover:text-black"
                 >
                   Cara titip jual
                 </Link>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-neutral-600 font-medium">
+              <div className="flex items-center gap-2 text-neutral-600 font-medium">
                 <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <Link href="/account" className="hover:underline">
                   Ruang penjual · {user.name}
@@ -117,7 +113,7 @@ export default function Navbar() {
                   Kami cek, simpan, dan pasarkan.
                 </span>
               </div>
-              <div className="hidden sm:flex items-center gap-4 text-neutral-600">
+              <div className="flex items-center gap-4 text-neutral-600">
                 <Link
                   href="/how-it-works"
                   className="flex items-center gap-1 font-medium hover:text-black hover:underline"
@@ -155,7 +151,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Center Search Bar */}
+        {/* Center Search Bar (Desktop Only) */}
         <form
           onSubmit={handleSearchSubmit}
           className="hidden md:flex flex-1 max-w-xl items-center relative"
@@ -172,10 +168,10 @@ export default function Navbar() {
           </div>
         </form>
 
-        {/* Right Navigation & User Controls */}
-        <div className="flex items-center gap-3 md:gap-5">
+        {/* Right Navigation for Desktop (hidden on mobile) */}
+        <div className="hidden md:flex items-center gap-5">
           {/* Quick links */}
-          <nav className="hidden lg:flex items-center gap-5 text-sm font-semibold text-neutral-700">
+          <nav className="flex items-center gap-5 text-sm font-semibold text-neutral-700">
             <Link href="/catalog" className="hover:text-black transition">
               Katalog
             </Link>
@@ -198,8 +194,8 @@ export default function Navbar() {
             </Link>
           </nav>
 
-          {/* Icon buttons */}
-          <div className="flex items-center gap-1 sm:gap-2">
+          {/* Icon buttons desktop */}
+          <div className="flex items-center gap-2">
             {/* Chat Icon Button */}
             <Link
               href={user ? "/chat/product" : "/auth/login?callbackUrl=/chat/product"}
@@ -241,9 +237,9 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <div className="hidden sm:block h-6 w-px bg-neutral-200" />
+          <div className="h-6 w-px bg-neutral-200" />
 
-          {/* User Section: If Guest -> Yellow Masuk button; If User -> Profil Pill with Dropdown */}
+          {/* User Section Desktop: If Guest -> Yellow Masuk button; If User -> Profil Pill with Dropdown */}
           {!user ? (
             <Link
               href="/auth/login"
@@ -328,148 +324,97 @@ export default function Navbar() {
               )}
             </div>
           )}
+        </div>
 
-          {/* Mobile hamburger toggle */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex md:hidden h-10 w-10 items-center justify-center rounded-lg text-neutral-700 hover:bg-neutral-100"
-            aria-label="Menu"
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
+        {/* Right Navigation for Mobile (< 768px): TEPAT 2 IKON BERSIH SESUAI FIGMA */}
+        <div className="flex md:hidden items-center gap-2">
+          {isSellerRoute ? (
+            <>
+              {/* Ruang Penjual: Ikon Chat dan Ikon Profil */}
+              <Link
+                href={user ? "/chat/product" : "/auth/login?callbackUrl=/chat/product"}
+                onClick={(e) => handleProtectedClick(e, "/chat/product")}
+                aria-label="Chat Admin"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Link>
+              <Link
+                href={user ? "/account" : "/auth/login?callbackUrl=/account"}
+                onClick={(e) => handleProtectedClick(e, "/account")}
+                aria-label="Profil"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+              >
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="h-7 w-7 rounded-full object-cover border border-[#FFC629]"
+                  />
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
+              </Link>
+            </>
+          ) : (
+            <>
+              {/* Halaman Umum/Pembeli: Hanya 2 Ikon (Chat dan Keranjang) */}
+              <Link
+                href={user ? "/chat/product" : "/auth/login?callbackUrl=/chat/product"}
+                onClick={(e) => handleProtectedClick(e, "/chat/product")}
+                aria-label="Chat Admin"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Link>
+              <Link
+                href={user ? "/cart" : "/auth/login?callbackUrl=/cart"}
+                onClick={(e) => handleProtectedClick(e, "/cart")}
+                aria-label="Keranjang"
+                className="relative flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {user && cart.length > 0 && (
+                  <span className="absolute 1 top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1A1A1A] text-[10px] font-bold text-white">
+                    {cart.length}
+                  </span>
+                )}
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Mobile Search Input in Sub-bar */}
-      <div className="md:hidden px-4 pb-2.5">
-        <form onSubmit={handleSearchSubmit} className="relative w-full">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari gear preloved..."
-            className="w-full rounded-full bg-[#F6F6F4] py-2 pl-10 pr-4 text-sm text-[#1A1A1A] outline-none"
-          />
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-        </form>
-      </div>
-
-      {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div className="border-t border-neutral-200 bg-white px-4 py-4 md:hidden flex flex-col gap-3 shadow-lg">
-          <Link
-            href="/catalog"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between py-2 text-sm font-semibold text-neutral-800"
-          >
-            Katalog & Pencarian
-            <ArrowRight className="h-4 w-4 text-neutral-400" />
-          </Link>
-          <Link
-            href={user ? "/seller/consignments" : "/auth/login?callbackUrl=/seller/consignments"}
-            onClick={(e) => {
-              setMobileMenuOpen(false);
-              handleProtectedClick(e, "/seller/consignments");
-            }}
-            className="flex items-center justify-between py-2 text-sm font-semibold text-neutral-800"
-          >
-            Ruang Penjual (Titip Jual)
-            <ArrowRight className="h-4 w-4 text-neutral-400" />
-          </Link>
-          <Link
-            href={user ? "/orders" : "/auth/login?callbackUrl=/orders"}
-            onClick={(e) => {
-              setMobileMenuOpen(false);
-              handleProtectedClick(e, "/orders");
-            }}
-            className="flex items-center justify-between py-2 text-sm font-semibold text-neutral-800"
-          >
-            Daftar Pesanan & Transaksi
-            <ArrowRight className="h-4 w-4 text-neutral-400" />
-          </Link>
-          <Link
-            href="/promo"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between py-2 text-sm font-semibold text-neutral-800"
-          >
-            Kupon & Voucher Promo
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 font-bold">
-              Hot
-            </span>
-          </Link>
-          <Link
-            href={user ? "/wishlist" : "/auth/login?callbackUrl=/wishlist"}
-            onClick={(e) => {
-              setMobileMenuOpen(false);
-              handleProtectedClick(e, "/wishlist");
-            }}
-            className="flex items-center justify-between py-2 text-sm font-semibold text-neutral-800"
-          >
-            Gear Impian (Wishlist)
-            {user && wishlist.length > 0 && (
-              <span className="rounded-full bg-red-500 text-white px-2 py-0.5 text-[10px] font-bold">
-                {wishlist.length}
-              </span>
-            )}
-          </Link>
-          <Link
-            href="/how-it-works"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between py-2 text-sm font-semibold text-neutral-800"
-          >
-            Cara Titip Jual & Rekening Bersama
-            <ArrowRight className="h-4 w-4 text-neutral-400" />
-          </Link>
-          <Link
-            href={user ? "/account" : "/auth/login?callbackUrl=/account"}
-            onClick={(e) => {
-              setMobileMenuOpen(false);
-              handleProtectedClick(e, "/account");
-            }}
-            className="flex items-center justify-between py-2 text-sm font-semibold text-neutral-800"
-          >
-            Pengaturan Akun & Rekening Bank
-            <ArrowRight className="h-4 w-4 text-neutral-400" />
-          </Link>
-
-          <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
-            {!user ? (
-              <Link
-                href="/auth/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl bg-[#FFC629] text-black text-sm font-bold shadow-xs flex items-center justify-center gap-2"
-              >
-                <User className="h-4 w-4" />
-                <span>Masuk</span>
-              </Link>
-            ) : (
-              <div className="flex flex-col gap-2 w-full">
-                <Link
-                  href="/account"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2.5 rounded-xl bg-[#FFC629] text-black text-sm font-bold shadow-xs flex items-center justify-center gap-2"
-                >
-                  <User className="h-4 w-4" />
-                  <span>Profil</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    logout();
-                  }}
-                  className="w-full text-center py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-red-600 text-xs font-bold cursor-pointer"
-                >
-                  Keluar (Logout)
-                </button>
-              </div>
-            )}
+      {/* Mobile Sub-Header Ruang Penjual (< 768px): Krem #FFFBEB dengan 2 Tab Horizontal */}
+      {isSellerRoute && (
+        <div className="md:hidden border-t border-b border-[#FDE68A] bg-[#FFFBEB] px-4 py-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-5">
+            <Link
+              href="/seller/consignments"
+              className={`font-extrabold transition ${
+                pathname === "/seller/consignments"
+                  ? "text-[#D97706] border-b-2 border-[#D97706] pb-0.5"
+                  : "text-neutral-600 hover:text-black"
+              }`}
+            >
+              Barang titipan saya
+            </Link>
+            <Link
+              href="/seller/consignments/new"
+              className={`font-extrabold transition ${
+                pathname === "/seller/consignments/new"
+                  ? "text-[#D97706] border-b-2 border-[#D97706] pb-0.5"
+                  : "text-neutral-600 hover:text-black"
+              }`}
+            >
+              Ajukan titip jual
+            </Link>
           </div>
+          {user && (
+            <span className="text-[10px] font-bold text-amber-900 bg-amber-200/60 px-2 py-0.5 rounded-md truncate max-w-[100px]">
+              {user.name.split(" ")[0]}
+            </span>
+          )}
         </div>
       )}
     </header>

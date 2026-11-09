@@ -96,6 +96,22 @@ export default function SellerConsignmentsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
+      {/* Mobile Sub-Navbar Penjual */}
+      <div className="flex md:hidden items-center gap-2 border-b border-neutral-200 pb-3 mb-5">
+        <Link
+          href="/seller/consignments"
+          className="rounded-full bg-[#1A1A1A] px-4 py-1.5 text-xs font-bold text-white"
+        >
+          Barang titipan saya
+        </Link>
+        <Link
+          href="/seller/consignments/new"
+          className="rounded-full bg-[#F6F6F4] px-4 py-1.5 text-xs font-bold text-neutral-600 hover:bg-neutral-200"
+        >
+          Ajukan titip jual
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -112,15 +128,15 @@ export default function SellerConsignmentsPage() {
 
         <Link
           href="/seller/consignments/new"
-          className="flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-5 py-3 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99] self-start sm:self-auto"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-5 py-3 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99]"
         >
           <Plus className="h-4 w-4" />
-          <span>Ajukan titip jual</span>
+          <span>+ Ajukan titip jual</span>
         </Link>
       </div>
 
-      {/* 4 KPI Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-6">
+      {/* 4 KPI Summary Cards - 1 column on mobile, 4 columns on desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {/* Card 1: Total */}
         <div className="rounded-2xl border border-[#E5E5E5] bg-white p-5 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-bold text-neutral-500">Total barang</span>
@@ -192,7 +208,7 @@ export default function SellerConsignmentsPage() {
         <div className="lg:col-span-8 flex flex-col gap-5">
           {/* Search & Filter pills */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <div className="flex flex-wrap items-center gap-1.5 pb-1 sm:pb-0">
               {[
                 { id: "ALL", label: "Semua", count: totalCount },
                 { id: "ACTION", label: "Perlu Tindakan", count: actionCount },
@@ -204,7 +220,7 @@ export default function SellerConsignmentsPage() {
                   key={f.id}
                   type="button"
                   onClick={() => setActiveFilter(f.id)}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                     activeFilter === f.id
                       ? "bg-[#1A1A1A] text-white"
                       : "bg-[#F6F6F4] text-neutral-600 hover:bg-neutral-200"
@@ -229,7 +245,7 @@ export default function SellerConsignmentsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari kode / model gear..."
+                placeholder="Cari kode atau nama barang"
                 className="w-full rounded-full bg-[#F6F6F4] py-1.5 pl-8 pr-3 text-xs text-[#1A1A1A] outline-none border border-neutral-200 focus:border-[#FFC629] focus:bg-white"
               />
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
@@ -440,6 +456,16 @@ export default function SellerConsignmentsPage() {
               <span>Chat admin Hingo</span>
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile Footer Ringkas */}
+      <div className="flex md:hidden items-center justify-between border-t border-neutral-200 pt-6 mt-8 text-xs text-neutral-400">
+        <span>© 2026 Hingo</span>
+        <div className="flex items-center gap-3">
+          <Link href="/privacy" className="hover:text-neutral-700">Privasi</Link>
+          <span>·</span>
+          <Link href="/chat/support" className="hover:text-neutral-700">Bantuan</Link>
         </div>
       </div>
     </div>

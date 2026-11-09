@@ -152,30 +152,30 @@ export default function CartPage() {
                         </p>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="mt-3 flex items-baseline justify-between">
                         <span className="text-base sm:text-lg font-black text-[#1A1A1A]">
                           {formatRupiah(item.product.price)}
                         </span>
-
-                        {/* Stepper (fixed to 1 because preloved stock is 1) */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center rounded-xl bg-[#F6F6F4] border border-neutral-200 p-1">
-                            <span className="px-3 text-xs font-bold text-[#1A1A1A]">
-                              1 unit
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(itemId)}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 hover:text-red-500 transition cursor-pointer"
-                            title="Hapus barang"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Baris bawah: Stepper [- 1 +] di kiri dan Hapus barang di kanan sesuai Figma */}
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                    <div className="flex items-center rounded-xl bg-[#F6F6F4] border border-neutral-200 px-2 py-1">
+                      <span className="text-neutral-400 font-bold px-1.5 text-xs">−</span>
+                      <span className="px-2 text-xs font-bold text-[#1A1A1A]">1</span>
+                      <span className="text-neutral-400 font-bold px-1.5 text-xs">+</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeFromCart(itemId)}
+                      className="flex items-center gap-1 text-xs font-bold text-neutral-400 hover:text-red-600 transition cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Hapus barang</span>
+                    </button>
                   </div>
 
                   {/* Preloved notice */}
@@ -190,18 +190,25 @@ export default function CartPage() {
               );
             })}
 
-            {/* Trust box & continue shopping */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-[#F6F6F4] p-4 text-xs text-neutral-600">
+            {/* Kartu: Dicek dan dikirim tim kami (Sesuai Figma) */}
+            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-xs text-amber-950 flex flex-col gap-1 shadow-xs">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span>Semua barang dikemas dengan proteksi kardus & bubble wrap tebal</span>
+                <ShieldCheck className="h-4 w-4 text-amber-800 shrink-0" />
+                <strong className="font-black text-amber-950">Dicek dan dikirim tim kami</strong>
               </div>
+              <p className="text-amber-900 text-[11px] leading-relaxed">
+                Setiap barang dikemas dengan proteksi kardus & bubble wrap tebal setelah lolos uji laboratorium teknisi.
+              </p>
+            </div>
+
+            {/* Tombol: Lanjut jelajahi barang */}
+            <div className="flex justify-start">
               <Link
                 href="/catalog"
-                className="flex items-center gap-1 font-bold text-neutral-800 hover:underline"
+                className="inline-flex items-center gap-1.5 font-bold text-xs sm:text-sm text-neutral-800 hover:underline p-2"
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Lanjut jelajahi barang
+                <ArrowLeft className="h-4 w-4" />
+                <span>Lanjut jelajahi barang</span>
               </Link>
             </div>
           </div>

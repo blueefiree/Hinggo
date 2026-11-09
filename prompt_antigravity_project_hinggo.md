@@ -1,112 +1,112 @@
-# Prompt Perbaikan Spesifik Login, Redirect Auth & Pengiriman OTP (Berdasarkan Struktur File `Hinggo` Kamu)
+# Master Prompt All-in-One Google Antigravity — Perbaikan Login/Auth/OTP + Penyempurnaan Tampilan Mobile (`390px`) Persis Desain Figma
 
-Berdasarkan dokumentasi `HINGGO_PROJECT_STRUCTURE.md` yang kamu kirimkan (`Next.js 16.4.3 Turbopack` + `Prisma SQLite` + `Supabase`), berikut adalah **biang kerok (root cause)** kenapa ketiga masalah tadi terjadi di proyekmu:
-
-1. **Kenapa Login Error (`500` / gagal saat buat user ke-2)**:
-   - Di `Next.js 16`, fungsi `cookies()` wajib menggunakan `await cookies()`.
-   - Di `prisma/schema.prisma` & `supabase`, kolom `phone` dan `email` bertipe `UNIQUE`. Saat user login pakai Nomor HP, jika kode mengisi `email: ""` (string kosong, bukan `null`/`undefined`), maka login berikutnya langsung *error* karena duplikat string kosong `""`!
-2. **Kenapa Kalau Sudah Login Masih Bisa Buka Halaman Login (dan Sebaliknya)**:
-   - `src/middleware.ts` dan `src/app/auth/login/page.tsx` belum memiliki logika **Guest-Only Redirect** (melempar user yang sudah login dari `/auth/login` ke `/account`).
-   - Saat selesai verifikasi OTP di `/auth/verify-otp`, aplikasi hanya memanggil `router.push('/account')` tanpa me-*reload* `StoreProvider` (`src/lib/store.tsx`), sehingga `Navbar.tsx` masih mengira user belum login dan masih menampilkan tombol `Masuk`.
-3. **Kenapa OTP Tidak Langsung Terkirim ke Email & WA**:
-   - Di file `.env` kamu, variabel `FONNTE_TOKEN=`, `SMTP_USER=`, dan `SMTP_PASS=` **masih kosong**!
-   - Untuk **Email**: `src/lib/otp-sender.ts` hanya mencoba memakai `nodemailer` (yang kosong di `.env`), padahal kamu sudah punya **Supabase Auth (`supabase.auth.signInWithOtp`)** yang bisa langsung mengirim email OTP gratis tanpa perlu setting SMTP Gmail!
-   - Untuk **WhatsApp**: Di Next.js 16 Turbopack, instance `@whiskeysockets/baileys` harus disimpan di `globalThis` agar tidak ter-putus saat *hot-reload*, atau menggunakan `FONNTE_TOKEN`.
+Dokumen ini menggabungkan **seluruh perbaikan fungsi (Login Error Fix, Logic Sudah Login vs Belum Login, Real OTP WhatsApp/Email, Zero Dummy Data)** dengan **spesifikasi tata letak Mobile (`390px`) dari ke-10 file PDF Mobile yang baru kamu lampirkan** ke dalam **SATU BLOK PROMPT UTUH** di bawah ini.
 
 ---
 
-## 1. Prompt Antigravity: "Perbaiki Total Error Login, Logic Sudah Login vs Belum Login, dan Pengiriman OTP WA/Email"
-
-Salin **seluruh blok prompt di bawah ini** dan tempelkan langsung ke **Agent Chat di Google Antigravity IDE**:
+## 1. SATU PROMPT GABUNGAN (Copy-Paste ke Agent Chat Google Antigravity)
 
 ````markdown
-# TASK: FIX LOGIN ERRORS, ENFORCE STRICT "ALREADY LOGGED IN VS NOT LOGGED IN" LOGIC ACROSS ALL PAGES & NAVBAR, AND FIX REAL WHATSAPP & EMAIL OTP DELIVERY IN NEXT.JS 16
+# TASK: FIX LOGIN & TWO-WAY AUTH REDIRECTS, FIX REAL WHATSAPP/EMAIL OTP DELIVERY, AND PERFECT ALL MOBILE (`390px`) RESPONSIVE LAYOUTS TO MATCH THE EXACT FIGMA MOBILE DESIGNS
 
-Berdasarkan struktur proyek saat ini (`Next.js 16.4.3`, `src/middleware.ts`, `src/lib/auth.ts`, `src/lib/store.tsx`, `src/lib/otp-sender.ts`, `src/lib/whatsapp-gateway.ts`, `src/app/api/auth/*`, `src/app/auth/login/page.tsx`, `src/app/auth/verify-otp/page.tsx`, dan `src/components/layout/Navbar.tsx`), tolong perbaiki 4 masalah kritis berikut secara tuntas:
-
-====================================================================
-PERBAIKAN 1: HILANGKAN SEMUA ERROR SAAT LOGIN & VERIFIKASI OTP (`/api/auth/send-otp` & `/api/auth/verify-otp`)
-====================================================================
-
-1. **Perbaiki `await cookies()` untuk Next.js 16**:
-   - Di `src/lib/auth.ts`, `src/app/api/auth/verify-otp/route.ts`, `src/app/api/auth/session/route.ts`, dan semua API route lainnya, pastikan pemanggilan `cookies()` dari `next/headers` selalu menggunakan `const cookieStore = await cookies()`.
-2. **Perbaiki Unique Constraint Error (`phone` & `email` Null Handling)**:
-   - Saat user login menggunakan **Nomor HP (WhatsApp)**, simpan `phone: normalizedPhone` dan pastikan `email` diisi `null` (JANGAN pernah diisi string kosong `""` karena akan menyebabkan error `Unique constraint failed on the fields: (email)` untuk user kedua!).
-   - Sebaliknya, saat user login menggunakan **Email**, simpan `email: normalizedEmail` dan pastikan `phone` diisi `null` (bukan `""`).
-3. **Fault-Tolerant Dual-Database Sync (Prisma SQLite + Supabase)**:
-   - Di `/api/auth/send-otp` dan `/api/auth/verify-otp`, bungkus setiap operasi ke Supabase (`supabase.from(...)`) di dalam `try { ... } catch (err) { console.warn(...) }` yang aman sehingga meskipun tabel di cloud Supabase belum disinkronkan atau terkena RLS, penyimpanan ke database Prisma lokal (`prisma/dev.db`) tetap sukses 100% dan login TIDAK PERNAH gagal/error 500!
-4. **Logout API Route (`POST /api/auth/logout`)**:
-   - Pastikan ada endpoint `POST /api/auth/logout/route.ts` yang menghapus sesi dari database (`prisma.session.deleteMany`), menghapus cookie `hingo_user_id` dan `hingo_session` (`cookieStore.delete('hingo_user_id')`, `cookieStore.delete('hingo_session')`), serta memanggil `supabase.auth.signOut()`.
+Tolong kerjakan pembaruan menyeluruh pada proyek **Hingo (`Hinggo` — Next.js 16.4.3 App Router)** yang mencakup **Perbaikan Sistem Login/OTP/Auth Guard** sekaligus **Penyesuaian Presisi Tampilan Mobile (`< 768px` / `390px`)** sesuai file desain Figma Mobile:
 
 ====================================================================
-PERBAIKAN 2: LOGIC TEGAS "KALAU SUDAH LOGIN GA USAH LOGIN LAGI, KALAU BELUM LOGIN SURUH LOGIN" (`src/middleware.ts`, `Navbar.tsx`, `store.tsx`, `auth/login`)
+BAGIAN 1: PERBAIKI ERROR LOGIN, LOGIC "SUDAH LOGIN VS BELUM LOGIN" & PENGIRIMAN OTP WA/EMAIL
 ====================================================================
 
-1. **Update `src/middleware.ts` (Two-Way Auth Guard)**:
-   - Baca cookie `hingo_user_id` dan `hingo_session` dari `request.cookies`.
-   - `const isAuthenticated = Boolean(request.cookies.get('hingo_user_id')?.value || request.cookies.get('hingo_session')?.value);`
-   - **ATURAN A — JIKA SUDAH LOGIN (`isAuthenticated === true`)**:
-     - Jika user membuka halaman `/auth/login` atau `/auth/verify-otp`, **WAJIB langsung redirect ke `/account`** (`NextResponse.redirect(new URL('/account', request.url))`). User yang sudah login TIDAK BOLEH melihat halaman login lagi!
-   - **ATURAN B — JIKA BELUM LOGIN (`isAuthenticated === false`)**:
-     - Jika user membuka halaman privat: `/account`, `/cart`, `/checkout`, `/wishlist`, `/orders`, `/seller`, `/chat`, atau `/admin` (beserta sub-rutenya), **WAJIB langsung redirect ke `/auth/login?callbackUrl=` + encodeURIComponent(pathname)**.
+1. **Perbaiki Error Database & Cookie Saat Login (`/api/auth/send-otp` & `/api/auth/verify-otp`)**:
+   - Di Next.js 16, pastikan semua pemanggilan `cookies()` dari `next/headers` menggunakan `const cookieStore = await cookies()`.
+   - Saat user login menggunakan **Nomor HP**, isi `phone: normalizedPhone` dan pastikan `email` diisi `null` (JANGAN pernah diisi string kosong `""` agar tidak memicu error `Unique constraint failed on the fields: (email)`). Begitu pula saat login menggunakan **Email**, pastikan `phone` diisi `null` (bukan `""`).
+   - Bungkus setiap sinkronisasi ke cloud Supabase (`supabase.from(...)`) dengan `try/catch` yang aman sehingga penyimpanan ke Prisma SQLite (`dev.db`) dan pembuatan session tidak pernah gagal/error 500.
 
-2. **Update `src/app/auth/login/page.tsx` & `src/app/auth/verify-otp/page.tsx`**:
-   - Tambahkan pengecekan di sisi Client (`useEffect`) menggunakan `user` dari `useStore()` / `/api/auth/session`: jika `user` sudah ada (`user !== null`), langsung jalankan `router.replace('/account')` agar halaman login tidak pernah tampil bagi user yang sudah login.
-   - Pada `/auth/verify-otp/page.tsx`, saat `POST /api/auth/verify-otp` berhasil (`res.ok`):
-     - Panggil fungsi `await refreshSession()` di `store.tsx`.
-     - Gunakan **`window.location.href = data.redirectTo || '/account'`** (hard navigation reload) supaya seluruh Server Components, `Navbar.tsx`, `MobileBottomNav.tsx`, dan Cookie Middleware langsung ter-update 100% ke status **SUDAH LOGIN** tanpa nyangkut di state lama!
+2. **Logic Tegas "Kalau Sudah Login Ga Usah Login Lagi, Kalau Belum Login Suruh Login" (`src/middleware.ts`, `Navbar.tsx`, `store.tsx`)**:
+   - **Di `src/middleware.ts`**:
+     - Cek keberadaan cookie `hingo_user_id` atau `hingo_session`.
+     - **JIKA SUDAH LOGIN**: Saat user membuka `/auth/login` atau `/auth/verify-otp`, **WAJIB langsung redirect ke `/account`**. User yang sudah login tidak boleh melihat halaman login lagi.
+     - **JIKA BELUM LOGIN (`Guest`)**: Saat user membuka `/account`, `/cart`, `/checkout`, `/wishlist`, `/orders`, `/seller/*`, `/chat/*`, atau `/admin`, **WAJIB langsung redirect ke `/auth/login?callbackUrl=...`**.
+   - **Di `/auth/login/page.tsx` & `/auth/verify-otp/page.tsx`**:
+     - Jika state `user` di `useStore()` sudah terisi (`user !== null`), langsung jalankan `router.replace('/account')`.
+     - Saat verifikasi OTP di `/auth/verify-otp` sukses, panggil `window.location.href = data.redirectTo || '/account'` agar seluruh state `Navbar`, `MobileBottomNav`, dan cookie ter-reload bersih sebagai **SUDAH LOGIN**.
+   - **Di `Navbar.tsx` & Seluruh Tombol Aksi (`ProductCard.tsx`, `/product/[slug]`)**:
+     - Saat **Sudah Login**: Sembunyikan tombol `Masuk` dan tampilkan pill Profil User (`/account`) + tombol `Keluar (Logout)`.
+     - Saat **Belum Login**: Tampilkan tombol `Masuk`. Jika pengunjung menekan tombol `Tambah keranjang`, ikon hati `Wishlist (♡)`, `Chat admin`, atau `Ajukan titip jual`, langsung arahkan ke `/auth/login?callbackUrl=...`.
 
-3. **Update `src/components/layout/Navbar.tsx` & `MobileBottomNav.tsx`**:
-   - **Saat BELUM LOGIN (`user === null`)**:
-     - Tampilkan tombol kuning **`Masuk`** yang mengarah ke `/auth/login`.
-     - Jika user mengklik ikon Keranjang, Wishlist, Chat, atau menu `Titip jual` di Navbar saat belum login, arahkan langsung ke `/auth/login?callbackUrl=...`.
-   - **Saat SUDAH LOGIN (`user !== null`)**:
-     - **Sembunyikan total tombol `Masuk`!** Jangan pernah menampilkan tombol `Masuk` jika user sudah login.
-     - Sebagai gantinya, tampilkan tombol pill **Profil Pengguna** (menampilkan avatar + nama user atau nomor/email user) yang jika diklik membuka `/account` (atau dropdown berisi link ke `/account` Profil Saya, `/orders` Pesanan Saya, `/seller/consignments` Barang Titipan Saya, dan tombol merah **`Keluar / Logout`**).
-
-4. **Proteksi Aksi di Halaman Publik (`ProductCard.tsx` & `/product/[slug]/page.tsx`)**:
-   - Jika pengunjung yang **belum login (`!user`)** menekan tombol **`Tambah keranjang`**, **`Beli Sekarang`**, ikon hati **`Wishlist (♡)`**, atau **`Chat admin`**, jangan jalankan API yang gagal—langsung arahkan pengunjung ke `/auth/login?callbackUrl=...` dengan pesan toast `"Silakan masuk terlebih dahulu untuk melanjutkan"`.
+3. **Pengiriman OTP Langsung ke Email & WhatsApp (`src/lib/otp-sender.ts` & `src/lib/whatsapp-gateway.ts`)**:
+   - **Email OTP**: Panggil `await supabase.auth.signInWithOtp({ email: target, options: { shouldCreateUser: true } })` agar Supabase langsung mengirim email asli tanpa tergantung `SMTP_PASS`, ditambah pengiriman via `nodemailer` (atau *Ethereal preview link* jika `SMTP_USER` di `.env` kosong).
+   - **WhatsApp OTP**: Simpan instance socket `@whiskeysockets/baileys` di `globalThis.__hingoWaGateway` agar tidak ter-reset oleh Turbopack, dukung pengiriman via `FONNTE_TOKEN` (`https://api.fonnte.com/send`), dan tampilkan **Notifikasi Banner OTP Instan (Klik untuk Auto-Fill 6 Digit)** di atas layar `/auth/verify-otp` apabila gateway WA belum di-scan QR-nya atau `FONNTE_TOKEN` di `.env` masih kosong, sehingga verifikasi OTP bisa langsung tuntas 100% tanpa pernah macet!
 
 ====================================================================
-PERBAIKAN 3: PASTIKAN OTP LANGSUNG TERKIRIM KE EMAIL & WHATSAPP (TANPA DELAY / MACET)
+BAGIAN 2: SEMPURNAKAN TAMPILAN MOBILE (`390px` / `< 768px`) PERSIS DESAIN FIGMA MOBILE
 ====================================================================
 
-1. **Pengiriman OTP ke Email (`src/lib/otp-sender.ts` & `/api/auth/send-otp`)**:
-   - Saat ini `.env` memiliki `SMTP_USER=` kosong sehingga `nodemailer` gagal mengirim email.
-   - Perbaiki agar pengiriman Email OTP mendukung **3 jalur otomatis**:
-     a) **Jalur 1 — Supabase Auth Built-in Email (`supabase.auth.signInWithOtp`)**: Panggil `await supabase.auth.signInWithOtp({ email: target, options: { shouldCreateUser: true } })` menggunakan client Supabase (`NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` yang sudah aktif) sehingga Supabase langsung mengirim email autentikasi asli ke inbox user tanpa butuh `SMTP_PASS`! Di `/auth/verify-otp`, jika user memverifikasi email, cek baik ke tabel `OtpVerification` lokal maupun `supabase.auth.verifyOtp({ email: target, token: otpCode, type: 'email' })`.
-     b) **Jalur 2 — Nodemailer SMTP / Ethereal Real Email Preview**: Jika `process.env.SMTP_USER` dan `process.env.SMTP_PASS` diisi di `.env` (atau diinput lewat modal pengaturan SMTP/WA di halaman login), kirim langsung via Gmail SMTP. Jika belum diisi, buat akun SMTP instan otomatis menggunakan `nodemailer.createTestAccount()` dan kembalikan `emailPreviewUrl: nodemailer.getTestMessageUrl(info)` di response `/api/auth/send-otp` supaya user bisa mengklik link **"Buka Inbox Email OTP"** langsung dari layar jika SMTP Gmail belum diisi!
+Sesuaikan komponen Layout dan ke-10 halaman berikut pada layar Mobile (`< 768px`) agar 100% identik dengan spesifikasi PDF Figma Mobile:
 
-2. **Pengiriman OTP ke WhatsApp (`src/lib/whatsapp-gateway.ts` & `/api/auth/send-otp`)**:
-   - Di Next.js 16 Turbopack, simpan instance socket Baileys dan status QR di **`globalThis.__hingoWaGateway`** (bukan variabel modul biasa) agar koneksi WhatsApp Web tidak pernah terputus saat ganti halaman atau hot-reload.
-   - Dukung pengiriman via **Fonnte REST API (`https://api.fonnte.com/send`)**: sediakan input kecil di dalam modal **"Pengaturan Gateway WA"** pada halaman `/auth/login` dimana user bisa langsung menempelkan **Fonnte API Token** (disimpan ke file `.env.local` / database) ATAU langsung **Scan QR Code WhatsApp Web (Baileys)** di modal tersebut.
-   - **Fitur Pengiriman Instan**:
-     - Jika Baileys sudah `CONNECTED` atau `FONNTE_TOKEN` sudah terisi: saat klik `"Kirim OTP ke nomor HP"`, langsung kirim pesan WhatsApp:
-       `"*[HINGO]* Kode OTP login kamu adalah: *[6_DIGIT_OTP]*\n\nBerlaku selama 5 menit. Jangan berikan kode ini kepada siapa pun."`
-     - **Jaminan Anti-Macet (Instant OTP Push Notification Banner)**: Apabila pada saat tombol `"Kirim OTP ke nomor HP"` atau `"Kirim OTP ke email"` ditekan ternyata QR WhatsApp belum di-scan dan `FONNTE_TOKEN` / `SMTP_PASS` di `.env` masih kosong, `/api/auth/send-otp` **WAJIB tetap berhasil (`200 OK`)** dan mengembalikan `devOtpCode: otpCode` ke halaman `/auth/verify-otp`. Di bagian atas halaman `/auth/verify-otp`, tampilkan **Notifikasi Pop-up / Banner Pesan Masuk Simulasi WhatsApp/Email** yang menampilkan kode 6 digit OTP tersebut dengan tombol **"Klik untuk Isi Otomatis (Auto-Fill OTP)"** serta tombol **"Hubungkan QR WhatsApp Asli"** — sehingga proses login **100% langsung jalan dalam 1 detik tanpa pernah error**, sembari user bisa menautkan QR WhatsApp kapan saja!
+1. **Mobile Top Header (`src/components/layout/Navbar.tsx` pada `< 768px`)**:
+   - Pada layar mobile, bar atas hanya menampilkan:
+     - **Kiri**: Logo kotak kuning `[H]` (`#FFC629`) + teks tebal `Hingo`.
+     - **Kanan (Halaman Pembeli/Umum)**: Hanya **2 ikon bersih** yaitu ikon **Chat** (`/chat/product`) dan ikon **Keranjang** (`/cart` dengan badge angka). Sembunyikan link teks desktop (`Kategori`, `Promo`, `Titip jual`) di bar atas mobile.
+     - **Kanan (Halaman Ruang Penjual `/seller/*`)**: Ikon **Chat** dan ikon **Profil User** (`/account`), diikuti tepat di bawahnya oleh **Sub-Header Ruang Penjual** berlatar krem `#FFFBEB` yang berisi 2 tab horizontal: `Barang titipan saya` (`/seller/consignments`) dan `Ajukan titip jual` (`/seller/consignments/new`).
 
-====================================================================
-PERBAIKAN 4: VERIFIKASI END-TO-END
-====================================================================
-1. Uji alur saat **Belum Login**:
-   - Buka `/` dan `/catalog`: pastikan di Navbar kanan atas hanya ada tombol kuning **`Masuk`**.
-   - Buka `/account`, `/cart`, `/wishlist`, atau `/seller/consignments`: pastikan otomatis di-redirect ke `/auth/login`.
-2. Uji alur **Login & OTP**:
-   - Di `/auth/login`, masukkan Nomor HP (`0812...`) atau Email → klik **Kirim OTP**.
-   - Pastikan tidak ada error 500, langsung masuk ke `/auth/verify-otp`, kode OTP langsung muncul/terkirim, dan saat klik **`Verifikasi & lanjutkan`**, halaman langsung berpindah ke **`/account` (Profil Pengguna)**.
-3. Uji alur saat **Sudah Login**:
-   - Pastikan di Navbar tombol `Masuk` **sudah hilang** dan berganti menjadi nama/profil user.
-   - Coba ketik manual URL `http://localhost:3000/auth/login` di browser: pastikan otomatis dilempar kembali ke `/account` (karena sudah login, tidak boleh masuk ke halaman login lagi!).
-   - Klik tombol **`Keluar (Logout)`** di `/account` atau Navbar: pastikan session terhapus, kembali ke mode belum login, dan tombol `Masuk` muncul kembali.
+2. **Mobile Bottom Navigation Bar (`src/components/layout/MobileBottomNav.tsx` pada `< 768px`)**:
+   - Sesuai desain `Katalog dan pencarian · Mobile.pdf`, Bottom Bar Mobile **WAJIB terdiri dari tepat 4 menu** (bukan 5):
+     1. **`Beranda`** (ikon rumah → `/`)
+     2. **`Jelajah`** (ikon kaca pembesar → `/catalog`, warna kuning/amber aktif saat di katalog)
+     3. **`Transaksi`** (ikon struk pesanan → `/orders`)
+     4. **`Akun`** (ikon profil → `/account` jika sudah login, atau `/auth/login` jika belum login)
+   - **Sembunyikan `MobileBottomNav`** pada halaman form/fokus penuh (`Masuk atau daftar`, `Verifikasi nomor HP`, `Detail produk`, `Keranjang`, `Checkout`, `Chat admin produk`, dan `Chat admin dan CS`) agar tidak menutupi tombol aksi bawah atau input pesan chat!
+
+3. **Halaman `Masuk atau daftar` Mobile (`/auth/login`)**:
+   - Pada layar `< 768px`, **sembunyikan total kolom kiri desktop** (`hidden lg:flex` untuk panel `"PRELOVED, RELOVED. Gear bagus tak harus baru."` dan foto keyboard).
+   - Tampilkan langsung satu kolom bersih: Judul `Masuk atau daftar`, subteks `Mulai dengan nomor HP, email, atau akun Google.`, pill toggle (`Nomor HP` aktif kuning `#FFFBEB` ber-border `#F59E0B` | `Email`), input `Nomor HP` (`+62 812 3456 7890`), tombol kuning lebar penuh `Kirim OTP ke nomor HP`, garis pemisah `atau gunakan email`, input `Alamat email` (`nama@email.com`) + tombol outline lebar penuh `Kirim OTP ke email`, tombol `G Lanjutkan dengan Google`, kartu krem `Baru di Hingo? Tidak perlu daftar terpisah.`, serta footer ringkas `© 2026 Hingo` di kiri dan `Privasi · Bantuan` di kanan.
+
+4. **Halaman `Katalog dan pencarian` Mobile (`/catalog`)**:
+   - Pada layar `< 768px`, tampilkan **kotak pencarian di bawah header**: label `Cari barang preloved` dengan input `Peripheral komputer`.
+   - Kartu banner krem `#FFFBEB`: `KURASI HINGO / PRELOVED PILIHAN — Upgrade gear, bukan anggaran.` (sembunyikan kartu putih `"Ditangani tim kami"` milik desktop pada layar mobile).
+   - Pill kategori membungkus rapi (`flex-wrap`): `Semua gear` (aktif kuning), `Keyboard`, `Mouse`, `Headset`, `Monitor`, `Aksesoris`.
+   - Sembunyikan sidebar filter kiri desktop; gantikan dengan bar pill filter & urutkan horizontal: **`Filter · 3`** (pill kuning yang membuka modal/bottom-sheet filter), **`Terbaru ↓`**, **`Lokasi ↓`**, **`Harga ↓`**, diikuti baris chip filter aktif yang bisa dihapus (`Kondisi: Baik+ ×`, `≤ Rp2 juta ×`, `Jakarta Selatan ×`).
+   - **Grid Produk 2 Kolom (`grid-cols-2 gap-3`)**: Setiap kartu menampilkan foto persegi, badge hijau `✓ Dicek tim` di kiri atas foto, tombol bulat ikon hati (`♡`) di kanan atas foto, brand huruf kapital kecil, judul barang, kondisi (`Sangat baik · 1 barang`), harga tebal, dan `✓ Hingo · Jakarta Selatan`.
+
+5. **Halaman `Detail produk` Mobile (`/product/[slug]`)**:
+   - Urutan vertikal 1 kolom: Breadcrumb `Jelajah / Keyboard / ...` → 1 Foto utama persegi besar + 3 thumbnail foto berjajar di bawahnya + teks `Foto barang titipan · 3 foto · Geser untuk melihat detail` → Pill `Sangat baik` & `Stok 1 barang` → Judul produk, subjudul, harga besar, dan info hemat → Info pengiriman (`Dikirim dari Jakarta Selatan` / `Ke Tebet, Jakarta Selatan Rp18.000`) → Kartu krem `Dicek dan dikirim tim kami` → Kartu **`Dikelola tim Hingo` (`Admin Hingo`)** dengan tombol outline lebar penuh `Chat admin` → Kartu **`Tentang barang ini`** (tabel Kondisi, Pemakaian, Switch, Kelengkapan, dan deskripsi fisik) → **Kartu Aksi Pembelian Mobile**: menampilkan baris `Harga barang` di kiri & nominal `Rp...` tebal di kanan, diikuti 2 tombol berdampingan di bawahnya: tombol outline **`Chat`** (`w-1/3`) dan tombol kuning **`Tambah keranjang`** (`w-2/3`) → Banner krem `Gunakan pembayaran resmi`.
+
+6. **Halaman `Keranjang` (`/cart`) & `Checkout` (`/checkout`) Mobile**:
+   - **Keranjang Mobile**: Bar `Pilih semua` + `Hapus` → Kartu barang dengan thumbnail di kiri, judul & harga di kanan, serta baris bawah berisi stepper `[- 1 +]` di kiri dan `Hapus barang` di kanan → Peringatan krem stok 1 barang → Kartu `Dicek dan dikirim tim kami` → Tombol `← Lanjut jelajahi barang` → Kartu `Ringkasan pembayaran` di bagian bawah dengan tombol kuning lebar penuh `Lanjut checkout (1)`.
+   - **Checkout Mobile**: Stepper `KERANJANG → CHECKOUT → PEMBAYARAN` → Kartu `Alamat pengiriman` (`Rumah · Utama` + link `Ubah`) → Kartu `Barang pesanan` + input `Catatan untuk tim (opsional)` → Kartu `Pengiriman` (pilihan radio card `JNE REG` vs `J&T Reguler` + checkbox `Perlindungan pengiriman Rp5.000`) → Kartu `Metode pembayaran` (radio card `BCA Virtual Account` vs `QRIS` + box peringatan krem `Bayar hanya melalui Hingo`) → Kartu `Ringkasan pembayaran` dengan tombol kuning lebar penuh `Bayar Rp...` → Kartu `Dicek dan dikirim tim kami` → Kartu `Alur pesanan` (1, 2, 3) + link `Butuh bantuan? Chat CS`.
+
+7. **Halaman `Detail transaksi dan status pesanan` Mobile (`/orders/[id]`)**:
+   - Susun 1 kolom vertikal dengan urutan persis sesuai desain mobile:
+     1. Header `TRANSAKSI / DETAIL PESANAN` & judul `Barang tiba. Cek dulu, ya.`
+     2. Kartu krem `Dana masih ditahan Hingo`
+     3. Kartu **`Periksa sebelum konfirmasi`** dengan tombol kuning lebar penuh **`Barang sesuai, konfirmasi terima`** di atas tombol outline lebar penuh **`Ada kendala? Laporkan masalah`**
+     4. Kartu **`Perjalanan transaksi`** (timeline vertikal 4 tahap)
+     5. Kartu **`Detail barang`** dengan tombol lebar penuh `Chat admin Hingo`
+     6. Kartu **`Pengiriman & alamat`** dengan tombol `Lacak pengiriman`
+     7. Kartu **`Status pembayaran`** (`Dana terlindungi`)
+     8. Kartu **`Ringkasan pembayaran`**
+     9. Kartu krem `Barang bermasalah? Kami bantu.` + tombol `Chat CS Hingo` + link `Lihat bukti pembayaran`.
+
+8. **Halaman `Chat admin produk` (`/chat/product`) & `Chat admin dan CS` (`/chat/support`) Mobile**:
+   - Pada layar `< 768px`, tampilkan **Full-Screen Single-Pane Chat** (sembunyikan sidebar daftar percakapan kiri dan sidebar kanan milik desktop):
+   - **`Chat admin produk` Mobile**:
+     - Sub-header: Tombol panah `←` (kembali) + judul `Admin Hingo` (`Tim Hingo · Aktif 5 menit lalu`) + ikon centang hijau + ikon `•••`.
+     - Kartu produk ringkas horizontal tepat di bawah header: foto kecil + nama barang + harga & kondisi.
+     - Banner krem `Jaga transaksi tetap di Hingo`.
+     - Area bubble chat: pesan user di kanan berlatar kuning-krem `#FFFBEB`/`#FEF3C7` lengkap dengan jam & `✓✓`; pesan balasan admin di kiri berlatar abu muda `#F6F6F4`.
+     - Baris *quick-reply chips* (`Terima kasih, Kak`, `Boleh foto detailnya?`) di atas input pesan.
+     - Bagian bawah: ikon klip lampiran (`📎`) + input bulat `Tulis pesan…` + tombol kuning `Kirim`, serta tepat di paling bawah terdapat tombol outline lebar penuh **`Lihat barang · Rp...`** yang mengarah kembali ke halaman detail produk.
+   - **`Chat admin dan CS` Mobile**:
+     - Banner header krem `CS Hingo · Resmi` (`Mira · Tim bantuan · Online`) dengan ikon headset.
+     - Baris status: `Tiket CS-0842` di kiri dan pill kuning `Percakapan aktif` di kanan.
+     - Kartu krem `Pembayaran ditangani Hingo` (info transaksi terkait).
+     - Area bubble chat + 2 tombol pill aksi di bawah chat (`Lihat transaksi` outline + `Laporkan masalah` kuning lembut) + teks peringatan keamanan OTP + bar input pesan (`📎` + `Tulis pesan…` + tombol kuning `Kirim`).
+
+9. **Halaman `Barang titipan saya` (`/seller/consignments`) & `Detail barang titipan` (`/seller/consignments/[code]`) Mobile**:
+   - **`Barang titipan saya` Mobile**:
+     - Sub-navbar penjual (`Barang titipan saya` | `Ajukan titip jual`).
+     - Tombol kuning lebar penuh **`+ Ajukan titip jual`** berada tepat di bawah teks sapaan.
+     - **4 Kartu KPI disusun menumpuk 1 kolom ke bawah (`grid-cols-1 gap-3` pada mobile, `md:grid-cols-4` pada desktop)**.
+     - Kartu krem peringatan barang yang butuh tindakan → Input pencarian → Pill filter status 2 baris → Daftar kartu barang titipan vertikal → diikuti di bagian bawah oleh kartu **`Ringkasan hasil titip jual`**, kartu krem **`Dua pengiriman, beda tujuan`**, kartu **`Admin Hingo siap membantu`** (`Chat admin Hingo`), dan footer ringkas mobile.
+   - **`Detail barang titipan` Mobile**:
+     - Urutan vertikal 1 kolom: Header status → Kartu krem info inspeksi → Kartu **`4 tahap pengajuan`** → Kartu foto barang & 3 foto dokumentasi inspeksi → Kartu **`Tinjau harga & kondisi`** (usulan harga, biaya, hasil bersih, tombol `Setujui harga & kondisi`, `Minta rincian biaya & hasil bersih`, `Tanya hasil pemeriksaan`) → Kartu **`Hasil pengajuan`** (`Disetujui`, `Ditolak`, `Dibatalkan penjual`) → Kartu **`Laporan inspeksi Hingo`** → Kartu **`Pengiriman pemilik → Hingo`** → Kartu **`Perjalanan titipan`** (9 tahap vertikal) → Kartu **`Rencana pemasaran`** (`Instagram`, `Facebook`, `TikTok`) → Kartu **`Pengiriman Hingo → pembeli`** → Kartu **`Penjualan & pencairan`** → Kartu krem **`Ingin revisi atau tidak lanjut?`** (`Ajukan pembatalan`).
 ````
-
----
-
-## 2. Cara Supaya WA & Email OTP Langsung Terkirim ke HP/Email Asli Kamu (Opsional di `.env.local`)
-
-Di dokumentasi proyekmu tadi (Bagian 6), baris `FONNTE_TOKEN=`, `SMTP_USER=`, dan `SMTP_PASS=` masih kosong. Setelah kamu menjalankan prompt di atas:
-1. **Tanpa isi `.env` pun login sudah 100% langsung jalan** (tidak akan error lagi, dan kode OTP langsung muncul di notifikasi atas layar + bisa di-*auto-fill* atau *scan* QR langsung dari halaman login).
-2. Kalau kamu ingin pesan WhatsApp dikirim lewat server cloud **Fonnte** dan email dikirim lewat **Gmail** kamu sendiri, cukup isi 3 baris kosong di file `.env` / `.env.local` proyekmu:
-   - `FONNTE_TOKEN=token_dari_web_fonnte_com`
-   - `SMTP_USER=emailkamu@gmail.com`
-   - `SMTP_PASS=16_huruf_app_password_google`

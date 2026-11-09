@@ -130,8 +130,8 @@ function LoginContent() {
     <div className="mx-auto max-w-7xl px-4 py-8 md:py-16">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch max-w-5xl mx-auto">
         
-        {/* KOLOM KIRI (Figma Editorial Banner) */}
-        <div className="lg:col-span-6 rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden shadow-xs">
+        {/* KOLOM KIRI (Figma Editorial Banner - Hidden on Mobile, Visible on Desktop) */}
+        <div className="hidden lg:flex lg:col-span-6 rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-8 sm:p-10 flex-col justify-between relative overflow-hidden shadow-xs">
           <div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#FFC629] px-3.5 py-1 text-xs font-black uppercase tracking-wider text-black mb-6">
               <Sparkles className="h-3.5 w-3.5" />
@@ -219,18 +219,18 @@ function LoginContent() {
               Masuk atau daftar
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1 mb-6 leading-relaxed">
-              Belum punya akun? Cukup masukkan nomor HP atau email, kami akan daftarkan otomatis tanpa ribet.
+              Mulai dengan nomor HP, email, atau akun Google.
             </p>
 
             {/* Method Toggle Tabs */}
-            <div className="grid grid-cols-2 gap-2 p-1.5 bg-[#F6F6F4] rounded-2xl mb-6 text-xs font-bold">
+            <div className="grid grid-cols-2 gap-2 p-1 bg-[#F6F6F4] rounded-2xl mb-6 text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setAuthMode("phone")}
                 className={`flex items-center justify-center gap-2 py-2.5 rounded-xl transition cursor-pointer ${
                   authMode === "phone"
-                    ? "bg-white text-black shadow-xs font-black"
-                    : "text-neutral-500 hover:text-black"
+                    ? "bg-[#FFFBEB] text-[#92400E] border border-[#F59E0B] shadow-xs font-black"
+                    : "text-neutral-500 hover:text-black border border-transparent"
                 }`}
               >
                 <Phone className="h-4 w-4" />
@@ -241,8 +241,8 @@ function LoginContent() {
                 onClick={() => setAuthMode("email")}
                 className={`flex items-center justify-center gap-2 py-2.5 rounded-xl transition cursor-pointer ${
                   authMode === "email"
-                    ? "bg-white text-black shadow-xs font-black"
-                    : "text-neutral-500 hover:text-black"
+                    ? "bg-[#FFFBEB] text-[#92400E] border border-[#F59E0B] shadow-xs font-black"
+                    : "text-neutral-500 hover:text-black border border-transparent"
                 }`}
               >
                 <Mail className="h-4 w-4" />
@@ -371,20 +371,39 @@ function LoginContent() {
               </svg>
               <span>Lanjutkan dengan Google</span>
             </button>
+
+            {/* Kartu Krem Baru di Hingo */}
+            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-xs text-amber-950 mt-5 shadow-xs">
+              <div className="font-extrabold mb-1">Baru di Hingo? Tidak perlu daftar terpisah.</div>
+              <div className="text-amber-800 text-[11px] leading-relaxed">
+                Cukup masukkan nomor HP atau email aktif, akunmu langsung siap digunakan untuk belanja maupun titip jual gear.
+              </div>
+            </div>
           </div>
 
-          {/* Privacy Note */}
-          <p className="text-[11px] text-neutral-400 text-center mt-6 leading-relaxed">
-            Dengan masuk atau mendaftar, kamu menyetujui{" "}
-            <Link href="/how-it-works" className="text-neutral-700 underline font-medium">
-              Ketentuan Layanan
-            </Link>{" "}
-            dan{" "}
-            <Link href="/how-it-works" className="text-neutral-700 underline font-medium">
-              Kebijakan Privasi
-            </Link>{" "}
-            Hingo.
-          </p>
+          {/* Privacy Note & Footer Ringkas Mobile */}
+          <div className="mt-6 pt-4 border-t border-neutral-100 flex flex-col gap-3">
+            <p className="text-[11px] text-neutral-400 text-center leading-relaxed">
+              Dengan masuk atau mendaftar, kamu menyetujui{" "}
+              <Link href="/how-it-works" className="text-neutral-700 underline font-medium">
+                Ketentuan Layanan
+              </Link>{" "}
+              dan{" "}
+              <Link href="/how-it-works" className="text-neutral-700 underline font-medium">
+                Kebijakan Privasi
+              </Link>{" "}
+              Hingo.
+            </p>
+
+            <div className="flex items-center justify-between text-[11px] text-neutral-400 pt-2 border-t border-neutral-100">
+              <span>© 2026 Hingo</span>
+              <div className="flex items-center gap-3">
+                <Link href="/how-it-works" className="hover:underline">Privasi</Link>
+                <span>·</span>
+                <Link href="/how-it-works" className="hover:underline">Bantuan</Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

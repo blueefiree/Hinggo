@@ -371,17 +371,17 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Card 3: Detail Barang */}
-          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 shadow-xs flex flex-col gap-4">
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-4">
             <h2 className="text-sm font-bold text-[#1A1A1A] pb-3 border-b border-neutral-100">
               Detail barang
             </h2>
 
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <img
                   src={order.product?.images?.[0] || "/images/placeholder.png"}
                   alt={order.product?.name || "Product"}
-                  className="h-16 w-16 rounded-xl object-cover border border-neutral-200"
+                  className="h-16 w-16 rounded-xl object-cover border border-neutral-200 shrink-0"
                 />
                 <div>
                   <h3 className="text-sm font-bold text-[#1A1A1A]">
@@ -396,11 +396,12 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
+              {/* Tombol Lebar Penuh di Mobile / Tombol Ramping di Desktop */}
               <Link
                 href="/chat/product"
-                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-[#F6F6F4] px-4 py-2 text-xs font-bold text-neutral-800 hover:bg-neutral-200 transition"
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-2xl border border-neutral-200 bg-[#F6F6F4] px-4 py-2.5 text-xs font-bold text-neutral-800 hover:bg-neutral-200 transition"
               >
-                <MessageSquare className="h-3.5 w-3.5" />
+                <MessageSquare className="h-4 w-4" />
                 <span>Chat admin Hingo</span>
               </Link>
             </div>
@@ -495,7 +496,36 @@ export default function OrderDetailPage() {
             </button>
           </div>
 
-          {/* Need help card */}
+          {/* 8. Ringkasan Pembayaran Card sesuai Figma */}
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-3">
+            <h3 className="text-sm font-black text-[#1A1A1A] pb-2 border-b border-neutral-100">
+              Ringkasan pembayaran
+            </h3>
+            <div className="flex flex-col gap-2 text-xs text-neutral-600">
+              <div className="flex justify-between">
+                <span>Harga barang</span>
+                <span className="font-semibold text-neutral-900">{formatRupiah(order.itemPrice)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Ongkir ({order.shippingCourier})</span>
+                <span className="font-semibold text-neutral-900">{formatRupiah(18000)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Proteksi pengiriman</span>
+                <span className="font-semibold text-neutral-900">{formatRupiah(5000)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Biaya layanan escrow</span>
+                <span className="font-semibold text-neutral-900">{formatRupiah(2500)}</span>
+              </div>
+              <div className="pt-2 border-t border-neutral-100 flex justify-between font-black text-[#1A1A1A] text-sm">
+                <span>Total dibayar</span>
+                <span>{formatRupiah(order.totalAmount)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 9. Need help card */}
           <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-6 shadow-xs flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Headphones className="h-5 w-5 text-amber-700" />

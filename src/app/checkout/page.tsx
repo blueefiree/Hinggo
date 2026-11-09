@@ -334,14 +334,22 @@ export default function CheckoutPage() {
                 />
               </label>
             </div>
+
+            {/* Box Peringatan Krem: Bayar hanya melalui Hingo sesuai Figma */}
+            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-3 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
+              <ShieldCheck className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+              <span>
+                <strong>Bayar hanya melalui Hingo:</strong> Transaksi aman dengan verifikasi otomatis dan proteksi rekening bersama resmi Hingo.
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Right Sidebar: Ringkasan Total & Tombol Bayar */}
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 flex flex-col gap-5">
           <div className="sticky top-28 rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-5">
             <h2 className="text-base font-black text-[#1A1A1A]">
-              Ringkasan pesanan
+              Ringkasan pembayaran
             </h2>
 
             <div className="flex flex-col gap-2.5 text-xs text-neutral-600 pb-4 border-b border-neutral-100">
@@ -378,22 +386,52 @@ export default function CheckoutPage() {
               </span>
             </div>
 
+            {/* Tombol Kuning Lebar Penuh: Bayar Rp... */}
             <button
               type="button"
               disabled={isPaying}
               onClick={handlePay}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.99] cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#FFC629] hover:bg-[#FFC420] py-3.5 text-sm font-black text-[#1A1A1A] shadow-xs transition active:scale-[0.99] cursor-pointer"
             >
-              <span>{isPaying ? "Memproses..." : "Bayar Sekarang"}</span>
+              <span>{isPaying ? "Memproses pesanan..." : `Bayar ${formatRupiah(totalAmount)}`}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
 
-            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-3 text-[11px] text-amber-900 flex items-start gap-2">
-              <ShieldCheck className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
-              <span>
-                <strong>Garansi Uang Kembali:</strong> Dana belanjaanmu disimpan di rekening bersama Hingo.
-                Penjual baru menerima dana setelah kamu selesai menguji fungsi gear selama 48 jam.
-              </span>
+            {/* Kartu: Dicek dan dikirim tim kami */}
+            <div className="rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-xs text-amber-950 flex flex-col gap-1.5 shadow-xs">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-amber-800 shrink-0" />
+                <strong className="font-black text-amber-950">Dicek dan dikirim tim kami</strong>
+              </div>
+              <p className="text-amber-900 text-[11px] leading-relaxed">
+                Barang pesanan telah lolos 12 poin inspeksi lab teknisi Hingo dan siap dikirim dengan proteksi kardus & bubble wrap tebal.
+              </p>
+            </div>
+
+            {/* Kartu: Alur Pesanan (1, 2, 3) + Link Butuh Bantuan Chat CS */}
+            <div className="rounded-2xl border border-neutral-200 bg-[#F6F6F4] p-4 text-xs text-neutral-700 flex flex-col gap-2.5">
+              <span className="font-bold text-[#1A1A1A] text-xs">Alur pesanan aman:</span>
+              <div className="flex flex-col gap-1.5 text-[11px] text-neutral-600">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-[9px] font-bold text-white">1</span>
+                  <span>Pembayaran diverifikasi otomatis oleh Hingo</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-[9px] font-bold text-white">2</span>
+                  <span>Barang dikirim dari gudang resmi Hingo</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-[9px] font-bold text-white">3</span>
+                  <span>Konfirmasi terima barang & tes fungsi 48 jam</span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-neutral-200 flex justify-between items-center text-[11px]">
+                <span className="text-neutral-500">Butuh bantuan?</span>
+                <Link href="/chat/support" className="font-bold text-amber-800 hover:underline">
+                  Chat CS Hingo →
+                </Link>
+              </div>
             </div>
           </div>
         </div>

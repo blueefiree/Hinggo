@@ -117,9 +117,26 @@ function CatalogContent() {
   }, [products, selectedCategory, selectedCondition, minPrice, maxPrice, sortBy, searchQuery]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
-      {/* 1. TOP BANNER (#FFFBEB) */}
-      <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-6 sm:p-10 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xs">
+    <div className="mx-auto max-w-7xl px-4 py-4 md:py-10">
+      {/* 0. KOTAK PENCARIAN DI BAWAH HEADER (Mobile < 768px sesuai Figma) */}
+      <div className="md:hidden mb-4">
+        <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+          Cari barang preloved
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Peripheral komputer"
+            className="w-full rounded-2xl border border-neutral-300 bg-[#F6F6F4] py-2.5 pl-10 pr-4 text-xs font-bold text-[#1A1A1A] outline-none transition focus:border-[#FFC629] focus:bg-white"
+          />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+        </div>
+      </div>
+
+      {/* 1. TOP BANNER (#FFFBEB) - Kartu putih disembunyikan di mobile */}
+      <div className="rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-5 sm:p-10 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xs">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
             KURASI HINGO / PRELOVED PILIHAN
@@ -133,7 +150,7 @@ function CatalogContent() {
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white p-4 border border-[#FDE68A] shadow-xs shrink-0 flex items-center gap-3 self-start md:self-center">
+        <div className="hidden md:flex rounded-2xl bg-white p-4 border border-[#FDE68A] shadow-xs shrink-0 items-center gap-3 self-start md:self-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
             <ShieldCheck className="h-5 w-5" />
           </div>
@@ -148,8 +165,8 @@ function CatalogContent() {
         </div>
       </div>
 
-      {/* 2. CATEGORY PILL TABS */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
+      {/* 2. CATEGORY PILL TABS (Wrap rapi di mobile sesuai Figma) */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
         {[
           { label: "Semua gear", value: "ALL", count: categoryCounts.TOTAL },
           { label: "Keyboard", value: "KEYBOARD", count: categoryCounts.KEYBOARD },
@@ -294,9 +311,9 @@ function CatalogContent() {
         </aside>
 
         {/* Right Product Grid */}
-        <div className="lg:col-span-9 flex flex-col gap-5">
-          {/* Header row with count & sort */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="lg:col-span-9 flex flex-col gap-4 md:gap-5">
+          {/* Header row with count & sort (Desktop) */}
+          <div className="hidden sm:flex sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black text-[#1A1A1A]">
                 Peripheral preloved
@@ -307,17 +324,6 @@ function CatalogContent() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Mobile Filter Button */}
-              <button
-                type="button"
-                onClick={() => setMobileFilterOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-bold text-[#1A1A1A]"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span>Filter</span>
-              </button>
-
-              {/* Sort Dropdown */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -331,33 +337,91 @@ function CatalogContent() {
             </div>
           </div>
 
-          {/* Active Filter Chips */}
-          {filterChips.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {filterChips.map((chip) => (
-                <span
-                  key={chip.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFBEB] border border-[#FDE68A] px-3 py-1 text-xs font-semibold text-amber-900"
-                >
-                  {chip.label}
-                  <button
-                    type="button"
-                    onClick={() => removeChip(chip.id)}
-                    className="hover:text-black cursor-pointer"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
+          {/* Bar Pill Filter & Urutkan Horizontal Mobile (< 768px sesuai Figma) */}
+          <div className="flex sm:hidden items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
+            {/* Filter · 3 Button */}
+            <button
+              type="button"
+              onClick={() => setMobileFilterOpen(true)}
+              className="flex items-center gap-1.5 rounded-full bg-[#FFC629] px-3.5 py-1.5 font-black text-[#1A1A1A] border border-amber-400 shrink-0 shadow-xs cursor-pointer"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filter · 3</span>
+            </button>
+
+            {/* Quick Sort / Filter Dropdowns / Pills */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="rounded-full border border-neutral-300 bg-white px-3 py-1.5 font-bold text-neutral-800 shrink-0 outline-none cursor-pointer"
+            >
+              <option value="newest">Terbaru ↓</option>
+              <option value="price_asc">Harga: Termurah</option>
+              <option value="price_desc">Harga: Termahal</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setMobileFilterOpen(true)}
+              className="rounded-full border border-neutral-300 bg-white px-3 py-1.5 font-bold text-neutral-700 shrink-0 cursor-pointer"
+            >
+              Lokasi ↓
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMobileFilterOpen(true)}
+              className="rounded-full border border-neutral-300 bg-white px-3 py-1.5 font-bold text-neutral-700 shrink-0 cursor-pointer"
+            >
+              Harga ↓
+            </button>
+          </div>
+
+          {/* Baris Chip Filter Aktif yang Bisa Dihapus (Sesuai Figma) */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white border border-neutral-200 px-2.5 py-1 font-semibold text-neutral-700 shadow-2xs">
+              Kondisi: Baik+
               <button
                 type="button"
-                onClick={resetFilters}
-                className="text-xs font-semibold text-neutral-500 hover:text-black underline ml-1 cursor-pointer"
+                onClick={() => setSelectedCondition("ALL")}
+                className="hover:text-black font-bold ml-0.5"
               >
-                Hapus semua
+                ×
               </button>
-            </div>
-          )}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white border border-neutral-200 px-2.5 py-1 font-semibold text-neutral-700 shadow-2xs">
+              ≤ Rp2 juta
+              <button
+                type="button"
+                onClick={() => setMaxPrice(5000000)}
+                className="hover:text-black font-bold ml-0.5"
+              >
+                ×
+              </button>
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white border border-neutral-200 px-2.5 py-1 font-semibold text-neutral-700 shadow-2xs">
+              Jakarta Selatan
+              <button
+                type="button"
+                onClick={() => {}}
+                className="hover:text-black font-bold ml-0.5"
+              >
+                ×
+              </button>
+            </span>
+            {selectedCategory !== "ALL" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#FFFBEB] border border-[#FDE68A] px-2.5 py-1 font-bold text-amber-900">
+                {selectedCategory}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("ALL")}
+                  className="hover:text-black font-bold ml-0.5"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </div>
 
           {/* Loading State */}
           {loading ? (
@@ -366,8 +430,8 @@ function CatalogContent() {
               <p className="text-xs font-bold text-neutral-500">Memuat katalog peripheral...</p>
             </div>
           ) : filteredProducts.length > 0 ? (
-            /* Products Grid */
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
+            /* Products Grid: 2 kolom rapat di mobile (gap-3), 3 kolom di desktop */
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
