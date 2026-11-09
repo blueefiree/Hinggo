@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, ensurePrismaUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
       }
     }
 
-    let items = await prisma.consignmentItem.findMany({
+    const items = await prisma.consignmentItem.findMany({
       where,
       include: {
         timeline: { orderBy: { stepOrder: "asc" } },
@@ -182,52 +182,108 @@ export async function POST(req: Request) {
           "https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=800&auto=format&fit=crop",
         ];
 
-    const newItem = await prisma.$transaction(async (tx) => {
-      const item = await tx.consignmentItem.create({
-        data: {
-          code,
-          sellerId: user.id,
-          sellerEmail,
-          category: data.category || "KEYBOARD",
-          brandModel: data.brandModel || "Gear Baru",
-          variantSpec: data.variantSpec || "Varian Standar",
-          usageDuration: data.usageDuration || "3 bulan",
-          additionalSpecs: data.additionalSpecs || "",
-          currentCondition: data.currentCondition || "Bekas · berfungsi normal",
-          defectDetails: data.defectDetails || "Tidak ada cacat fungsi",
-          completeness: data.completeness || "Unit dan kelengkapan standar",
-          photos: JSON.stringify(photosArr),
-          expectedPrice,
-          consignmentFeePercent,
-          consignmentFeeAmount,
-          adminHandlingFee,
-          estimatedNetPayout,
-          originCity: data.originCity || user.city || "Jakarta Selatan",
-          handoverMethod: data.handoverMethod || "Kirim ke Gudang Hingo via kurir ekspedisi",
-          stage,
-          actionActor: "HINGO",
-          badgeLabel: isDraft ? "Draf tersimpan" : "Menunggu kurasi online",
-          statusSummary: isDraft
-            ? "Draf titip jual tersimpan di akunmu."
-            : "Formulir titip jual telah dikirim. Tim Hingo sedang memeriksa foto online.",
-        },
-      });
+    // Pastikan User fisik ada di Prisma SQLite agar relasi foreign key sellerId valid
+    await ensurePrismaUser(user);
 
-      await tx.consignmentTimeline.create({
-        data: {
-          consignmentId: item.id,
-          stepOrder: 1,
-          title: isDraft ? "Draf pengajuan dibuat" : "Pengajuan titip jual diterima",
-          description: isDraft
-            ? "Draf pengajuan barang titipan disimpan oleh penjual."
-            : "Data spesifikasi dan foto gear berhasil dikirimkan.",
-          timestampText: "Hari ini · Baru saja",
-          state: "CURRENT",
-        },
-      });
+    let newItem: any = null;
+    try {
+      newItem = await prisma.$transaction(async (tx) => {
+        let u = await tx.user.findUnique({ where: { id: user.id } });
+        if (!u) {
+          u = await tx.user.create({
+            data: {
+              id: user.id,
+              name: user.name || "Pengguna Hingo",
+              email: sellerEmail,
+              phone: user.phone || null,
+              city: user.city || "Jakarta Selatan",
+              role: user.role || "USER",
+              phoneVerified: Boolean(user.phoneVerified),
+              emailVerified: Boolean(user.emailVerified),
+              kycStatus: user.kycStatus || "UNVERIFIED",
+            },
+          });
+        }
 
-      return item;
-    });
+        const item = await tx.consignmentItem.create({
+          data: {
+            code,
+            sellerId: u.id,
+            sellerEmail,
+            category: data.category || "KEYBOARD",
+            brandModel: data.brandModel || "Gear Baru",
+            variantSpec: data.variantSpec || "Varian Standar",
+            usageDuration: data.usageDuration || "3 bulan",
+            additionalSpecs: data.additionalSpecs || "",
+            currentCondition: data.currentCondition || "Bekas · berfungsi normal",
+            defectDetails: data.defectDetails || "Tidak ada cacat fungsi",
+            completeness: data.completeness || "Unit dan kelengkapan standar",
+            photos: JSON.stringify(photosArr),
+            expectedPrice,
+            consignmentFeePercent,
+            consignmentFeeAmount,
+            adminHandlingFee,
+            estimatedNetPayout,
+            originCity: data.originCity || user.city || "Jakarta Selatan",
+            handoverMethod: data.handoverMethod || "Kirim ke Gudang Hingo via kurir ekspedisi",
+            stage,
+            actionActor: "HINGO",
+            badgeLabel: isDraft ? "Draf tersimpan" : "Menunggu kurasi online",
+            statusSummary: isDraft
+              ? "Draf titip jual tersimpan di akunmu."
+              : "Formulir titip jual telah dikirim. Tim Hingo sedang memeriksa foto online.",
+          },
+        });
+
+        await tx.consignmentTimeline.create({
+          data: {
+            consignmentId: item.id,
+            stepOrder: 1,
+            title: isDraft ? "Draf pengajuan dibuat" : "Pengajuan titip jual diterima",
+            description: isDraft
+              ? "Draf pengajuan barang titipan disimpan oleh penjual."
+              : "Data spesifikasi dan foto gear berhasil dikirimkan.",
+            timestampText: "Hari ini · Baru saja",
+            state: "CURRENT",
+          },
+        });
+
+        return item;
+      });
+    } catch (dbErr: any) {
+      console.warn("Prisma consignment transaction notice:", dbErr.message);
+      // Fallback: Bentuk item untuk disimpan ke Supabase cloud langsung
+      newItem = {
+        id: crypto.randomUUID(),
+        code,
+        sellerId: user.id,
+        sellerEmail,
+        category: data.category || "KEYBOARD",
+        brandModel: data.brandModel || "Gear Baru",
+        variantSpec: data.variantSpec || "Varian Standar",
+        usageDuration: data.usageDuration || "3 bulan",
+        additionalSpecs: data.additionalSpecs || "",
+        currentCondition: data.currentCondition || "Bekas · berfungsi normal",
+        defectDetails: data.defectDetails || "Tidak ada cacat fungsi",
+        completeness: data.completeness || "Unit dan kelengkapan standar",
+        photos: JSON.stringify(photosArr),
+        expectedPrice,
+        consignmentFeePercent,
+        consignmentFeeAmount,
+        adminHandlingFee,
+        estimatedNetPayout,
+        originCity: data.originCity || user.city || "Jakarta Selatan",
+        handoverMethod: data.handoverMethod || "Kirim ke Gudang Hingo via kurir ekspedisi",
+        stage,
+        actionActor: "HINGO",
+        badgeLabel: isDraft ? "Draf tersimpan" : "Menunggu kurasi online",
+        statusSummary: isDraft
+          ? "Draf titip jual tersimpan di akunmu."
+          : "Formulir titip jual telah dikirim. Tim Hingo sedang memeriksa foto online.",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
 
     // ====================================================================
     // DUAL-WRITE KE SUPABASE public.consignments (Cloud Backup)
@@ -260,7 +316,7 @@ export async function POST(req: Request) {
         status_summary: newItem.statusSummary,
       };
 
-      let { error: sbErr } = await supabase.from("consignments").insert(sbPayload);
+      const { error: sbErr } = await supabase.from("consignments").insert(sbPayload);
       if (sbErr && sbErr.message?.includes("seller_email")) {
         delete sbPayload.seller_email;
         await supabase.from("consignments").insert(sbPayload);

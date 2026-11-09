@@ -38,7 +38,7 @@ export async function GET() {
 
     // 2. Cek status koneksi Supabase & keberadaan tabel
     let supabaseConnected = false;
-    let tablesStatus: Record<string, boolean> = {
+    const tablesStatus: Record<string, boolean> = {
       products: false,
       users: false,
       consignments: false,

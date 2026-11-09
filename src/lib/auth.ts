@@ -61,6 +61,81 @@ export function verifySessionToken(token: string): SessionPayload | null {
   }
 }
 
+/**
+ * Memastikan record User secara fisik tersimpan di database Prisma SQLite lokal.
+ * Mencegah error 'Foreign key constraint violated' saat pembuatan barang titipan, alamat, atau pesanan.
+ */
+export async function ensurePrismaUser(user: {
+  id: string;
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  role?: string | null;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+  kycStatus?: string | null;
+  avatarUrl?: string | null;
+  bio?: string | null;
+}) {
+  if (!user || !user.id || user.id === "user-naya") return null;
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        kycDocument: true,
+        addresses: true,
+        bankAccounts: true,
+      },
+    });
+    if (existing) return existing;
+
+    const emailNorm = user.email?.trim()?.toLowerCase() || null;
+    const phoneNorm = user.phone?.trim() || null;
+
+    if (emailNorm || phoneNorm) {
+      const match = await prisma.user.findFirst({
+        where: {
+          OR: [
+            ...(emailNorm ? [{ email: emailNorm }] : []),
+            ...(phoneNorm ? [{ phone: phoneNorm }] : []),
+          ],
+        },
+        include: {
+          kycDocument: true,
+          addresses: true,
+          bankAccounts: true,
+        },
+      });
+      if (match) return match;
+    }
+
+    return await prisma.user.create({
+      data: {
+        id: user.id,
+        name: user.name || "Pengguna Hingo",
+        email: emailNorm,
+        phone: phoneNorm,
+        city: user.city || "Jakarta Selatan",
+        role: user.role || "USER",
+        phoneVerified: Boolean(user.phoneVerified),
+        emailVerified: Boolean(user.emailVerified),
+        kycStatus: user.kycStatus || "UNVERIFIED",
+        avatarUrl: user.avatarUrl || null,
+        bio: user.bio || null,
+      },
+      include: {
+        kycDocument: true,
+        addresses: true,
+        bankAccounts: true,
+      },
+    });
+  } catch (err) {
+    console.warn("ensurePrismaUser fallback:", err);
+    return null;
+  }
+}
+
 export async function getCurrentUser() {
   try {
     const cookieStore = await cookies();
@@ -104,48 +179,38 @@ export async function getCurrentUser() {
 
         if (sbUsers && sbUsers.length > 0) {
           const su = sbUsers[0];
-          try {
-            const created = await prisma.user.upsert({
-              where: { email: normEmail },
-              update: {},
-              create: {
-                id: su.id || crypto.randomUUID(),
-                name: su.name || normEmail.split("@")[0],
-                email: normEmail,
-                phone: su.phone || null,
-                city: su.city || "Jakarta Selatan",
-                role: su.role || "USER",
-                emailVerified: Boolean(su.email_verified),
-                phoneVerified: Boolean(su.phone_verified),
-                kycStatus: su.kyc_status || "UNVERIFIED",
-                avatarUrl: su.avatar_url || null,
-              },
-              include: {
-                kycDocument: true,
-                addresses: true,
-                bankAccounts: true,
-              },
-            });
-            return created;
-          } catch {
-            return {
-              id: su.id || `user-${Date.now()}`,
-              name: su.name || normEmail.split("@")[0],
-              email: normEmail,
-              phone: su.phone || null,
-              city: su.city || "Jakarta Selatan",
-              role: su.role || "USER",
-              emailVerified: true,
-              phoneVerified: Boolean(su.phone_verified),
-              kycStatus: su.kyc_status || "UNVERIFIED",
-              avatarUrl: su.avatar_url || null,
-              bio: null,
-              createdAt: new Date(),
-              addresses: [],
-              bankAccounts: [],
-              kycDocument: null,
-            };
-          }
+          const ensured = await ensurePrismaUser({
+            id: su.id || crypto.randomUUID(),
+            name: su.name || normEmail.split("@")[0],
+            email: normEmail,
+            phone: su.phone || null,
+            city: su.city || "Jakarta Selatan",
+            role: su.role || "USER",
+            emailVerified: Boolean(su.email_verified),
+            phoneVerified: Boolean(su.phone_verified),
+            kycStatus: su.kyc_status || "UNVERIFIED",
+            avatarUrl: su.avatar_url || null,
+          });
+
+          if (ensured) return ensured;
+
+          return {
+            id: su.id || `user-${Date.now()}`,
+            name: su.name || normEmail.split("@")[0],
+            email: normEmail,
+            phone: su.phone || null,
+            city: su.city || "Jakarta Selatan",
+            role: su.role || "USER",
+            emailVerified: true,
+            phoneVerified: Boolean(su.phone_verified),
+            kycStatus: su.kyc_status || "UNVERIFIED",
+            avatarUrl: su.avatar_url || null,
+            bio: null,
+            createdAt: new Date(),
+            addresses: [],
+            bankAccounts: [],
+            kycDocument: null,
+          };
         }
       } catch (sbErr) {
         console.warn("Supabase user by email lookup bypassed:", sbErr);
@@ -176,9 +241,24 @@ export async function getCurrentUser() {
           if (dbUser) {
             return dbUser;
           }
-        } catch {
-          // Instance serverless baru / SQLite ephemeral, gunakan payload tepercaya
-        }
+        } catch {}
+
+        // Pastikan user ini tersimpan secara fisik di Prisma SQLite
+        const ensured = await ensurePrismaUser({
+          id: payload.userId,
+          name: payload.name,
+          email: payload.email || (payload.phone ? `${payload.phone.replace(/\D/g, "")}@wa.hingo.id` : null),
+          phone: payload.phone || null,
+          city: payload.city || "Jakarta Selatan",
+          role: payload.role || "USER",
+          phoneVerified: Boolean(payload.phoneVerified),
+          emailVerified: Boolean(payload.emailVerified),
+          kycStatus: payload.kycStatus || "UNVERIFIED",
+          avatarUrl: payload.avatarUrl || null,
+          bio: payload.bio || null,
+        });
+
+        if (ensured) return ensured;
 
         // Return user tepercaya dari session payload
         return {
@@ -219,7 +299,7 @@ export async function getCurrentUser() {
         if (directUser) {
           return directUser;
         }
-      } catch (err) {}
+      } catch {}
     }
 
     return null;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, ensurePrismaUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
@@ -8,6 +8,8 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Silakan masuk terlebih dahulu" }, { status: 401 });
     }
+
+    await ensurePrismaUser(user);
 
     const {
       productId,
