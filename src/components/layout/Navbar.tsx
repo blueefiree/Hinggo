@@ -243,7 +243,7 @@ export default function Navbar() {
 
           <div className="hidden sm:block h-6 w-px bg-neutral-200" />
 
-          {/* User Section: If Guest -> Yellow Masuk button; If User -> Profile Pill with Dropdown */}
+          {/* User Section: If Guest -> Yellow Masuk button; If User -> Profil Pill with Dropdown */}
           {!user ? (
             <Link
               href="/auth/login"
@@ -257,28 +257,23 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2 rounded-full border border-neutral-200 bg-[#F6F6F4] p-1.5 pr-2.5 hover:bg-[#EAEAEA] transition cursor-pointer"
+                className="flex items-center gap-2 rounded-full border border-neutral-200 bg-[#F6F6F4] px-3 py-1.5 hover:bg-[#EAEAEA] transition cursor-pointer"
               >
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
                     alt={user.name}
-                    className="h-7 w-7 rounded-full object-cover border border-[#FFC629]"
+                    className="h-6 w-6 rounded-full object-cover border border-[#FFC629]"
                   />
                 ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFC629] text-xs font-bold text-black uppercase">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FFC629] text-[10px] font-bold text-black uppercase">
                     {user.name.charAt(0)}
                   </div>
                 )}
-                <div className="hidden sm:flex flex-col text-left">
-                  <span className="text-xs font-bold leading-tight text-[#1A1A1A] max-w-[100px] truncate">
-                    {user.name.split(" ")[0]}
-                  </span>
-                  <span className="text-[10px] text-emerald-600 font-semibold leading-none">
-                    {user.kycStatus === "VERIFIED" ? "Terverifikasi" : "KYC Aktif"}
-                  </span>
-                </div>
-                <ChevronDown className="h-3 w-3 text-neutral-400 hidden sm:block" />
+                <span className="text-xs font-bold text-[#1A1A1A]">
+                  Profil
+                </span>
+                <ChevronDown className="h-3 w-3 text-neutral-400" />
               </button>
 
               {/* Profile Dropdown */}
@@ -447,21 +442,32 @@ export default function Navbar() {
               <Link
                 href="/auth/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl bg-[#FFC629] text-black text-sm font-bold shadow-xs"
+                className="w-full text-center py-2.5 rounded-xl bg-[#FFC629] text-black text-sm font-bold shadow-xs flex items-center justify-center gap-2"
               >
-                Masuk ke Akun
+                <User className="h-4 w-4" />
+                <span>Masuk</span>
               </Link>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  logout();
-                }}
-                className="w-full text-center py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-red-600 text-sm font-bold"
-              >
-                Keluar (Logout)
-              </button>
+              <div className="flex flex-col gap-2 w-full">
+                <Link
+                  href="/account"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center py-2.5 rounded-xl bg-[#FFC629] text-black text-sm font-bold shadow-xs flex items-center justify-center gap-2"
+                >
+                  <User className="h-4 w-4" />
+                  <span>Profil</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full text-center py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-red-600 text-xs font-bold cursor-pointer"
+                >
+                  Keluar (Logout)
+                </button>
+              </div>
             )}
           </div>
         </div>

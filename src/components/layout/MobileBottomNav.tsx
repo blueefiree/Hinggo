@@ -50,7 +50,7 @@ export default function MobileBottomNav() {
       targetPath: "/orders",
     },
     {
-      label: "Akun",
+      label: user ? "Profil" : "Masuk",
       href: user ? "/account" : "/auth/login?callbackUrl=/account",
       icon: User,
       isActive: pathname === "/account" || pathname.startsWith("/seller") || pathname.startsWith("/auth"),
