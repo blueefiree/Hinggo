@@ -44,7 +44,13 @@ export default function RoleSwitcherWidget() {
               onClick={() => {
                 setRole("USER");
                 setIsOpen(false);
-                if (isAdminPage) router.push("/seller/consignments");
+                if (isAdminPage) {
+                  if (user) {
+                    router.push("/account");
+                  } else {
+                    router.push("/");
+                  }
+                }
               }}
               className={`flex items-center justify-between p-2.5 rounded-xl border transition ${
                 role === "USER"
@@ -55,8 +61,8 @@ export default function RoleSwitcherWidget() {
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-emerald-600" />
                 <div className="text-left">
-                  <div className="font-bold text-xs">{user?.name || "Mode Pengguna"}</div>
-                  <div className="text-[10px] text-neutral-500">Pembeli & Penjual Gear</div>
+                  <div className="font-bold text-xs">{user ? user.name : "Tamu (Belum Login)"}</div>
+                  <div className="text-[10px] text-neutral-500">{user ? "Akun Aktif" : "Jelajah Katalog & Beli"}</div>
                 </div>
               </div>
               {role === "USER" && <span className="h-2 w-2 rounded-full bg-emerald-500" />}
@@ -125,7 +131,7 @@ export default function RoleSwitcherWidget() {
           }`}
         />
         <span className="text-xs font-black tracking-tight">
-          {role === "ADMIN" ? "Mode: Admin Hingo" : `Mode: ${user?.name || "Pengguna"}`}
+          {role === "ADMIN" ? "Mode: Admin Hingo" : (user ? `Mode: ${user.name}` : "Mode: Tamu (Belum Login)")}
         </span>
         <ArrowLeftRight className="h-3.5 w-3.5 text-neutral-400" />
       </button>

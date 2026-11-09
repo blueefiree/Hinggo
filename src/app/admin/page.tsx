@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -27,6 +28,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const {
     user,
     role,
@@ -262,10 +264,15 @@ export default function AdminDashboardPage() {
             type="button"
             onClick={() => {
               setRole("USER");
+              if (user) {
+                router.push("/account");
+              } else {
+                router.push("/");
+              }
             }}
-            className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2.5 text-xs font-bold text-white transition border border-white/15"
+            className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2.5 text-xs font-bold text-white transition border border-white/15 cursor-pointer"
           >
-            <span>Beralih ke Tampilan Pengguna (User)</span>
+            <span>Beralih ke Tampilan Pengguna ({user ? user.name : "Tamu / Belum Login"})</span>
           </button>
         </div>
       </div>

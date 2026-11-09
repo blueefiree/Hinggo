@@ -42,6 +42,7 @@ function AccountContent() {
 
   const {
     user,
+    isLoadingUser,
     addresses,
     bankAccounts,
     orders,
@@ -52,6 +53,13 @@ function AccountContent() {
     showToast,
     logout,
   } = useHingoStore();
+
+  // If not logged in, immediately redirect to login (never display fake dummy account)
+  useEffect(() => {
+    if (!isLoadingUser && !user) {
+      router.replace("/auth/login?callbackUrl=/account");
+    }
+  }, [isLoadingUser, user, router]);
 
   // Profile edit state
   const [nameInput, setNameInput] = useState(user?.name || "");
@@ -415,6 +423,24 @@ function AccountContent() {
     .filter((p) => p.status === "SUCCESS")
     .reduce((sum, p) => sum + (p.netDisbursed || 0), 0);
 
+  if (isLoadingUser) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-28 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
+        <p className="text-sm font-semibold text-neutral-500">Memuat profil akun...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-28 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
+        <p className="text-sm font-semibold text-neutral-500">Mengalihkan ke halaman masuk...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
       {/* Top Header */}
@@ -424,7 +450,7 @@ function AccountContent() {
             PROFIL PENGGUNA RESMI HINGO
           </span>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A]">
-            Akun & Keamanan {user?.name || "Pengguna"}
+            Akun & Keamanan {user.name}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 mt-1">
             Data pribadi, kontak terverifikasi, verifikasi identitas KYC, buku alamat, dan rekening pencairan konsinyasi.
@@ -534,10 +560,10 @@ function AccountContent() {
 
             <div>
               <h2 className="text-lg font-black text-[#1A1A1A]">
-                {user?.name || "Pengguna Hingo"}
+                {user.name}
               </h2>
               <p className="text-xs text-neutral-500 mt-0.5">
-                {user?.city || "Jakarta Selatan"} · {user?.role === "ADMIN" ? "Admin Kurator" : "Member"}
+                {user.city || "Jakarta Selatan"} · {user.role === "ADMIN" ? "Admin Kurator" : "Member"}
               </p>
               {(user as any)?.bio && (
                 <p className="text-xs text-neutral-600 italic mt-1.5 px-3">
