@@ -33,6 +33,7 @@ export default function AdminDashboardPage() {
     user,
     role,
     setRole,
+    logout,
     consignments,
     orders,
     payouts,
@@ -262,17 +263,17 @@ export default function AdminDashboardPage() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              setRole("USER");
-              if (user) {
-                router.push("/account");
+            onClick={async () => {
+              if (user?.role === "ADMIN") {
+                await logout();
               } else {
-                router.push("/");
+                setRole("USER");
+                router.push(user ? "/account" : "/");
               }
             }}
             className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2.5 text-xs font-bold text-white transition border border-white/15 cursor-pointer"
           >
-            <span>Beralih ke Tampilan Pengguna ({user ? user.name : "Tamu / Belum Login"})</span>
+            <span>Beralih ke Tampilan Pengguna ({user && user.role !== "ADMIN" ? user.name : "Tamu / Belum Login"})</span>
           </button>
         </div>
       </div>

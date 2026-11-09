@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
+import { createSessionToken } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -149,18 +150,33 @@ export async function POST(req: Request) {
       });
     }
 
-    // 4. Buat session 30 hari di database
-    const sessionToken = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 hari
+    // 4. Buat signed session 30 hari (tahan banting di lingkungan serverless)
+    const sessionToken = createSessionToken({
+      userId: localUser.id,
+      name: localUser.name,
+      phone: localUser.phone,
+      email: localUser.email,
+      role: localUser.role,
+      city: localUser.city,
+      avatarUrl: localUser.avatarUrl,
+      bio: (localUser as any).bio || null,
+      phoneVerified: localUser.phoneVerified,
+      emailVerified: localUser.emailVerified,
+      kycStatus: localUser.kycStatus,
+      createdAt: localUser.createdAt?.toISOString?.() || new Date().toISOString(),
+    });
 
-    await prisma.session.create({
-      data: {
-        token: sessionToken,
-        userId: localUser.id,
-        userAgent: req.headers.get("user-agent") || "Browser",
-        expiresAt,
-      },
-    }).catch(() => {});
+    try {
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await prisma.session.create({
+        data: {
+          token: sessionToken,
+          userId: localUser.id,
+          userAgent: req.headers.get("user-agent") || "Browser",
+          expiresAt,
+        },
+      });
+    } catch {}
 
     // 5. Pasang HTTP-Only Cookie 30 Hari
     const cookieStore = await cookies();

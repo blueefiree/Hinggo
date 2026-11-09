@@ -1,6 +1,64 @@
 import { cookies } from "next/headers";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { supabase } from "@/lib/supabase";
+
+const SESSION_SECRET = process.env.SESSION_SECRET || "hinggo-secret-session-key-2026";
+
+export interface SessionPayload {
+  userId: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  city?: string;
+  role: string;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+  kycStatus?: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  createdAt?: string;
+  exp: number;
+}
+
+export function createSessionToken(
+  payload: Omit<SessionPayload, "exp">,
+  durationMs = 30 * 24 * 60 * 60 * 1000 // 30 days
+): string {
+  const fullPayload: SessionPayload = {
+    ...payload,
+    city: payload.city || "Jakarta Selatan",
+    role: payload.role || "USER",
+    phoneVerified: Boolean(payload.phoneVerified),
+    emailVerified: Boolean(payload.emailVerified),
+    kycStatus: payload.kycStatus || "UNVERIFIED",
+    exp: Date.now() + durationMs,
+  };
+  const data = Buffer.from(JSON.stringify(fullPayload)).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", SESSION_SECRET)
+    .update(data)
+    .digest("base64url");
+  return `${data}.${signature}`;
+}
+
+export function verifySessionToken(token: string): SessionPayload | null {
+  try {
+    const [data, signature] = token.split(".");
+    if (!data || !signature) return null;
+    const expectedSig = crypto
+      .createHmac("sha256", SESSION_SECRET)
+      .update(data)
+      .digest("base64url");
+    if (signature !== expectedSig) return null;
+    const payload: SessionPayload = JSON.parse(
+      Buffer.from(data, "base64url").toString("utf8")
+    );
+    if (!payload || !payload.exp || Date.now() > payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 export async function getCurrentUser() {
   try {
@@ -13,7 +71,49 @@ export async function getCurrentUser() {
       return null;
     }
 
-    // 1. Primary: Look up persistent session in Prisma Session table
+    // 1. Primary: Verified Signed Session Token (Instant, 0 network hops, 100% resilient across lambdas)
+    if (sessionToken && sessionToken.includes(".")) {
+      const payload = verifySessionToken(sessionToken);
+      if (payload) {
+        // Coba perkaya relasi dari Prisma (alamat, rekening, kyc, dsb) jika database lokal aktif
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: payload.userId },
+            include: {
+              kycDocument: true,
+              addresses: true,
+              bankAccounts: true,
+            },
+          });
+          if (dbUser) {
+            return dbUser;
+          }
+        } catch {
+          // Instance serverless baru / SQLite ephemeral, gunakan payload tepercaya
+        }
+
+        // Return user tepercaya dari session payload
+        return {
+          id: payload.userId,
+          name: payload.name,
+          phone: payload.phone || null,
+          email: payload.email || null,
+          city: payload.city || "Jakarta Selatan",
+          role: payload.role || "USER",
+          phoneVerified: Boolean(payload.phoneVerified),
+          emailVerified: Boolean(payload.emailVerified),
+          kycStatus: payload.kycStatus || "UNVERIFIED",
+          avatarUrl: payload.avatarUrl || null,
+          bio: payload.bio || null,
+          createdAt: payload.createdAt ? new Date(payload.createdAt) : new Date(),
+          addresses: [],
+          bankAccounts: [],
+          kycDocument: null,
+        };
+      }
+    }
+
+    // 2. Fallback: Cek Session DB Prisma (untuk token UUID lama jika ada)
     if (sessionToken) {
       try {
         const session = await prisma.session.findUnique({
@@ -29,21 +129,15 @@ export async function getCurrentUser() {
           },
         });
 
-        if (session) {
-          if (session.expiresAt > new Date()) {
-            return session.user;
-          } else {
-            await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
-          }
+        if (session && session.expiresAt > new Date()) {
+          return session.user;
         }
-      } catch (err) {
-        // Prisma fallback
-      }
+      } catch (err) {}
     }
 
-    // 2. Fallback: Direct User ID in Prisma
-    const targetUserId = userId || sessionToken;
-    if (targetUserId) {
+    // 3. Fallback: Cek Direct User ID di Prisma
+    const targetUserId = userId || (sessionToken && !sessionToken.includes(".") ? sessionToken : null);
+    if (targetUserId && targetUserId !== "user-naya") {
       try {
         const directUser = await prisma.user.findUnique({
           where: { id: targetUserId },
@@ -57,46 +151,7 @@ export async function getCurrentUser() {
         if (directUser) {
           return directUser;
         }
-      } catch (err) {
-        // Prisma fallback
-      }
-
-      // 3. Cloud Fallback: Look up user in Supabase public.users (with 1500ms safety timeout)
-      try {
-        const fetchSb = async () => {
-          const { data: sbUser } = await supabase
-            .from("users")
-            .select("*")
-            .eq("id", targetUserId)
-            .single();
-
-          if (!sbUser) return null;
-
-          return {
-            id: sbUser.id,
-            name: sbUser.name,
-            phone: sbUser.phone,
-            email: sbUser.email,
-            city: sbUser.city || "Jakarta Selatan",
-            avatarUrl: sbUser.avatar_url,
-            bio: sbUser.bio,
-            role: sbUser.role || "USER",
-            phoneVerified: Boolean(sbUser.phone_verified),
-            emailVerified: Boolean(sbUser.email_verified),
-            kycStatus: sbUser.kyc_status || "UNVERIFIED",
-            createdAt: sbUser.created_at,
-            addresses: [],
-            bankAccounts: [],
-            kycDocument: null,
-          };
-        };
-
-        const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
-        const result = await Promise.race([fetchSb(), timeout]);
-        if (result) return result as any;
-      } catch (sbErr) {
-        // Safe fallback
-      }
+      } catch (err) {}
     }
 
     return null;

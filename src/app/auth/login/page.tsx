@@ -36,12 +36,13 @@ function LoginContent() {
   const [waLoading, setWaLoading] = useState(false);
   const [waStatusMsg, setWaStatusMsg] = useState("");
 
-  // If already logged in, redirect to /account
+  // If already logged in, redirect to target or /account
   useEffect(() => {
     if (user) {
-      router.push("/account");
+      const dest = callbackUrl && !callbackUrl.includes("/auth/") ? callbackUrl : "/account";
+      router.replace(dest);
     }
-  }, [user, router]);
+  }, [user, router, callbackUrl]);
 
   // Check WhatsApp status
   const checkWaStatus = async () => {

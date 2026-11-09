@@ -35,9 +35,11 @@ function VerifyOtpContent() {
   // If already logged in, auto-redirect
   useEffect(() => {
     if (user) {
-      router.replace("/account");
+      const cb = searchParams.get("callbackUrl");
+      const dest = cb && !cb.includes("/auth/") ? cb : "/account";
+      router.replace(dest);
     }
-  }, [user, router]);
+  }, [user, router, searchParams]);
 
   // Pre-fill with first digits if demo
   useEffect(() => {
