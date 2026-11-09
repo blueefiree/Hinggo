@@ -7,6 +7,11 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const user = await getCurrentUser();
+    if (!user) {
+      const cookieStore = await cookies();
+      cookieStore.delete("hingo_session");
+      cookieStore.delete("hingo_user_id");
+    }
     return NextResponse.json({ user });
   } catch (error: any) {
     console.error("Session API error:", error);

@@ -61,30 +61,16 @@ export async function getCurrentUser() {
         // Prisma fallback
       }
 
-      // 3. Cloud Fallback: Look up user in Supabase public.users
+      // 3. Cloud Fallback: Look up user in Supabase public.users (with 1500ms safety timeout)
       try {
-        const { data: sbUser } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", targetUserId)
-          .single();
-
-        if (sbUser) {
-          const { data: addresses } = await supabase
-            .from("addresses")
+        const fetchSb = async () => {
+          const { data: sbUser } = await supabase
+            .from("users")
             .select("*")
-            .eq("user_id", targetUserId);
-
-          const { data: bankAccounts } = await supabase
-            .from("bank_accounts")
-            .select("*")
-            .eq("user_id", targetUserId);
-
-          const { data: kycDoc } = await supabase
-            .from("kyc_documents")
-            .select("*")
-            .eq("user_id", targetUserId)
+            .eq("id", targetUserId)
             .single();
+
+          if (!sbUser) return null;
 
           return {
             id: sbUser.id,
@@ -99,13 +85,17 @@ export async function getCurrentUser() {
             emailVerified: Boolean(sbUser.email_verified),
             kycStatus: sbUser.kyc_status || "UNVERIFIED",
             createdAt: sbUser.created_at,
-            addresses: addresses || [],
-            bankAccounts: bankAccounts || [],
-            kycDocument: kycDoc || null,
+            addresses: [],
+            bankAccounts: [],
+            kycDocument: null,
           };
-        }
+        };
+
+        const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+        const result = await Promise.race([fetchSb(), timeout]);
+        if (result) return result as any;
       } catch (sbErr) {
-        console.warn("Supabase getCurrentUser error:", sbErr);
+        // Safe fallback
       }
     }
 

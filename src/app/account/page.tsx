@@ -54,13 +54,6 @@ function AccountContent() {
     logout,
   } = useHingoStore();
 
-  // If not logged in, immediately redirect to login (never display fake dummy account)
-  useEffect(() => {
-    if (!isLoadingUser && !user) {
-      router.replace("/auth/login?callbackUrl=/account");
-    }
-  }, [isLoadingUser, user, router]);
-
   // Profile edit state
   const [nameInput, setNameInput] = useState(user?.name || "");
   const [cityInput, setCityInput] = useState(user?.city || "Jakarta Selatan");
@@ -434,9 +427,20 @@ function AccountContent() {
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-28 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-[#FFC629]" />
-        <p className="text-sm font-semibold text-neutral-500">Mengalihkan ke halaman masuk...</p>
+      <div className="mx-auto max-w-xl px-4 py-24 flex flex-col items-center justify-center text-center gap-4">
+        <div className="h-16 w-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+          <User className="h-8 w-8" />
+        </div>
+        <h2 className="text-2xl font-black text-[#1A1A1A]">Belum Masuk Akun</h2>
+        <p className="text-sm text-neutral-500 max-w-md">
+          Kamu belum masuk. Silakan masuk terlebih dahulu untuk melihat dan mengelola profil, alamat, pesanan, dan barang titip jualmu.
+        </p>
+        <Link
+          href="/auth/login?callbackUrl=/account"
+          className="rounded-full bg-[#FFC629] hover:bg-[#FFC420] text-black font-extrabold px-6 py-3 text-sm shadow-xs transition"
+        >
+          Masuk Sekarang
+        </Link>
       </div>
     );
   }
