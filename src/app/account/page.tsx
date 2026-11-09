@@ -463,6 +463,13 @@ function AccountContent() {
 
         <div className="flex items-center gap-3">
           <Link
+            href="/admin"
+            className="flex items-center gap-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2.5 text-xs sm:text-sm font-bold transition shadow-xs"
+          >
+            <ShieldCheck className="h-4 w-4 text-[#FFC629]" />
+            <span>Buka Panel Admin (/admin)</span>
+          </Link>
+          <Link
             href="/seller/consignments"
             className="flex items-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-4 py-2.5 text-xs sm:text-sm font-bold text-black transition shadow-xs"
           >

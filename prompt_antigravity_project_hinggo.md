@@ -1,112 +1,373 @@
-# Master Prompt All-in-One Google Antigravity — Perbaikan Login/Auth/OTP + Penyempurnaan Tampilan Mobile (`390px`) Persis Desain Figma
+# Master Prompt Google Antigravity — Perbaikan Full CRUD Tambah Barang, Dashboard Admin (`/admin`) & Pembuatan Tabel Supabase (`obdczozspvkdebhtyhoh`)
 
-Dokumen ini menggabungkan **seluruh perbaikan fungsi (Login Error Fix, Logic Sudah Login vs Belum Login, Real OTP WhatsApp/Email, Zero Dummy Data)** dengan **spesifikasi tata letak Mobile (`390px`) dari ke-10 file PDF Mobile yang baru kamu lampirkan** ke dalam **SATU BLOK PROMPT UTUH** di bawah ini.
+Dokumen ini berisi:
+1. **Bagian 1 (Copy-Paste ke Agent Chat Antigravity)**: Prompt untuk memperbaiki **Full CRUD Produk (Tambah, Lihat, Edit, Hapus Barang + Upload Foto)**, **Dashboard Admin Lengkap (`/admin`)**, serta **Sinkronisasi Otomatis Prisma ↔ Supabase**.
+2. **Bagian 2 (Copy-Paste 1 Kali ke SQL Editor Supabase Kamu)**: Script SQL untuk membuat 12 tabel di project Supabase `obdczozspvkdebhtyhoh` kamu (karena `DATABASE_URL="file:./dev.db"` di proyekmu sebelumnya hanya membuat tabel di file SQLite lokal, belum di cloud Supabase).
 
 ---
 
-## 1. SATU PROMPT GABUNGAN (Copy-Paste ke Agent Chat Google Antigravity)
+## 1. Prompt Antigravity: "Perbaiki Full CRUD Tambah/Edit/Hapus Barang, Dashboard Admin Lengkap & Sinkronisasi Supabase"
+
+Salin **seluruh blok prompt di bawah ini** dan tempelkan langsung ke **Agent Chat di Google Antigravity IDE**:
 
 ````markdown
-# TASK: FIX LOGIN & TWO-WAY AUTH REDIRECTS, FIX REAL WHATSAPP/EMAIL OTP DELIVERY, AND PERFECT ALL MOBILE (`390px`) RESPONSIVE LAYOUTS TO MATCH THE EXACT FIGMA MOBILE DESIGNS
+# TASK: FIX FULL PRODUCT CRUD (CREATE, READ, UPDATE, DELETE WITH IMAGE UPLOAD), UPGRADE COMPLETE ADMIN DASHBOARD (`/admin`), AND FIX SUPABASE TABLE SYNC
 
-Tolong kerjakan pembaruan menyeluruh pada proyek **Hingo (`Hinggo` — Next.js 16.4.3 App Router)** yang mencakup **Perbaikan Sistem Login/OTP/Auth Guard** sekaligus **Penyesuaian Presisi Tampilan Mobile (`< 768px` / `390px`)** sesuai file desain Figma Mobile:
+Saat ini kami ingin memastikan **fungsi CRUD untuk menambah, mengedit, dan menghapus barang** serta **seluruh fitur di Dashboard Admin (`/admin`)** berjalan 100% tanpa error, dan tersinkronisasi penuh ke database **Supabase (`https://obdczozspvkdebhtyhoh.supabase.co`)** maupun **Prisma (`dev.db`)**.
 
-====================================================================
-BAGIAN 1: PERBAIKI ERROR LOGIN, LOGIC "SUDAH LOGIN VS BELUM LOGIN" & PENGIRIMAN OTP WA/EMAIL
-====================================================================
-
-1. **Perbaiki Error Database & Cookie Saat Login (`/api/auth/send-otp` & `/api/auth/verify-otp`)**:
-   - Di Next.js 16, pastikan semua pemanggilan `cookies()` dari `next/headers` menggunakan `const cookieStore = await cookies()`.
-   - Saat user login menggunakan **Nomor HP**, isi `phone: normalizedPhone` dan pastikan `email` diisi `null` (JANGAN pernah diisi string kosong `""` agar tidak memicu error `Unique constraint failed on the fields: (email)`). Begitu pula saat login menggunakan **Email**, pastikan `phone` diisi `null` (bukan `""`).
-   - Bungkus setiap sinkronisasi ke cloud Supabase (`supabase.from(...)`) dengan `try/catch` yang aman sehingga penyimpanan ke Prisma SQLite (`dev.db`) dan pembuatan session tidak pernah gagal/error 500.
-
-2. **Logic Tegas "Kalau Sudah Login Ga Usah Login Lagi, Kalau Belum Login Suruh Login" (`src/middleware.ts`, `Navbar.tsx`, `store.tsx`)**:
-   - **Di `src/middleware.ts`**:
-     - Cek keberadaan cookie `hingo_user_id` atau `hingo_session`.
-     - **JIKA SUDAH LOGIN**: Saat user membuka `/auth/login` atau `/auth/verify-otp`, **WAJIB langsung redirect ke `/account`**. User yang sudah login tidak boleh melihat halaman login lagi.
-     - **JIKA BELUM LOGIN (`Guest`)**: Saat user membuka `/account`, `/cart`, `/checkout`, `/wishlist`, `/orders`, `/seller/*`, `/chat/*`, atau `/admin`, **WAJIB langsung redirect ke `/auth/login?callbackUrl=...`**.
-   - **Di `/auth/login/page.tsx` & `/auth/verify-otp/page.tsx`**:
-     - Jika state `user` di `useStore()` sudah terisi (`user !== null`), langsung jalankan `router.replace('/account')`.
-     - Saat verifikasi OTP di `/auth/verify-otp` sukses, panggil `window.location.href = data.redirectTo || '/account'` agar seluruh state `Navbar`, `MobileBottomNav`, dan cookie ter-reload bersih sebagai **SUDAH LOGIN**.
-   - **Di `Navbar.tsx` & Seluruh Tombol Aksi (`ProductCard.tsx`, `/product/[slug]`)**:
-     - Saat **Sudah Login**: Sembunyikan tombol `Masuk` dan tampilkan pill Profil User (`/account`) + tombol `Keluar (Logout)`.
-     - Saat **Belum Login**: Tampilkan tombol `Masuk`. Jika pengunjung menekan tombol `Tambah keranjang`, ikon hati `Wishlist (♡)`, `Chat admin`, atau `Ajukan titip jual`, langsung arahkan ke `/auth/login?callbackUrl=...`.
-
-3. **Pengiriman OTP Langsung ke Email & WhatsApp (`src/lib/otp-sender.ts` & `src/lib/whatsapp-gateway.ts`)**:
-   - **Email OTP**: Panggil `await supabase.auth.signInWithOtp({ email: target, options: { shouldCreateUser: true } })` agar Supabase langsung mengirim email asli tanpa tergantung `SMTP_PASS`, ditambah pengiriman via `nodemailer` (atau *Ethereal preview link* jika `SMTP_USER` di `.env` kosong).
-   - **WhatsApp OTP**: Simpan instance socket `@whiskeysockets/baileys` di `globalThis.__hingoWaGateway` agar tidak ter-reset oleh Turbopack, dukung pengiriman via `FONNTE_TOKEN` (`https://api.fonnte.com/send`), dan tampilkan **Notifikasi Banner OTP Instan (Klik untuk Auto-Fill 6 Digit)** di atas layar `/auth/verify-otp` apabila gateway WA belum di-scan QR-nya atau `FONNTE_TOKEN` di `.env` masih kosong, sehingga verifikasi OTP bisa langsung tuntas 100% tanpa pernah macet!
+Tolong kerjakan perbaikan menyeluruh berikut:
 
 ====================================================================
-BAGIAN 2: SEMPURNAKAN TAMPILAN MOBILE (`390px` / `< 768px`) PERSIS DESAIN FIGMA MOBILE
+BAGIAN 1: PERBAIKI API & FUNGSI FULL CRUD PRODUK (`src/app/api/products/*` & `src/app/api/admin/route.ts`)
 ====================================================================
 
-Sesuaikan komponen Layout dan ke-10 halaman berikut pada layar Mobile (`< 768px`) agar 100% identik dengan spesifikasi PDF Figma Mobile:
+1. **CREATE — Tambah Barang Baru (`POST /api/products` & `POST /api/admin`)**:
+   - Pastikan endpoint `POST /api/products` menerima input lengkap:
+     - `name` (wajib, misal `"Keychron K2 V2"`)
+     - `brand` (wajib, misal `"KEYCHRON"`)
+     - `category` (wajib: `"Keyboard"` | `"Mouse"` | `"Headset"` | `"Monitor"` | `"Aksesoris"`)
+     - `subtitle` / `switchOrVariant` (misal `"Wireless mechanical keyboard · Brown switch"`)
+     - `condition` (`"Sangat baik"` | `"Baik"`)
+     - `usageDuration` (misal `"8 bulan"`)
+     - `completeness` (misal `"Box, kabel, keycap puller"`)
+     - `description` (deskripsi & laporan uji fungsi tim Hingo)
+     - `defectNotes` (catatan cacat kosmetik halus)
+     - `price` (angka integer harga jual, misal `850000`)
+     - `originalNewPrice` (angka integer harga baru, misal `1499000`)
+     - `location` (default `"Jakarta Selatan"`)
+     - `stock` (default `1`)
+     - `images` (mendukung array foto berupa **File Upload gambar dari perangkat yang dikonversi ke Base64 Data URL / disimpan ke `/public/uploads/products/`** MAUPUN input link URL gambar).
+   - **Auto-Generate `code` & `slug` Unik**:
+     - Buat `code` unik otomatis (misal `HG-PRD-8492`) dan `slug` URL-friendly unik (misal `keychron-k2-v2-8492`) agar tidak pernah terjadi error `Unique constraint failed` meskipun ada 2 barang dengan nama yang mirip!
+   - **Dual-Write (Supabase + Prisma)**:
+     - Simpan barang baru ke tabel `public.products` di Supabase (`supabase.from('products').insert(...)`) DAN ke tabel `Product` di Prisma (`prisma.product.create(...)`).
+     - Panggil `revalidatePath('/')`, `revalidatePath('/catalog')`, dan `revalidatePath('/admin')` agar barang yang baru ditambahkan **detik itu juga langsung tampil di Beranda (`/`), Katalog (`/catalog`), dan Admin (`/admin`)**!
 
-1. **Mobile Top Header (`src/components/layout/Navbar.tsx` pada `< 768px`)**:
-   - Pada layar mobile, bar atas hanya menampilkan:
-     - **Kiri**: Logo kotak kuning `[H]` (`#FFC629`) + teks tebal `Hingo`.
-     - **Kanan (Halaman Pembeli/Umum)**: Hanya **2 ikon bersih** yaitu ikon **Chat** (`/chat/product`) dan ikon **Keranjang** (`/cart` dengan badge angka). Sembunyikan link teks desktop (`Kategori`, `Promo`, `Titip jual`) di bar atas mobile.
-     - **Kanan (Halaman Ruang Penjual `/seller/*`)**: Ikon **Chat** dan ikon **Profil User** (`/account`), diikuti tepat di bawahnya oleh **Sub-Header Ruang Penjual** berlatar krem `#FFFBEB` yang berisi 2 tab horizontal: `Barang titipan saya` (`/seller/consignments`) dan `Ajukan titip jual` (`/seller/consignments/new`).
+2. **READ — Ambil Daftar & Detail Barang (`GET /api/products` & `GET /api/products/[slug]`)**:
+   - Baca daftar produk dari Supabase (`public.products`) dan gabungkan/fallback dengan Prisma (`prisma.product.findMany`) agar tidak pernah kosong jika salah satu database baru diisi.
+   - Hitung jumlah produk per kategori (`Keyboard`, `Mouse`, `Headset`, `Monitor`, `Aksesoris`) secara real-time berdasarkan barang yang berstatus `AVAILABLE` dan `stock > 0`.
 
-2. **Mobile Bottom Navigation Bar (`src/components/layout/MobileBottomNav.tsx` pada `< 768px`)**:
-   - Sesuai desain `Katalog dan pencarian · Mobile.pdf`, Bottom Bar Mobile **WAJIB terdiri dari tepat 4 menu** (bukan 5):
-     1. **`Beranda`** (ikon rumah → `/`)
-     2. **`Jelajah`** (ikon kaca pembesar → `/catalog`, warna kuning/amber aktif saat di katalog)
-     3. **`Transaksi`** (ikon struk pesanan → `/orders`)
-     4. **`Akun`** (ikon profil → `/account` jika sudah login, atau `/auth/login` jika belum login)
-   - **Sembunyikan `MobileBottomNav`** pada halaman form/fokus penuh (`Masuk atau daftar`, `Verifikasi nomor HP`, `Detail produk`, `Keranjang`, `Checkout`, `Chat admin produk`, dan `Chat admin dan CS`) agar tidak menutupi tombol aksi bawah atau input pesan chat!
+3. **UPDATE — Edit Data Barang & Ubah Status (`PATCH /api/products/[slug]` & `PATCH /api/admin`)**:
+   - Sediakan fungsi untuk mengedit seluruh field barang (Nama, Brand, Kategori, Harga, Kondisi, Kelengkapan, Deskripsi, Foto, serta Status `AVAILABLE` / `SOLD` / `ARCHIVED`) baik di Supabase (`public.products`) maupun Prisma (`Product`).
 
-3. **Halaman `Masuk atau daftar` Mobile (`/auth/login`)**:
-   - Pada layar `< 768px`, **sembunyikan total kolom kiri desktop** (`hidden lg:flex` untuk panel `"PRELOVED, RELOVED. Gear bagus tak harus baru."` dan foto keyboard).
-   - Tampilkan langsung satu kolom bersih: Judul `Masuk atau daftar`, subteks `Mulai dengan nomor HP, email, atau akun Google.`, pill toggle (`Nomor HP` aktif kuning `#FFFBEB` ber-border `#F59E0B` | `Email`), input `Nomor HP` (`+62 812 3456 7890`), tombol kuning lebar penuh `Kirim OTP ke nomor HP`, garis pemisah `atau gunakan email`, input `Alamat email` (`nama@email.com`) + tombol outline lebar penuh `Kirim OTP ke email`, tombol `G Lanjutkan dengan Google`, kartu krem `Baru di Hingo? Tidak perlu daftar terpisah.`, serta footer ringkas `© 2026 Hingo` di kiri dan `Privasi · Bantuan` di kanan.
+4. **DELETE — Hapus Barang (`DELETE /api/products/[slug]` & `DELETE /api/admin`)**:
+   - Sediakan fungsi hapus barang berdasarkan `id` atau `slug` yang menghapus baris produk dari Supabase (`supabase.from('products').delete()`) dan Prisma (`prisma.product.delete()`), lalu langsung memperbarui tampilan di `/admin`, `/catalog`, dan `/`.
 
-4. **Halaman `Katalog dan pencarian` Mobile (`/catalog`)**:
-   - Pada layar `< 768px`, tampilkan **kotak pencarian di bawah header**: label `Cari barang preloved` dengan input `Peripheral komputer`.
-   - Kartu banner krem `#FFFBEB`: `KURASI HINGO / PRELOVED PILIHAN — Upgrade gear, bukan anggaran.` (sembunyikan kartu putih `"Ditangani tim kami"` milik desktop pada layar mobile).
-   - Pill kategori membungkus rapi (`flex-wrap`): `Semua gear` (aktif kuning), `Keyboard`, `Mouse`, `Headset`, `Monitor`, `Aksesoris`.
-   - Sembunyikan sidebar filter kiri desktop; gantikan dengan bar pill filter & urutkan horizontal: **`Filter · 3`** (pill kuning yang membuka modal/bottom-sheet filter), **`Terbaru ↓`**, **`Lokasi ↓`**, **`Harga ↓`**, diikuti baris chip filter aktif yang bisa dihapus (`Kondisi: Baik+ ×`, `≤ Rp2 juta ×`, `Jakarta Selatan ×`).
-   - **Grid Produk 2 Kolom (`grid-cols-2 gap-3`)**: Setiap kartu menampilkan foto persegi, badge hijau `✓ Dicek tim` di kiri atas foto, tombol bulat ikon hati (`♡`) di kanan atas foto, brand huruf kapital kecil, judul barang, kondisi (`Sangat baik · 1 barang`), harga tebal, dan `✓ Hingo · Jakarta Selatan`.
+====================================================================
+BAGIAN 2: PERBAIKI & LENGKAPI DASHBOARD ADMIN (`/admin` — `src/app/admin/page.tsx`)
+====================================================================
 
-5. **Halaman `Detail produk` Mobile (`/product/[slug]`)**:
-   - Urutan vertikal 1 kolom: Breadcrumb `Jelajah / Keyboard / ...` → 1 Foto utama persegi besar + 3 thumbnail foto berjajar di bawahnya + teks `Foto barang titipan · 3 foto · Geser untuk melihat detail` → Pill `Sangat baik` & `Stok 1 barang` → Judul produk, subjudul, harga besar, dan info hemat → Info pengiriman (`Dikirim dari Jakarta Selatan` / `Ke Tebet, Jakarta Selatan Rp18.000`) → Kartu krem `Dicek dan dikirim tim kami` → Kartu **`Dikelola tim Hingo` (`Admin Hingo`)** dengan tombol outline lebar penuh `Chat admin` → Kartu **`Tentang barang ini`** (tabel Kondisi, Pemakaian, Switch, Kelengkapan, dan deskripsi fisik) → **Kartu Aksi Pembelian Mobile**: menampilkan baris `Harga barang` di kiri & nominal `Rp...` tebal di kanan, diikuti 2 tombol berdampingan di bawahnya: tombol outline **`Chat`** (`w-1/3`) dan tombol kuning **`Tambah keranjang`** (`w-2/3`) → Banner krem `Gunakan pembayaran resmi`.
+Jadikan halaman **`/admin`** sebagai pusat kendali operasional Hingo yang lengkap, rapi, responsif (Desktop & Mobile), dan bebas bug dengan **6 Tab Utama**:
 
-6. **Halaman `Keranjang` (`/cart`) & `Checkout` (`/checkout`) Mobile**:
-   - **Keranjang Mobile**: Bar `Pilih semua` + `Hapus` → Kartu barang dengan thumbnail di kiri, judul & harga di kanan, serta baris bawah berisi stepper `[- 1 +]` di kiri dan `Hapus barang` di kanan → Peringatan krem stok 1 barang → Kartu `Dicek dan dikirim tim kami` → Tombol `← Lanjut jelajahi barang` → Kartu `Ringkasan pembayaran` di bagian bawah dengan tombol kuning lebar penuh `Lanjut checkout (1)`.
-   - **Checkout Mobile**: Stepper `KERANJANG → CHECKOUT → PEMBAYARAN` → Kartu `Alamat pengiriman` (`Rumah · Utama` + link `Ubah`) → Kartu `Barang pesanan` + input `Catatan untuk tim (opsional)` → Kartu `Pengiriman` (pilihan radio card `JNE REG` vs `J&T Reguler` + checkbox `Perlindungan pengiriman Rp5.000`) → Kartu `Metode pembayaran` (radio card `BCA Virtual Account` vs `QRIS` + box peringatan krem `Bayar hanya melalui Hingo`) → Kartu `Ringkasan pembayaran` dengan tombol kuning lebar penuh `Bayar Rp...` → Kartu `Dicek dan dikirim tim kami` → Kartu `Alur pesanan` (1, 2, 3) + link `Butuh bantuan? Chat CS`.
+1. **Tab 1: "Manajemen Produk Katalog (Full CRUD)"**:
+   - **Tombol & Modal/Form `"+ Tambah Barang ke Katalog"`**:
+     - Form interaktif untuk menambahkan produk baru secara langsung (Nama Barang, Brand, Kategori, Varian/Switch, Kondisi `Sangat baik`/`Baik`, Lama Pemakaian, Kelengkapan, Harga Jual `Rp`, Harga Baru Referensi `Rp`, Lokasi, Deskripsi Inspeksi, Catatan Cacat, serta **Upload Foto Gambar langsung dari file laptop/HP + preview gambar**).
+     - Saat disubmit, tampilkan loading state, simpan ke database, tampilkan toast sukses, dan langsung munculkan produk baru di tabel bawahnya serta di `/catalog`!
+   - **Tabel Daftar Produk Katalog Aktif**:
+     - Menampilkan foto thumbnail, Kode & Nama Barang, Kategori, Kondisi, Harga Jual, Status (`Tersedia` / `Terjual`), serta 3 tombol aksi di setiap baris:
+       - **`Lihat`** (membuka `/product/[slug]`)
+       - **`Edit`** (membuka modal edit barang dengan data yang sudah terisi untuk diubah & disimpan)
+       - **`Hapus`** (menghapus barang dari database dengan konfirmasi).
 
-7. **Halaman `Detail transaksi dan status pesanan` Mobile (`/orders/[id]`)**:
-   - Susun 1 kolom vertikal dengan urutan persis sesuai desain mobile:
-     1. Header `TRANSAKSI / DETAIL PESANAN` & judul `Barang tiba. Cek dulu, ya.`
-     2. Kartu krem `Dana masih ditahan Hingo`
-     3. Kartu **`Periksa sebelum konfirmasi`** dengan tombol kuning lebar penuh **`Barang sesuai, konfirmasi terima`** di atas tombol outline lebar penuh **`Ada kendala? Laporkan masalah`**
-     4. Kartu **`Perjalanan transaksi`** (timeline vertikal 4 tahap)
-     5. Kartu **`Detail barang`** dengan tombol lebar penuh `Chat admin Hingo`
-     6. Kartu **`Pengiriman & alamat`** dengan tombol `Lacak pengiriman`
-     7. Kartu **`Status pembayaran`** (`Dana terlindungi`)
-     8. Kartu **`Ringkasan pembayaran`**
-     9. Kartu krem `Barang bermasalah? Kami bantu.` + tombol `Chat CS Hingo` + link `Lihat bukti pembayaran`.
+2. **Tab 2: "Antrean Titip Jual & Inspeksi Penjual" (Terhubung ke `/seller/consignments`)**:
+   - Menampilkan seluruh pengajuan titip jual (`ConsignmentItem`) yang disubmit oleh pengguna dari `/seller/consignments/new`.
+   - Di setiap kartu/baris barang titipan, sediakan tombol aksi tahapan Admin:
+     - **Tahap 1 (`ONLINE_CHECK`)**: Tombol **`"Loloskan Cek Online (Minta Penjual Kirim Barang)"`** atau **`"Minta Revisi Foto"`**.
+     - **Tahap 2 (`SHIPPING_TO_HINGO`)**: Tombol **`"Konfirmasi Paket Diterima di Gudang Hingo"`**.
+     - **Tahap 3 (`INSPECTION_COMPLETED`)**: Form/Modal **`"Input Laporan Inspeksi Fisik & Usulan Harga"`** (Admin mengisi Uji Fungsi, Catatan Cacat Kosmetik, Usulan Harga Jual `Rp`, Biaya Komisi Konsinyasi, dan Estimasi Hasil Bersih Penjual).
+     - **Tahap 4 (`PUBLISH TO CATALOG`)**: Tombol kuning **`"Tayangkan Barang ke Katalog Belanja"`** yang **otomatis menyalin data & foto barang titipan tersebut menjadi produk baru di tabel `Product` (`public.products`)**, sehingga barang titipan penjual langsung muncul di halaman `/catalog` untuk dibeli pengguna lain!
 
-8. **Halaman `Chat admin produk` (`/chat/product`) & `Chat admin dan CS` (`/chat/support`) Mobile**:
-   - Pada layar `< 768px`, tampilkan **Full-Screen Single-Pane Chat** (sembunyikan sidebar daftar percakapan kiri dan sidebar kanan milik desktop):
-   - **`Chat admin produk` Mobile**:
-     - Sub-header: Tombol panah `←` (kembali) + judul `Admin Hingo` (`Tim Hingo · Aktif 5 menit lalu`) + ikon centang hijau + ikon `•••`.
-     - Kartu produk ringkas horizontal tepat di bawah header: foto kecil + nama barang + harga & kondisi.
-     - Banner krem `Jaga transaksi tetap di Hingo`.
-     - Area bubble chat: pesan user di kanan berlatar kuning-krem `#FFFBEB`/`#FEF3C7` lengkap dengan jam & `✓✓`; pesan balasan admin di kiri berlatar abu muda `#F6F6F4`.
-     - Baris *quick-reply chips* (`Terima kasih, Kak`, `Boleh foto detailnya?`) di atas input pesan.
-     - Bagian bawah: ikon klip lampiran (`📎`) + input bulat `Tulis pesan…` + tombol kuning `Kirim`, serta tepat di paling bawah terdapat tombol outline lebar penuh **`Lihat barang · Rp...`** yang mengarah kembali ke halaman detail produk.
-   - **`Chat admin dan CS` Mobile**:
-     - Banner header krem `CS Hingo · Resmi` (`Mira · Tim bantuan · Online`) dengan ikon headset.
-     - Baris status: `Tiket CS-0842` di kiri dan pill kuning `Percakapan aktif` di kanan.
-     - Kartu krem `Pembayaran ditangani Hingo` (info transaksi terkait).
-     - Area bubble chat + 2 tombol pill aksi di bawah chat (`Lihat transaksi` outline + `Laporkan masalah` kuning lembut) + teks peringatan keamanan OTP + bar input pesan (`📎` + `Tulis pesan…` + tombol kuning `Kirim`).
+3. **Tab 3: "Pesanan Pembeli & Escrow Rekber" (Terhubung ke `/orders`)**:
+   - Menampilkan semua pesanan (`Order`) yang masuk dari pembeli.
+   - Sediakan tombol aksi Admin:
+     - **`"Verifikasi Pembayaran Lunas"`** (mengubah status `UNPAID` → `PAID_PACKING`).
+     - **`"Input Nomor Resi & Kirim Barang"`** (input kurir `JNE REG`/`J&T` & nomor resi → mengubah status ke `SHIPPED` dan menambahkan log ke `OrderTimeline`).
+     - **`"Tandai Paket Tiba di Pembeli"`** (mengubah status ke `DELIVERED_CHECKING` agar pembeli bisa menekan tombol *"Barang sesuai, konfirmasi terima"*).
+     - **`"Cairkan Dana Escrow ke Penjual"`** (melepas dana ke tabel `Payout` penjual).
 
-9. **Halaman `Barang titipan saya` (`/seller/consignments`) & `Detail barang titipan` (`/seller/consignments/[code]`) Mobile**:
-   - **`Barang titipan saya` Mobile**:
-     - Sub-navbar penjual (`Barang titipan saya` | `Ajukan titip jual`).
-     - Tombol kuning lebar penuh **`+ Ajukan titip jual`** berada tepat di bawah teks sapaan.
-     - **4 Kartu KPI disusun menumpuk 1 kolom ke bawah (`grid-cols-1 gap-3` pada mobile, `md:grid-cols-4` pada desktop)**.
-     - Kartu krem peringatan barang yang butuh tindakan → Input pencarian → Pill filter status 2 baris → Daftar kartu barang titipan vertikal → diikuti di bagian bawah oleh kartu **`Ringkasan hasil titip jual`**, kartu krem **`Dua pengiriman, beda tujuan`**, kartu **`Admin Hingo siap membantu`** (`Chat admin Hingo`), dan footer ringkas mobile.
-   - **`Detail barang titipan` Mobile**:
-     - Urutan vertikal 1 kolom: Header status → Kartu krem info inspeksi → Kartu **`4 tahap pengajuan`** → Kartu foto barang & 3 foto dokumentasi inspeksi → Kartu **`Tinjau harga & kondisi`** (usulan harga, biaya, hasil bersih, tombol `Setujui harga & kondisi`, `Minta rincian biaya & hasil bersih`, `Tanya hasil pemeriksaan`) → Kartu **`Hasil pengajuan`** (`Disetujui`, `Ditolak`, `Dibatalkan penjual`) → Kartu **`Laporan inspeksi Hingo`** → Kartu **`Pengiriman pemilik → Hingo`** → Kartu **`Perjalanan titipan`** (9 tahap vertikal) → Kartu **`Rencana pemasaran`** (`Instagram`, `Facebook`, `TikTok`) → Kartu **`Pengiriman Hingo → pembeli`** → Kartu **`Penjualan & pencairan`** → Kartu krem **`Ingin revisi atau tidak lanjut?`** (`Ajukan pembatalan`).
+4. **Tab 4: "Verifikasi Identitas KYC User" (Terhubung ke `/auth/verify-identity` & `/account`)**:
+   - Menampilkan daftar dokumen KYC (`KycDocument`) yang diunggah pengguna (Nama KTP, NIK, preview Foto KTP & Selfie).
+   - Sediakan tombol hijau **`"Setujui KYC (Verified)"`** (mengubah `user.kycStatus = 'VERIFIED'`) dan tombol merah **`"Tolak / Minta Upload Ulang"`**.
+
+5. **Tab 5: "Live Chat Admin Produk & CS" (Terhubung ke `/chat/product` & `/chat/support`)**:
+   - Menampilkan seluruh thread percakapan dari pengguna dan memungkinkan Admin membalas pesan secara langsung sebagai `Admin Hingo` maupun `CS Mira`.
+
+6. **Tab 6: "Status Database Supabase & Sinkronisasi 1-Klik"**:
+   - Tampilkan indikator status koneksi ke `https://obdczozspvkdebhtyhoh.supabase.co` (mengecek apakah tabel `public.products`, `public.users`, `public.consignments`, `public.orders` sudah ada di Supabase).
+   - Sediakan tombol **`"Sinkronkan Data Lokal (Prisma) ke Cloud Supabase"`** (yang mendorong/meng-upsert semua produk, user, dan barang titipan dari SQLite lokal ke Supabase begitu tabel Supabase dibuat) serta tombol **`"Copy Script SQL Pembuatan Tabel Supabase"`** langsung dari UI!
+
+====================================================================
+BAGIAN 3: PASTIKAN AKSES KE `/admin` MUDAH DIUJI
+====================================================================
+- Di `Navbar.tsx` (pada dropdown profil user yang sedang login) dan di halaman `/account`, tambahkan tombol/link **`"Buka Panel Admin (/admin)"`** (atau gunakan `RoleSwitcherWidget` untuk mengubah role user aktif menjadi `ADMIN` di database) supaya pemilik proyek bisa langsung masuk ke `/admin` untuk menambah barang dan mengelola pengajuan tanpa terkunci.
+
+====================================================================
+BAGIAN 4: VERIFIKASI WAJIB
+====================================================================
+1. Buka `/admin` → masuk ke **Tab Manajemen Produk Katalog** → klik **`"+ Tambah Barang ke Katalog"`**, isi data barang beserta upload foto, lalu klik Simpan.
+2. Pastikan barang baru langsung muncul di tabel `/admin`, langsung tampil di halaman `/catalog` serta Beranda (`/`), dan angka jumlah kategori otomatis bertambah (`0 produk` → `1 produk`).
+3. Uji klik **`Edit`** (ubah harga barang) dan pastikan harganya langsung berubah di `/catalog`.
+4. Uji klik **`Hapus`** pada barang percobaan dan pastikan barang langsung terhapus dari database dan hilang dari `/catalog`.
 ````
+
+---
+
+## 2. Kenapa di Dashboard Supabase Kamu Tadi Belum Ada Tabel? (Cara Membuatnya dalam 10 Detik)
+
+Alasan kenapa di dashboard Supabase kamu belum muncul tabel adalah karena di file `.env` proyekmu tertulis `DATABASE_URL="file:./dev.db"` (SQLite lokal). Jadi waktu agen menjalankan `npx prisma db push`, Prisma hanya membuat tabel di dalam file `prisma/dev.db` di laptopmu, **bukan** di server cloud Supabase.
+
+Supaya ke-12 tabel langsung terbuat di dashboard Supabase kamu (`obdczozspvkdebhtyhoh`):
+1. Klik link ini untuk membuka SQL Editor project Supabase kamu: **[Buka SQL Editor obdczozspvkdebhtyhoh](https://www.google.com/search?q=https://supabase.com/dashboard/project/obdczozspvkdebhtyhoh/sql/new)**
+2. *Copy-paste* seluruh blok SQL di bawah ini ke dalam kotak editor di sana, lalu klik tombol hijau **Run** (di pojok kanan bawah):
+
+```sql
+-- 1. Tabel Users (Profil & Role Pengguna)
+CREATE TABLE IF NOT EXISTS public.users (
+  id TEXT PRIMARY KEY,
+  name TEXT DEFAULT 'Pengguna Hingo',
+  phone TEXT UNIQUE,
+  email TEXT UNIQUE,
+  city TEXT DEFAULT '',
+  bio TEXT DEFAULT '',
+  avatar_url TEXT DEFAULT '',
+  role TEXT DEFAULT 'USER',
+  phone_verified BOOLEAN DEFAULT FALSE,
+  email_verified BOOLEAN DEFAULT FALSE,
+  kyc_status TEXT DEFAULT 'UNVERIFIED',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Tabel Sessions (Sesi Login 30 Hari)
+CREATE TABLE IF NOT EXISTS public.sessions (
+  id TEXT PRIMARY KEY,
+  token TEXT UNIQUE NOT NULL,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  user_agent TEXT DEFAULT '',
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Tabel OTP Verifications
+CREATE TABLE IF NOT EXISTS public.otp_verifications (
+  id TEXT PRIMARY KEY,
+  target TEXT NOT NULL,
+  otp_code TEXT NOT NULL,
+  channel TEXT NOT NULL DEFAULT 'WHATSAPP',
+  verified BOOLEAN DEFAULT FALSE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Tabel Dokumen KYC
+CREATE TABLE IF NOT EXISTS public.kyc_documents (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  full_name_ktp TEXT NOT NULL,
+  nik_number TEXT NOT NULL,
+  masked_nik TEXT NOT NULL,
+  ktp_image_url TEXT NOT NULL,
+  ktp_file_size TEXT DEFAULT '1.5 MB',
+  selfie_image_url TEXT NOT NULL,
+  selfie_file_size TEXT DEFAULT '1.8 MB',
+  status TEXT DEFAULT 'PENDING_REVIEW',
+  rejection_reason TEXT DEFAULT '',
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. Tabel Buku Alamat
+CREATE TABLE IF NOT EXISTS public.addresses (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  label TEXT DEFAULT 'Rumah',
+  recipient_name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  full_address TEXT NOT NULL,
+  city TEXT NOT NULL,
+  postal_code TEXT DEFAULT '',
+  is_primary BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. Tabel Rekening Bank Pencairan
+CREATE TABLE IF NOT EXISTS public.bank_accounts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  bank_name TEXT NOT NULL,
+  account_number TEXT NOT NULL,
+  account_holder TEXT NOT NULL,
+  is_primary BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. Tabel Katalog Produk (Full CRUD)
+CREATE TABLE IF NOT EXISTS public.products (
+  id TEXT PRIMARY KEY,
+  code TEXT UNIQUE NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  consignment_item_id TEXT,
+  seller_id TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+  brand TEXT NOT NULL,
+  name TEXT NOT NULL,
+  subtitle TEXT DEFAULT '',
+  category TEXT NOT NULL,
+  condition TEXT NOT NULL DEFAULT 'Sangat baik',
+  usage_duration TEXT DEFAULT '',
+  switch_or_variant TEXT DEFAULT '',
+  completeness TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  defect_notes TEXT DEFAULT '',
+  price BIGINT NOT NULL,
+  original_new_price BIGINT DEFAULT 0,
+  stock INT DEFAULT 1,
+  location TEXT DEFAULT 'Jakarta Selatan',
+  rating NUMERIC(3,1) DEFAULT 5.0,
+  sold_count INT DEFAULT 0,
+  is_verified_by_team BOOLEAN DEFAULT TRUE,
+  images JSONB DEFAULT '[]'::jsonb,
+  status TEXT DEFAULT 'AVAILABLE',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. Tabel Wishlist
+CREATE TABLE IF NOT EXISTS public.wishlists (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  product_id TEXT REFERENCES public.products(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+-- 9. Tabel Keranjang Belanja
+CREATE TABLE IF NOT EXISTS public.cart_items (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  product_id TEXT REFERENCES public.products(id) ON DELETE CASCADE,
+  quantity INT DEFAULT 1,
+  selected BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+-- 10. Tabel Barang Titipan (Consignments)
+CREATE TABLE IF NOT EXISTS public.consignments (
+  id TEXT PRIMARY KEY,
+  code TEXT UNIQUE NOT NULL,
+  seller_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  brand_model TEXT NOT NULL,
+  variant_spec TEXT DEFAULT '',
+  usage_duration TEXT DEFAULT '',
+  additional_specs TEXT DEFAULT '',
+  current_condition TEXT DEFAULT 'Bekas · berfungsi normal',
+  defect_details TEXT DEFAULT '',
+  completeness TEXT DEFAULT '',
+  photos JSONB DEFAULT '[]'::jsonb,
+  expected_price BIGINT NOT NULL,
+  proposed_price BIGINT,
+  consignment_fee BIGINT,
+  estimated_net_payout BIGINT,
+  origin_city TEXT DEFAULT '',
+  handover_method TEXT DEFAULT 'SHIP_AFTER_ONLINE_CHECK',
+  inbound_courier TEXT DEFAULT '',
+  inbound_tracking_number TEXT DEFAULT '',
+  stage TEXT DEFAULT 'ONLINE_CHECK',
+  badge_label TEXT DEFAULT 'Menunggu review',
+  status_summary TEXT DEFAULT 'Data sudah terkirim. Jangan kirim barang sebelum ada instruksi.',
+  inspection_specs TEXT DEFAULT '',
+  inspection_function_test TEXT DEFAULT '',
+  inspection_condition_defect TEXT DEFAULT '',
+  inspection_completeness TEXT DEFAULT '',
+  inspected_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 11. Tabel Pesanan & Escrow (Orders)
+CREATE TABLE IF NOT EXISTS public.orders (
+  id TEXT PRIMARY KEY,
+  order_code TEXT UNIQUE NOT NULL,
+  buyer_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
+  address_id TEXT REFERENCES public.addresses(id) ON DELETE SET NULL,
+  item_price BIGINT NOT NULL,
+  shipping_courier TEXT DEFAULT 'JNE REG',
+  shipping_cost BIGINT DEFAULT 18000,
+  shipping_protection BIGINT DEFAULT 5000,
+  service_fee BIGINT DEFAULT 2500,
+  total_amount BIGINT NOT NULL,
+  payment_method TEXT DEFAULT 'BCA_VA',
+  va_number TEXT DEFAULT '',
+  buyer_note TEXT DEFAULT '',
+  tracking_number TEXT DEFAULT '',
+  escrow_status TEXT DEFAULT 'HELD_BY_HINGO',
+  order_status TEXT DEFAULT 'PAID_PACKING',
+  inspection_deadline TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. Tabel Chat Threads & Messages
+CREATE TABLE IF NOT EXISTS public.chat_threads (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  type TEXT DEFAULT 'PRODUCT_ADMIN',
+  title TEXT DEFAULT 'Admin Hingo',
+  agent_name TEXT DEFAULT 'Tim Hingo · Online',
+  ticket_code TEXT DEFAULT '',
+  related_product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
+  related_order_id TEXT REFERENCES public.orders(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT REFERENCES public.chat_threads(id) ON DELETE CASCADE,
+  sender_role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Aktifkan RLS & Buka Policy untuk Aplikasi Hingo
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.otp_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bank_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wishlists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.consignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.users;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.sessions;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.otp_verifications;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.addresses;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.bank_accounts;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.products;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.wishlists;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.cart_items;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.consignments;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.orders;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.chat_threads;
+DROP POLICY IF EXISTS "Allow all access for Hingo app" ON public.chat_messages;
+
+CREATE POLICY "Allow all access for Hingo app" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.sessions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.otp_verifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.kyc_documents FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.addresses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.bank_accounts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.wishlists FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.cart_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.consignments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.chat_threads FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for Hingo app" ON public.chat_messages FOR ALL USING (true) WITH CHECK (true);
+```

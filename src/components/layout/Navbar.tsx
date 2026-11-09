@@ -15,6 +15,7 @@ import {
   LogOut,
   Package,
   Layers,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useHingoStore } from "@/lib/store";
@@ -305,6 +306,15 @@ export default function Navbar() {
                   >
                     <Package className="h-4 w-4 text-neutral-500" />
                     <span>Daftar Transaksi</span>
+                  </Link>
+
+                  <Link
+                    href="/admin"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-amber-900 bg-amber-50 hover:bg-amber-100 transition font-bold"
+                  >
+                    <ShieldCheck className="h-4 w-4 text-amber-600" />
+                    <span>Buka Panel Admin (/admin)</span>
                   </Link>
 
                   <div className="border-t border-neutral-100 my-1" />

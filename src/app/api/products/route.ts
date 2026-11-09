@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
@@ -7,18 +8,22 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
-    const search = searchParams.get("search");
+    const search = searchParams.get("search") || searchParams.get("q");
     const condition = searchParams.get("condition");
     const sort = searchParams.get("sort");
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
+    const all = searchParams.get("all") === "true";
 
-    // 1. Coba ambil dari Supabase public.products
+    // 1. Coba ambil dari Supabase public.products jika tersedia
     let supabaseProducts: any[] = [];
     try {
-      let sbQuery = supabase.from("products").select("*").eq("status", "AVAILABLE");
+      let sbQuery = supabase.from("products").select("*");
+      if (!all) {
+        sbQuery = sbQuery.eq("status", "AVAILABLE");
+      }
       if (category && category !== "ALL") {
-        sbQuery = sbQuery.eq("category", category.toUpperCase());
+        sbQuery = sbQuery.ilike("category", category);
       }
       if (condition && condition !== "ALL") {
         sbQuery = sbQuery.eq("condition", condition);
@@ -31,19 +36,44 @@ export async function GET(req: Request) {
       }
       const { data, error } = await sbQuery;
       if (!error && data && data.length > 0) {
-        supabaseProducts = data;
+        supabaseProducts = data.map((item: any) => ({
+          id: item.id,
+          code: item.code,
+          slug: item.slug,
+          brand: item.brand,
+          name: item.name,
+          subtitle: item.subtitle,
+          category: item.category,
+          condition: item.condition,
+          usageDuration: item.usage_duration,
+          switchOrVariant: item.switch_or_variant,
+          completeness: item.completeness,
+          description: item.description,
+          defectNotes: item.defect_notes,
+          price: Number(item.price),
+          originalNewPrice: Number(item.original_new_price || 0),
+          stock: item.stock || 1,
+          location: item.location || "Jakarta Selatan",
+          rating: Number(item.rating || 5.0),
+          soldCount: item.sold_count || 0,
+          isVerifiedByTeam: Boolean(item.is_verified_by_team),
+          images: Array.isArray(item.images) ? item.images : JSON.parse(item.images || "[]"),
+          status: item.status || "AVAILABLE",
+          createdAt: item.created_at,
+        }));
       }
     } catch (e) {
-      // ignore
+      // safe fallback
     }
 
     // 2. Query Prisma lokal
-    const where: any = {
-      status: "AVAILABLE",
-    };
+    const where: any = {};
+    if (!all) {
+      where.status = "AVAILABLE";
+    }
 
     if (category && category !== "ALL") {
-      where.category = category.toUpperCase();
+      where.category = { equals: category.toUpperCase() };
     }
 
     if (condition && condition !== "ALL") {
@@ -84,9 +114,10 @@ export async function GET(req: Request) {
         prisma.product.count({ where: { status: "AVAILABLE" } }),
       ]);
 
-    const activeList = supabaseProducts.length > 0 ? supabaseProducts : prismaProducts;
+    // Fallback: jika supabase kosong atau error, gunakan prismaProducts
+    const rawList = supabaseProducts.length > 0 ? supabaseProducts : prismaProducts;
 
-    const parsedProducts = activeList.map((p) => {
+    const parsedProducts = rawList.map((p: any) => {
       let parsedImages: string[] = [];
       if (Array.isArray(p.images)) {
         parsedImages = p.images;
@@ -118,7 +149,7 @@ export async function GET(req: Request) {
       total: parsedProducts.length,
     });
   } catch (error: any) {
-    console.error("Products API error:", error.message);
+    console.error("Products API GET error:", error.message);
     return NextResponse.json({
       products: [],
       categoryCounts: {
@@ -137,11 +168,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Silakan login terlebih dahulu" }, { status: 401 });
-    }
-
     const body = await req.json();
+
     const {
       name,
       brand,
@@ -151,22 +179,27 @@ export async function POST(req: Request) {
       originalNewPrice,
       location = "Jakarta Selatan",
       switchOrVariant = "Standar",
-      completeness = "Unit lengkap",
+      completeness = "Unit lengkap dengan aksesoris",
       description = "",
-      defectNotes = "Fungsi normal 100%, mulus terawat.",
+      defectNotes = "Fungsi normal 100%, fisik terawat.",
       usageDuration = "6 bulan",
       images = [],
+      stock = 1,
     } = body;
 
     if (!name || !price) {
       return NextResponse.json({ error: "Nama dan harga produk wajib diisi" }, { status: 400 });
     }
 
-    const numPrice = Number(price);
-    const numOriginal = originalNewPrice ? Number(originalNewPrice) : Math.round(numPrice * 1.4);
-    const code = `HG-${Date.now().toString().slice(-4)}`;
-    const baseSlug = `${brand ? brand.toLowerCase() + "-" : ""}${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-    const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+    const numPrice = Math.round(Number(price));
+    const numOriginal = originalNewPrice ? Math.round(Number(originalNewPrice)) : Math.round(numPrice * 1.35);
+
+    // Auto-generate code & slug unik anti-bentrok
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const code = `HG-PRD-${randomSuffix}`;
+    const cleanBrand = (brand || "CUSTOM").trim().toUpperCase();
+    const slugBase = `${cleanBrand.toLowerCase()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`.replace(/-+/g, "-");
+    const slug = `${slugBase}-${randomSuffix}`;
 
     const imageArray = Array.isArray(images)
       ? images.filter(Boolean)
@@ -176,25 +209,25 @@ export async function POST(req: Request) {
           "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=900&auto=format&fit=crop",
         ];
 
-    // 1. Simpan ke Prisma lokal
+    // 1. Simpan ke Prisma SQLite lokal
     const newProduct = await prisma.product.create({
       data: {
         code,
         slug,
-        sellerId: user.id,
-        brand: brand ? brand.toUpperCase() : "CUSTOM",
-        name,
+        sellerId: user?.id || null,
+        brand: cleanBrand,
+        name: name.trim(),
         subtitle: `${switchOrVariant} · ${condition}`,
         category: category.toUpperCase(),
         condition,
         usageDuration,
         switchOrVariant,
         completeness,
-        description: description || `Gear titip jual terverifikasi Hingo. ${name}`,
+        description: description || `Gear preloved pilihan terverifikasi Hingo. ${name}`,
         defectNotes,
         price: numPrice,
         originalNewPrice: numOriginal,
-        stock: 1,
+        stock: Number(stock) || 1,
         location,
         rating: 5.0,
         soldCount: 0,
@@ -204,24 +237,26 @@ export async function POST(req: Request) {
       },
     });
 
-    // 2. Simpan ke Supabase public.products
+    // 2. Dual-Write ke Supabase public.products
     try {
       await supabase.from("products").insert({
+        id: newProduct.id,
         code,
         slug,
-        brand: brand ? brand.toUpperCase() : "CUSTOM",
-        name,
+        seller_id: user?.id || null,
+        brand: cleanBrand,
+        name: name.trim(),
         subtitle: `${switchOrVariant} · ${condition}`,
         category: category.toUpperCase(),
         condition,
         usage_duration: usageDuration,
         switch_or_variant: switchOrVariant,
         completeness,
-        description: description || `Gear titip jual terverifikasi Hingo. ${name}`,
+        description: description || `Gear preloved pilihan terverifikasi Hingo. ${name}`,
         defect_notes: defectNotes,
         price: numPrice,
         original_new_price: numOriginal,
-        stock: 1,
+        stock: Number(stock) || 1,
         location,
         rating: 5.0,
         sold_count: 0,
@@ -229,6 +264,15 @@ export async function POST(req: Request) {
         images: imageArray,
         status: "AVAILABLE",
       });
+    } catch (e) {
+      console.warn("Supabase dual-write warning (products table may not exist yet):", e);
+    }
+
+    // 3. Revalidasi cache halaman agar detik itu juga muncul di UI
+    try {
+      revalidatePath("/");
+      revalidatePath("/catalog");
+      revalidatePath("/admin");
     } catch (e) {}
 
     return NextResponse.json({
@@ -237,10 +281,10 @@ export async function POST(req: Request) {
         ...newProduct,
         images: imageArray,
       },
-      message: "Produk berhasil ditambahkan ke katalog!",
+      message: `Produk "${name}" berhasil ditambahkan ke katalog!`,
     });
   } catch (error: any) {
     console.error("Create product API error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Gagal menambahkan produk" }, { status: 500 });
   }
 }
