@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart, Star, ShieldCheck } from "lucide-react";
 import { Product } from "@/lib/data";
 import { useHingoStore } from "@/lib/store";
@@ -12,7 +13,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, compact = false }: ProductCardProps) {
-  const { isInWishlist, toggleWishlist } = useHingoStore();
+  const router = useRouter();
+  const { user, isInWishlist, toggleWishlist, showToast } = useHingoStore();
   const isWishlisted = isInWishlist(product.id);
 
   const formatRupiah = (val: number) => {
@@ -26,6 +28,11 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
   const handleHeartClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      showToast("Silakan masuk terlebih dahulu untuk melanjutkan");
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/catalog")}`);
+      return;
+    }
     toggleWishlist(product);
   };
 

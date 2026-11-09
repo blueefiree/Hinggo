@@ -303,7 +303,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/session", { method: "DELETE" });
+      await fetch("/api/auth/logout", { method: "POST" });
     } catch (e) {
       console.error("Logout error:", e);
     }
@@ -319,7 +319,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     setPayouts([]);
     setChatThreads([]);
     showToast("Berhasil keluar dari akun");
-    router.push("/");
+    window.location.href = "/";
   };
 
   const toggleRole = () => {

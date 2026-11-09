@@ -9,6 +9,7 @@ const PROTECTED_PREFIXES = [
   "/chat",
   "/account",
   "/checkout",
+  "/admin",
 ];
 
 const AUTH_PAGES = ["/auth/login", "/auth/verify-otp"];
@@ -20,24 +21,25 @@ export async function middleware(request: NextRequest) {
   const { supabase, supabaseResponse } = createClient(request);
   const { data: { user: supabaseUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
-  const sessionCookie =
+  const isAuthenticated = Boolean(
     request.cookies.get("hingo_user_id")?.value ||
     request.cookies.get("hingo_session")?.value ||
-    supabaseUser?.id;
+    supabaseUser?.id
+  );
 
-  // Auto-redirect logged-in users away from auth pages
+  // ATURAN A — JIKA SUDAH LOGIN: Lempar dari halaman login/verify ke /account
   const isAuthPage = AUTH_PAGES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
-  if (isAuthPage && sessionCookie) {
+  if (isAuthPage && isAuthenticated) {
     return NextResponse.redirect(new URL("/account", request.url));
   }
 
-  // Check if route is protected
+  // ATURAN B — JIKA BELUM LOGIN: Lempar dari halaman privat ke /auth/login
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
 
   if (isProtected) {
-    if (!sessionCookie) {
+    if (!isAuthenticated) {
       const callbackUrl = encodeURIComponent(pathname + search);
       return NextResponse.redirect(
         new URL(`/auth/login?callbackUrl=${callbackUrl}`, request.url)
@@ -64,6 +66,8 @@ export const config = {
     "/account",
     "/checkout/:path*",
     "/checkout",
+    "/admin/:path*",
+    "/admin",
     "/auth/login",
     "/auth/verify-otp",
   ],

@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       delivered: sendResult.delivered,
       deliveryInfo: sendResult.info,
       otpCode, // Tersedia untuk auto-fill & pengujian instan
+      devOtpCode: otpCode,
     });
   } catch (error: any) {
     console.error("Error in /api/auth/send-otp:", error);

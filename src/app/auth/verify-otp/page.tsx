@@ -35,7 +35,7 @@ function VerifyOtpContent() {
   // If already logged in, auto-redirect
   useEffect(() => {
     if (user) {
-      router.push("/account");
+      router.replace("/account");
     }
   }, [user, router]);
 
@@ -131,7 +131,10 @@ function VerifyOtpContent() {
         await refreshSession();
         showToast("Login berhasil! Mengalihkan ke profil...");
         const targetUrl = searchParams.get("callbackUrl");
-        router.push(targetUrl && targetUrl !== "/" ? targetUrl : "/account");
+        const finalDest = (targetUrl && targetUrl !== "/" && !targetUrl.includes("/auth/"))
+          ? targetUrl
+          : (data.redirectTo || "/account");
+        window.location.href = finalDest;
       } else {
         setErrorMsg(data.error || "Kode OTP salah atau tidak cocok");
       }
@@ -144,21 +147,46 @@ function VerifyOtpContent() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:py-14">
-      {/* Dev OTP Helper */}
-      <div className="mb-6 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-4 text-xs flex items-center justify-between text-neutral-800">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-amber-700" />
-          <span>
-            <strong>Dev Test OTP Database:</strong> Kode aktif di database: <code className="font-mono font-bold text-amber-900 bg-amber-200/60 px-2 py-0.5 rounded text-sm">{activeOtpCode}</code>
-          </span>
+      {/* Notifikasi Pop-up / Banner Pesan Masuk WhatsApp/Email */}
+      <div className="mb-6 rounded-2xl bg-[#FFFBEB] border-2 border-[#FFC629] p-4 sm:p-5 shadow-sm text-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFC629] text-black">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider text-amber-900">
+                Pesan Masuk ({target.includes("@") ? "Email" : "WhatsApp"})
+              </span>
+              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                Instan Terkirim
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-neutral-700 mt-0.5">
+              Kode OTP kamu adalah:{" "}
+              <strong className="font-mono text-base font-black text-black bg-amber-200/70 px-2 py-0.5 rounded border border-amber-300">
+                {activeOtpCode}
+              </strong>{" "}
+              <span className="text-neutral-500 text-xs hidden md:inline">(berlaku 5 menit)</span>
+            </p>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setOtp(activeOtpCode.split(""))}
-          className="text-amber-800 font-bold hover:underline"
-        >
-          Isi Otomatis
-        </button>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setOtp(activeOtpCode.split(""))}
+            className="flex-1 sm:flex-none rounded-xl bg-[#FFC629] px-4 py-2 text-xs font-black text-black shadow-xs hover:bg-[#FFC420] transition active:scale-95 cursor-pointer text-center"
+          >
+            Klik untuk Isi Otomatis
+          </button>
+          <Link
+            href="/auth/login"
+            className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition text-center"
+          >
+            Hubungkan QR WhatsApp
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">

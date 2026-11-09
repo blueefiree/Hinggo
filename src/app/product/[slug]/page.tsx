@@ -22,7 +22,7 @@ import { useHingoStore } from "@/lib/store";
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, addToCart, isInWishlist, toggleWishlist, cart } = useHingoStore();
+  const { user, addToCart, isInWishlist, toggleWishlist, cart, showToast } = useHingoStore();
 
   const slug = params?.slug as string;
   const [product, setProduct] = useState<Product | null>(null);
@@ -69,6 +69,7 @@ export default function ProductDetailPage() {
   const handleAddToCart = async () => {
     if (!product) return;
     if (!user) {
+      showToast("Silakan masuk terlebih dahulu untuk melanjutkan");
       router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/product/${product.slug}`)}`);
       return;
     }
@@ -82,6 +83,7 @@ export default function ProductDetailPage() {
     if (!product) return;
     if (!user) {
       e.preventDefault();
+      showToast("Silakan masuk terlebih dahulu untuk melanjutkan");
       router.push(
         `/auth/login?callbackUrl=${encodeURIComponent(`/chat/product?productId=${product.id}`)}`
       );
@@ -162,7 +164,14 @@ export default function ProductDetailPage() {
               <div className="absolute top-4 right-4 z-10 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => toggleWishlist(product)}
+                  onClick={() => {
+                    if (!user) {
+                      showToast("Silakan masuk terlebih dahulu untuk melanjutkan");
+                      router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/product/${product.slug}`)}`);
+                      return;
+                    }
+                    toggleWishlist(product);
+                  }}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-xs backdrop-blur-xs hover:bg-white text-neutral-700 hover:text-red-500 transition cursor-pointer"
                 >
                   <Heart className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />

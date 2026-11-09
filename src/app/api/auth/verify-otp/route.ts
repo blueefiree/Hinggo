@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Upsert User di Supabase public.users
+    // 2. Upsert User di Supabase public.users (Fault-Tolerant)
     const generatedName = isEmail
       ? cleanTarget.split("@")[0].replace(/[._-]/g, " ")
       : `Pengguna ${cleanTarget.slice(-4)}`;
@@ -70,50 +70,54 @@ export async function POST(req: Request) {
     let userId = crypto.randomUUID();
     let userData: any = null;
 
-    // Cek user yang sudah ada di Supabase
-    const userQuery = isEmail
-      ? supabase.from("users").select("*").eq("email", cleanTarget).limit(1)
-      : supabase.from("users").select("*").eq("phone", cleanTarget).limit(1);
+    try {
+      // Cek user yang sudah ada di Supabase
+      const userQuery = isEmail
+        ? supabase.from("users").select("*").eq("email", cleanTarget).limit(1)
+        : supabase.from("users").select("*").eq("phone", cleanTarget).limit(1);
 
-    const { data: existingUsers } = await userQuery;
+      const { data: existingUsers } = await userQuery;
 
-    if (existingUsers && existingUsers.length > 0) {
-      const exUser = existingUsers[0];
-      userId = exUser.id;
-      const updatePayload: any = isEmail
-        ? { email_verified: true, updated_at: new Date().toISOString() }
-        : { phone_verified: true, updated_at: new Date().toISOString() };
+      if (existingUsers && existingUsers.length > 0) {
+        const exUser = existingUsers[0];
+        userId = exUser.id;
+        const updatePayload: any = isEmail
+          ? { email_verified: true, updated_at: new Date().toISOString() }
+          : { phone_verified: true, updated_at: new Date().toISOString() };
 
-      const { data: updated } = await supabase
-        .from("users")
-        .update(updatePayload)
-        .eq("id", userId)
-        .select()
-        .single();
-      userData = updated || exUser;
-    } else {
-      // Buat user baru di Supabase
-      const newPayload = {
-        name: formattedName,
-        email: isEmail ? cleanTarget : null,
-        phone: isEmail ? null : cleanTarget,
-        city: "Jakarta Selatan",
-        role: "USER",
-        phone_verified: !isEmail,
-        email_verified: isEmail,
-        kyc_status: "UNVERIFIED",
-      };
+        const { data: updated } = await supabase
+          .from("users")
+          .update(updatePayload)
+          .eq("id", userId)
+          .select()
+          .single();
+        userData = updated || exUser;
+      } else {
+        // Buat user baru di Supabase
+        const newPayload = {
+          name: formattedName,
+          email: isEmail ? cleanTarget : null,
+          phone: isEmail ? null : cleanTarget,
+          city: "Jakarta Selatan",
+          role: "USER",
+          phone_verified: !isEmail,
+          email_verified: isEmail,
+          kyc_status: "UNVERIFIED",
+        };
 
-      const { data: inserted, error: insErr } = await supabase
-        .from("users")
-        .insert(newPayload)
-        .select()
-        .single();
+        const { data: inserted, error: insErr } = await supabase
+          .from("users")
+          .insert(newPayload)
+          .select()
+          .single();
 
-      if (!insErr && inserted) {
-        userId = inserted.id;
-        userData = inserted;
+        if (!insErr && inserted) {
+          userId = inserted.id;
+          userData = inserted;
+        }
       }
+    } catch (sbErr) {
+      console.warn("Supabase user sync error (bypassed safely):", sbErr);
     }
 
     // 3. Sinkronkan ke Prisma lokal
@@ -122,7 +126,13 @@ export async function POST(req: Request) {
       include: { kycDocument: true, addresses: true, bankAccounts: true },
     });
 
-    if (!localUser) {
+    if (localUser) {
+      localUser = await prisma.user.update({
+        where: { id: localUser.id },
+        data: isEmail ? { emailVerified: true } : { phoneVerified: true },
+        include: { kycDocument: true, addresses: true, bankAccounts: true },
+      });
+    } else {
       localUser = await prisma.user.create({
         data: {
           id: userId,
