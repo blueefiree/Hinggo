@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, ensurePrismaUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
@@ -9,8 +9,6 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Silakan masuk terlebih dahulu" }, { status: 401 });
     }
-
-    await ensurePrismaUser(user);
 
     const {
       productId,
@@ -21,201 +19,214 @@ export async function POST(req: Request) {
       buyerNote = "",
     } = await req.json();
 
-    // 1. Fetch product
+    // 1. Fetch product - Supabase adalah Single Source of Truth
     let targetProductId = productId;
     if (!targetProductId) {
-      const firstCart = await prisma.cartItem.findFirst({
-        where: { userId: user.id },
-      });
-      targetProductId = firstCart?.productId;
+      const { data: firstCart } = await supabase
+        .from("cart_items")
+        .select("product_id")
+        .eq("user_id", user.id)
+        .limit(1);
+      targetProductId = firstCart && firstCart[0] ? firstCart[0].product_id : null;
     }
 
     if (!targetProductId) {
       return NextResponse.json({ error: "Pilih produk yang ingin di-checkout" }, { status: 400 });
     }
 
-    let product = await prisma.product.findUnique({
-      where: { id: targetProductId },
-    });
+    // Ambil data produk langsung dari Supabase
+    const { data: product, error: prodErr } = await supabase
+      .from("products")
+      .select("*")
+      .eq("id", targetProductId)
+      .single();
 
-    // Supabase fallback if not found in local prisma
-    if (!product) {
-      try {
-        const { data: sbProduct } = await supabase
-          .from("products")
-          .select("*")
-          .eq("id", targetProductId)
-          .single();
-
-        if (sbProduct) {
-          product = await prisma.product.upsert({
-            where: { id: sbProduct.id },
-            update: {},
-            create: {
-              id: sbProduct.id,
-              code: sbProduct.code || `PRD-${Date.now().toString().slice(-6)}`,
-              slug: sbProduct.slug || `prod-${Date.now()}`,
-              name: sbProduct.name,
-              subtitle: sbProduct.subtitle || "",
-              brand: sbProduct.brand,
-              category: sbProduct.category,
-              price: Number(sbProduct.price),
-              originalNewPrice: Number(sbProduct.original_price || sbProduct.original_new_price || sbProduct.price),
-              condition: sbProduct.condition || "Bekas",
-              usageDuration: sbProduct.usage_duration || "Pemakaian normal",
-              switchOrVariant: sbProduct.switch_or_variant || "",
-              location: sbProduct.location || "Jakarta Selatan",
-              images: typeof sbProduct.images === "string" ? sbProduct.images : JSON.stringify(sbProduct.images || []),
-              rating: Number(sbProduct.rating || 5.0),
-              soldCount: Number(sbProduct.sold_count || 0),
-              stock: Number(sbProduct.stock || 1),
-              status: sbProduct.status || "AVAILABLE",
-              description: sbProduct.description || "",
-              defectNotes: sbProduct.defect_notes || "",
-              completeness: sbProduct.completeness || "",
-            },
-          });
-        }
-      } catch (sbErr) {
-        console.warn("Supabase checkout product fallback error:", sbErr);
-      }
+    if (prodErr || !product) {
+      return NextResponse.json({ error: "Produk tidak ditemukan di katalog" }, { status: 404 });
     }
 
-    if (!product || product.stock <= 0 || product.status !== "AVAILABLE") {
+    if (product.stock <= 0 || product.status !== "AVAILABLE") {
       return NextResponse.json(
         { error: "Gear sudah terjual atau tidak tersedia" },
         { status: 400 }
       );
     }
 
-    // 2. Fetch or create default address for the user
-    let address = addressId
-      ? await prisma.address.findUnique({ where: { id: addressId } })
-      : await prisma.address.findFirst({ where: { userId: user.id, isPrimary: true } });
-
-    if (!address) {
-      address = await prisma.address.findFirst({ where: { userId: user.id } });
+    // 2. Fetch or create default address in Supabase
+    let address: any = null;
+    if (addressId) {
+      const { data: addr } = await supabase
+        .from("addresses")
+        .select("*")
+        .eq("id", addressId)
+        .single();
+      address = addr;
     }
 
-    const userEmailNorm = user.email?.trim()?.toLowerCase() || null;
+    if (!address) {
+      const { data: addrs } = await supabase
+        .from("addresses")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_primary", true)
+        .limit(1);
+      address = addrs && addrs[0] ? addrs[0] : null;
+    }
 
     if (!address) {
-      address = await prisma.address.create({
-        data: {
-          userId: user.id,
-          userEmail: userEmailNorm,
+      const { data: addrs } = await supabase
+        .from("addresses")
+        .select("*")
+        .eq("user_id", user.id)
+        .limit(1);
+      address = addrs && addrs[0] ? addrs[0] : null;
+    }
+
+    if (!address) {
+      const newAddrId = `addr-${Date.now()}`;
+      const { data: createdAddr } = await supabase
+        .from("addresses")
+        .insert({
+          id: newAddrId,
+          user_id: user.id,
           label: "Rumah",
-          recipientName: user.name,
+          recipient_name: user.name || "Pembeli Hingo",
           phone: user.phone || "081234567890",
-          fullAddress: "Jl. Sudirman No. 45, Kebayoran Baru, Jakarta Selatan",
+          full_address: "Jl. Sudirman No. 45, Kebayoran Baru, Jakarta Selatan",
           city: "Jakarta Selatan",
-          postalCode: "12190",
-          isPrimary: true,
-        },
-      });
+          postal_code: "12190",
+          is_primary: true,
+        })
+        .select()
+        .single();
+      address = createdAddr || { id: newAddrId };
     }
 
+    const itemPrice = Number(product.price);
     const shippingProtection = 5000;
     const serviceFee = 2500;
-    const totalAmount = product.price + shippingCost + shippingProtection + serviceFee;
+    const totalAmount = itemPrice + Number(shippingCost) + shippingProtection + serviceFee;
 
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
     const orderCode = `GRL-${dateStr}-${randomSuffix}`;
+    const orderId = `ord-${dateStr}-${randomSuffix}`;
     const vaNumber = `8801 ${(user.phone || "081234567890").replace(/\D/g, "").slice(-8)}`;
+    const trackingNumber = `JNE${dateStr.slice(2)}${randomSuffix}`;
 
-    // 3. Database transaction
-    const newOrder = await prisma.$transaction(async (tx) => {
-      // Create order
-      const ord = await tx.order.create({
+    // 3. Simpan Pesanan ke Supabase
+    const { data: newOrder, error: orderErr } = await supabase
+      .from("orders")
+      .insert({
+        id: orderId,
+        order_code: orderCode,
+        buyer_id: user.id,
+        product_id: product.id,
+        address_id: address?.id || null,
+        item_price: itemPrice,
+        shipping_courier: shippingCourier,
+        shipping_cost: Number(shippingCost),
+        shipping_protection: shippingProtection,
+        service_fee: serviceFee,
+        total_amount: totalAmount,
+        payment_method: paymentMethod,
+        va_number: vaNumber,
+        buyer_note: buyerNote || "",
+        tracking_number: trackingNumber,
+        escrow_status: "WAITING_PAYMENT",
+        order_status: "WAITING_PAYMENT",
+        inspection_deadline: "48 jam setelah paket tiba",
+      })
+      .select()
+      .single();
+
+    if (orderErr) {
+      console.error("Gagal menyimpan pesanan ke Supabase:", orderErr);
+      return NextResponse.json(
+        { error: `Gagal membuat pesanan di database: ${orderErr.message}` },
+        { status: 500 }
+      );
+    }
+
+    // 4. Update status produk menjadi SOLD di Supabase
+    await supabase
+      .from("products")
+      .update({ stock: 0, status: "SOLD" })
+      .eq("id", product.id);
+
+    // 5. Bersihkan item keranjang di Supabase
+    await supabase
+      .from("cart_items")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("product_id", product.id);
+
+    // Best-effort sinkronisasi ke Prisma lokal untuk testing offline
+    try {
+      await prisma.product.upsert({
+        where: { id: product.id },
+        update: { stock: 0, status: "SOLD" },
+        create: {
+          id: product.id,
+          code: product.code || `PRD-${randomSuffix}`,
+          slug: product.slug || `prod-${product.id}`,
+          name: product.name,
+          subtitle: product.subtitle || "",
+          brand: product.brand,
+          category: product.category,
+          price: itemPrice,
+          originalNewPrice: Number(product.original_new_price || product.price),
+          condition: product.condition || "Bekas",
+          usageDuration: product.usage_duration || "Pemakaian normal",
+          switchOrVariant: product.switch_or_variant || "",
+          location: product.location || "Jakarta Selatan",
+          images: typeof product.images === "string" ? product.images : JSON.stringify(product.images || []),
+          rating: Number(product.rating || 5.0),
+          soldCount: Number(product.sold_count || 0),
+          stock: 0,
+          status: "SOLD",
+          description: product.description || "",
+          defectNotes: product.defect_notes || "",
+          completeness: product.completeness || "",
+        },
+      });
+
+      await prisma.order.create({
         data: {
-          orderCode,
+          id: newOrder.id,
+          orderCode: newOrder.order_code,
           buyerId: user.id,
-          buyerEmail: userEmailNorm,
+          buyerEmail: user.email?.trim()?.toLowerCase() || null,
           productId: product.id,
-          addressId: address.id,
-          itemPrice: product.price,
+          addressId: address?.id || `addr-${randomSuffix}`,
+          itemPrice,
           shippingCourier,
-          shippingCost,
+          shippingCost: Number(shippingCost),
           shippingProtection,
           serviceFee,
           totalAmount,
           paymentMethod,
           vaNumber,
           buyerNote,
-          trackingNumber: `JNE${dateStr.slice(2)}${randomSuffix}`,
+          trackingNumber,
           escrowStatus: "WAITING_PAYMENT",
           orderStatus: "WAITING_PAYMENT",
           inspectionDeadline: "48 jam setelah paket tiba",
         },
       });
-
-      // Add timeline steps
-      await tx.orderTimeline.createMany({
-        data: [
-          {
-            orderId: ord.id,
-            stepOrder: 1,
-            title: "Menunggu pembayaran pembeli",
-            description: `Menunggu transfer ${paymentMethod === "QRIS" ? "QRIS" : "BCA Virtual Account"} sebesar Rp${totalAmount.toLocaleString("id-ID")}.`,
-            timestampText: "Menunggu pembayaran",
-            isCompleted: false,
-          },
-          {
-            orderId: ord.id,
-            stepOrder: 2,
-            title: "Pengemasan aman & pengiriman Hingo",
-            description: "Gudang Hingo Jakarta Selatan.",
-            timestampText: "Menunggu pembayaran",
-            isCompleted: false,
-          },
-          {
-            orderId: ord.id,
-            stepOrder: 3,
-            title: "Paket tiba — masa uji 48 jam",
-            description: "Uji fungsi tombol, switch, sensor, dan kelengkapan sebelum konfirmasi.",
-            timestampText: "Belum dimulai",
-            isCompleted: false,
-          },
-          {
-            orderId: ord.id,
-            stepOrder: 4,
-            title: "Konfirmasi & pencairan dana",
-            description: "Setelah dikonfirmasi sesuai, dana escrow diteruskan ke pemilik gear.",
-            timestampText: "Menunggu konfirmasi pembeli",
-            isCompleted: false,
-          },
-        ],
-      });
-
-      // Update product stock to 0 and SOLD
-      await tx.product.update({
-        where: { id: product.id },
-        data: {
-          stock: 0,
-          status: "SOLD",
-        },
-      });
-
-      // Clear from user cart
-      await tx.cartItem.deleteMany({
-        where: {
-          userId: user.id,
-          productId: product.id,
-        },
-      });
-
-      return ord;
-    });
+    } catch (e) {
+      // Abaikan jika prisma lokal gagal, Supabase tetap sukses
+    }
 
     return NextResponse.json({
       success: true,
-      orderCode: newOrder.orderCode,
+      orderCode: newOrder.order_code,
       orderId: newOrder.id,
-      redirectTo: `/checkout/payment/${newOrder.orderCode}?method=${paymentMethod.toLowerCase()}`,
+      redirectTo: `/checkout/payment/${newOrder.order_code}?method=${paymentMethod.toLowerCase()}`,
     });
   } catch (error: any) {
     console.error("Checkout transaction error:", error);
     return NextResponse.json({ error: error.message || "Gagal membuat pesanan" }, { status: 500 });
   }
 }
+
