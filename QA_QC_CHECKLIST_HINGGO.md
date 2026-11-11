@@ -379,3 +379,4 @@ Gunakan tabel ini untuk mencatat hasil uji nyata saat melakukan verifikasi:
 
 > [!NOTE]
 > Jika ditemukan perilaku aneh atau error selama pengujian, catat kode test case (**Kode TC**) dan laporkan kepada developer untuk perbaikan langsung.
+
