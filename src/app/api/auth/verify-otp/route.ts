@@ -195,28 +195,19 @@ export async function POST(req: Request) {
       });
     } catch {}
 
-    // 5. Pasang HTTP-Only Cookie 30 Hari (Termasuk hingo_user_email sesuai Aturan 1)
+    // 5. Pasang HTTP-Only Cookie Bertanda Tangan 30 Hari
     const cookieStore = await cookies();
-    cookieStore.set("hingo_user_email", userEmail, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30, // 30 hari
-    });
-
-    cookieStore.set("hingo_user_id", finalUserId, {
-      path: "/",
-      httpOnly: false,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30, // 30 hari
-    });
-
     cookieStore.set("hingo_session", sessionToken, {
       path: "/",
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30, // 30 hari
     });
+
+    // Bersihkan cookie legacy tanpa tanda tangan
+    cookieStore.set("hingo_user_email", "", { path: "/", maxAge: 0, expires: new Date(0) });
+    cookieStore.set("hingo_user_id", "", { path: "/", maxAge: 0, expires: new Date(0) });
 
     return NextResponse.json({
       success: true,

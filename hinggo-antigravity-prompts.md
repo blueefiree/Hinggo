@@ -371,9 +371,263 @@ STEP 13: Deploy.
 
 ---
 
+---
+
+# BAGIAN D - PERBAIKAN SETELAH REVIEW (Step 14-21)
+
+Bagian ini ditambahkan setelah laporan Step 0-13 dari Antigravity direview. Kerjakan berurutan. Step 14 hanya membaca; sisanya memperbaiki. Perubahan skema/RLS/penghapusan data tetap wajib minta persetujuan.
+
+## Step 14 - Review keamanan dan kebersihan data (hanya membaca)
+
+```
+STEP 14: Review keamanan dan kebersihan data. JANGAN mengubah file atau data di step ini; hanya
+baca dan laporkan, lalu tunggu persetujuan.
+
+1. Auth/sesi: jelaskan persis bagaimana sesi login dibuat dan diverifikasi (cookie
+   hingo_user_email). Apakah nilainya ditandatangani/dienkripsi? Apakah cookie HttpOnly, Secure,
+   dan SameSite? Apakah orang yang membuat cookie itu sendiri dengan email orang lain bisa
+   dianggap login? Buktikan dengan satu permintaan nyata ke endpoint session TANPA login yang
+   sah, lalu laporkan hasilnya.
+2. OTP: jelaskan bagaimana kode OTP dibuat dan dikirim. Apakah kode dikembalikan di respons
+   API atau memakai nilai tetap? Apakah ada batas percobaan dan kedaluwarsa? Tandai mana yang
+   sengaja untuk simulasi.
+3. Secret: cari semua key/token yang tertulis di kode atau riwayat git (git grep dan git log -S).
+   Jelaskan apa yang dimaksud "fallback token" dan "toleransi variabel env" di Step 2 dan apakah
+   itu membuat aplikasi berjalan dengan key yang salah secara diam-diam. Jangan tampilkan nilai
+   key, hanya lokasi file dan nama variabel.
+4. Sumber data: jelaskan peran Prisma dan Supabase. Di mana pengguna, keranjang, dan pesanan
+   sebenarnya tersimpan di produksi? Pastikan tidak ada penyimpanan file lokal di Vercel.
+5. Data uji: daftar semua baris yang dibuat oleh skrip pengujian Step 13 di database produksi
+   (pengguna "Pengguna 5432", order GRL-20261111-3729, item keranjang). Tulis SQL penghapusannya
+   dan TUNGGU persetujuan sebelum menjalankan.
+6. RLS: daftar tabel dan status RLS-nya, dan tandai tabel yang bisa dibaca atau diubah publik
+   lewat anon key padahal seharusnya tidak.
+7. Tulis laporan berurutan dari risiko tertinggi, beserta rencana perbaikan, lalu berhenti.
+```
+
+Selesai kalau: laporan keluar. Baca dulu sebelum lanjut ke Step 15.
+
+## Step 15 - Amankan sesi login
+
+```
+STEP 15: Amankan sesi login. Masalah: sesi disimpan di cookie hingo_user_email (email polos),
+sehingga cookie bisa dipalsukan dan seseorang bisa masuk sebagai pengguna lain.
+
+Lakukan:
+1. Ganti mekanisme sesi. Pilih salah satu dan jelaskan alasannya di rencana:
+   (a) Supabase Auth bawaan, atau
+   (b) token sesi acak/JWT yang DITANDATANGANI dengan secret server (variabel SESSION_SECRET).
+   Cookie sesi wajib: HttpOnly, Secure (di produksi), SameSite=Lax, path=/, masa berlaku jelas.
+   Isi cookie TIDAK boleh berisi email atau data pribadi yang bisa diubah klien.
+2. Semua route API yang butuh login (cart, wishlist, checkout, orders, user/*, consignments,
+   payouts, chat, admin) harus memverifikasi sesi di SERVER dan memeriksa kepemilikan data
+   (pengguna hanya boleh mengakses datanya sendiri; /admin hanya untuk peran admin).
+3. Tambahkan logout yang benar-benar menghapus cookie sesi.
+4. Nama variabel baru (mis. SESSION_SECRET) dicatat di .env.example TANPA nilai. Saya yang
+   mengisinya di Vercel. Kalau variabel belum ada, aplikasi harus berhenti dengan pesan error
+   yang jelas, bukan memakai nilai cadangan.
+5. Kalau butuh perubahan skema atau RLS, TULIS rencananya dan tunggu persetujuan.
+6. Uji dengan permintaan nyata dan laporkan hasilnya:
+   - cookie lama hingo_user_email dengan email orang lain -> harus DITOLAK (401),
+   - cookie sesi yang diubah satu karakter -> ditolak,
+   - mengakses /api/orders milik pengguna lain -> ditolak (403/404),
+   - /admin dengan akun biasa -> ditolak,
+   - login sah -> berhasil dan keranjang tetap jalan.
+7. `npm run build`, lalu commit: "fix(auth): sesi bertanda tangan dan otorisasi per pengguna".
+```
+
+Selesai kalau: semua uji penolakan di poin 6 lolos. Sebelum deploy, isi `SESSION_SECRET` (string acak panjang) di Vercel.
+
+## Step 16 - Rapikan OTP (simulasi yang disengaja dan aman)
+
+```
+STEP 16: Rapikan OTP. Verifikasi OTP masih SIMULASI (tanpa SMS sungguhan), tapi simulasinya harus
+aman dan disengaja.
+
+1. Tentukan mode lewat variabel environment DEMO_MODE (true/false). Catat di .env.example.
+2. Saat DEMO_MODE=true: kode OTP demo boleh berupa satu kode tetap yang diambil dari variabel
+   DEMO_OTP_CODE (bukan ditulis di kode), dan UI menampilkan banner jelas "Mode demo: gunakan
+   kode yang diberikan penyelenggara". Kode TIDAK boleh dikembalikan di respons API send-otp.
+3. Saat DEMO_MODE=false atau kosong: buat kode acak 6 digit, simpan HASH-nya dengan masa
+   kedaluwarsa 5 menit, batasi 5 percobaan salah per nomor lalu kunci sementara, dan beri jeda
+   kirim ulang 60 detik. Sambungan SMS sungguhan belum ada, jadi tampilkan pesan bahwa pengiriman
+   belum tersedia dan JANGAN mencetak kode ke log produksi.
+4. Pesan error tidak boleh membocorkan apakah nomor/email terdaftar.
+5. Uji dan laporkan: kode salah ditolak, kode kedaluwarsa ditolak, percobaan ke-6 terkunci,
+   respons send-otp tidak berisi kode.
+6. `npm run build`, lalu commit: "fix(auth): otp aman dan mode demo eksplisit".
+```
+
+Selesai kalau: respons `send-otp` tidak memuat kode dan uji penolakan lolos.
+
+## Step 17 - Hapus fallback token dan secret di kode
+
+```
+STEP 17: Bersihkan secret dan fallback tersembunyi.
+
+1. Cari dan tampilkan LOKASI (file:baris, nama variabel; bukan nilainya) semua key/token yang
+   tertulis di kode atau riwayat git: `git grep -nE "eyJ[A-Za-z0-9_-]{20,}|service_role|sb_secret|sb_publishable"`
+   dan `git log -p -S "<pola>" --all` (cukup laporkan commit dan file).
+2. Hapus semua "fallback token" dan nilai cadangan untuk variabel env dari kode (Step 2). Ganti
+   dengan pemeriksaan wajib di satu tempat (mis. `src/lib/env.ts`): kalau variabel wajib kosong,
+   lempar error "Variabel X belum diisi" saat start/build, bukan memakai nilai lain.
+3. Pastikan key rahasia (service_role dan sejenisnya) hanya dipakai di kode server dan tidak pernah
+   berawalan NEXT_PUBLIC_.
+4. Pastikan `.env*` ada di .gitignore dan tidak ter-track.
+5. Kalau ada key yang pernah ter-commit, JANGAN mencoba menulis ulang riwayat git sendiri.
+   Tulis daftar key yang harus saya ganti (rotate) di dashboard Supabase/Vercel, lalu berhenti
+   dan tunggu saya.
+6. `npm run build`, lalu commit: "fix: hapus fallback secret dan wajibkan env".
+```
+
+Selesai kalau: tidak ada key di kode, dan aplikasi gagal dengan pesan jelas kalau env kosong. **Kamu** yang mengganti (rotate) key yang bocor di dashboard Supabase, lalu memperbarui nilainya di Vercel dan redeploy.
+
+## Step 17B - Kunci RLS Supabase dan bucket Storage
+
+```
+STEP 17B: Kunci akses langsung ke database. Audit Step 14 menunjukkan tabel users, orders,
+cart_items, dan otp_verifications bisa dibaca (dan sebagian ditulis) lewat anon key, padahal anon
+key terlihat publik di browser.
+
+1. PETAKAN dulu (hanya membaca): untuk tiap tabel di schema public, tulis kode mana yang
+   mengaksesnya dan memakai apa: anon key (Supabase client di browser/server), service role,
+   atau Prisma/koneksi langsung. Tandai tabel yang SAAT INI dibaca lewat anon key oleh aplikasi
+   (mis. katalog produk), supaya tidak rusak saat RLS dikunci. Gunakan juga security advisor
+   Supabase lewat MCP kalau tersedia.
+2. TULIS RENCANA SQL (jangan jalankan), lalu berhenti dan tunggu persetujuan:
+   - ENABLE ROW LEVEL SECURITY di SEMUA tabel schema public.
+   - products: SELECT publik hanya untuk produk yang boleh tampil (mis. status aktif);
+     INSERT/UPDATE/DELETE tanpa policy untuk anon (hanya service role).
+   - users, orders, cart_items, wishlists, addresses, bank_accounts, consignments, payouts,
+     chat, otp_verifications, dan tabel sensitif lain: TANPA policy untuk anon (default tolak).
+     Aplikasi mengaksesnya lewat server (service role/Prisma) setelah sesi diverifikasi di Step 15.
+   - Kalau ada tabel yang saat ini dibaca browser lewat anon key padahal sensitif, pindahkan
+     aksesnya ke route API server dulu sebelum RLS dikunci.
+3. Storage: daftar semua bucket dan statusnya (public/private). Bucket berisi dokumen KYC, foto
+   KTP, atau bukti pembayaran HARUS private dan diakses lewat signed URL berumur pendek.
+   Bucket foto produk boleh publik.
+4. Setelah saya setujui: terapkan sebagai satu migration. Lalu uji dengan permintaan nyata
+   memakai anon key dari environment (JANGAN mencetak key-nya) dan laporkan:
+   - GET /rest/v1/users, /orders, /cart_items, /otp_verifications -> kosong atau ditolak,
+   - INSERT/UPDATE ke products dengan anon key -> ditolak,
+   - katalog dan detail produk di aplikasi masih memuat 12 produk,
+   - login, keranjang, dan checkout simulasi masih berjalan.
+5. `npm run build`, lalu commit file migration: "fix(db): aktifkan RLS dan kunci bucket".
+```
+
+Selesai kalau: semua permintaan anon ke tabel sensitif ditolak, katalog masih jalan, dan bucket KYC private.
+
+## Step 18 - Satukan sumber data dan bersihkan data uji
+
+```
+STEP 18: Satukan sumber data dan bersihkan data uji.
+
+A. Sumber data
+1. Jelaskan di mana data pengguna, keranjang, wishlist, dan pesanan disimpan di produksi.
+   Kalau ada dua sumber (Prisma dan Supabase) atau penyimpanan file lokal (mis. SQLite),
+   usulkan satu sumber kebenaran: Supabase. Tulis rencana migrasi dan TUNGGU persetujuan.
+2. Setelah disetujui, hapus kode "sinkronisasi fallback" yang menyalin data antar sumber dan
+   pastikan route checkout/orders membaca dan menulis hanya ke Supabase.
+3. Buktikan: buat pesanan simulasi di produksi, lalu tunjukkan baris pesanan itu lewat query di
+   Supabase (jumlah baris sebelum dan sesudah).
+
+B. Data uji
+4. Tampilkan SQL (SELECT dulu, lalu DELETE) untuk menghapus: pengguna "Pengguna 5432", pesanan
+   GRL-20261111-3729, serta keranjang, wishlist, dan alamat milik pengguna uji itu. Tampilkan
+   baris yang akan terhapus dan TUNGGU persetujuan sebelum menjalankan DELETE.
+5. Setelah dihapus, laporkan jumlah baris yang tersisa di tabel terkait dan pastikan 12 produk
+   asli tidak ikut terhapus.
+6. Mulai dari sini, pengujian ke produksi wajib memakai akun uji yang diberi penanda jelas
+   (mis. email berakhiran @hinggo-test.local) supaya mudah dibersihkan.
+7. `npm run build`, lalu commit: "chore: satu sumber data dan bersihkan data uji".
+```
+
+Selesai kalau: data uji hilang, 12 produk utuh, dan pesanan baru muncul di Supabase.
+
+## Step 19 - Keranjang tamu: tidak melebihi batas cookie
+
+```
+STEP 19: Keranjang tamu dan batas ukuran.
+
+Masalah: keranjang tamu disimpan di cookie (batas sekitar 4 KB). Kita sepakat tamu memakai
+localStorage dan akun login memakai Supabase.
+
+1. Pindahkan penyimpanan keranjang dan wishlist TAMU dari cookie ke localStorage (dibungkus
+   try/catch, aman untuk server-side rendering). Cookie hanya boleh untuk sesi login.
+2. Simpan hanya data minimal (id barang, jumlah, waktu ditambahkan). Detail produk diambil ulang
+   dari Supabase saat ditampilkan.
+3. Batas wajar: maksimal 20 barang di keranjang; tampilkan pesan yang ramah kalau terlampaui.
+   Jumlah per barang tidak melebihi stok (preloved: stok 1).
+4. Saat login, gabungkan isi localStorage ke akun (hilangkan duplikat), lalu kosongkan localStorage.
+5. Uji: tambah 3 barang sebagai tamu, refresh, tetap ada; login, tergabung ke akun; refresh,
+   tetap ada; logout, kembali ke mode tamu kosong. Laporkan hasil tiap skenario.
+6. `npm run build`, lalu commit: "fix: keranjang tamu pindah ke localStorage".
+```
+
+Selesai kalau: skenario di poin 5 lolos dan tidak ada cookie keranjang lagi.
+
+## Step 20 - Verifikasi visual tiap layar terhadap Figma
+
+```
+STEP 20: Bandingkan tampilan produksi/lokal dengan Figma, layar demi layar. Gunakan Figma MCP
+untuk mengambil screenshot frame, dan browser untuk mengambil screenshot halaman di lebar 1440
+dan 390.
+
+Layar (desktop / mobile node):
+- Beranda: 1:2 / 48:2963
+- Katalog: 10:25047 / 10:25319
+- Detail produk: 10:25521 / 10:25655
+- Keranjang: 10:25747 / 10:25867
+- Masuk atau daftar: 10:25941 / 10:26026
+- Verifikasi HP: 10:26079 / 10:26164
+- Verifikasi identitas: 10:26217 / 10:26343
+- Chat admin produk: 10:26423 / 10:26544
+- Chat admin dan CS: 10:26610 / 10:26735
+- Checkout: 10:26798 / 10:26966
+- Status pesanan: 10:27088 / 10:27286
+- Pengajuan titip jual: 14:12784 / 14:12992
+- Barang titipan saya: 14:13159 / 14:13435
+- Detail barang titipan: 14:13670 / 14:13929
+
+Untuk tiap layar, laporkan dalam satu tabel: layar | selisih utama (teks, warna, spasi, ukuran,
+komponen yang hilang) | tingkat keparahan (tinggi/sedang/rendah). Jangan memperbaiki apa pun di
+tahap ini. Setelah tabel selesai, berhenti dan tunggu saya memilih selisih mana yang diperbaiki.
+```
+
+Selesai kalau: ada tabel selisih per layar. Pilih sendiri yang tingkat keparahannya tinggi dulu, lalu minta perbaikan per layar dengan prompt biasa ("Perbaiki selisih nomor X di layar Y, node Z").
+
+## Step 21 - Verifikasi akhir di produksi (termasuk uji penolakan)
+
+```
+STEP 21: Verifikasi akhir setelah deploy ke produksi (https://hinggo.vercel.app). Jangan klaim
+sukses dari pesan build. Jalankan permintaan nyata, gunakan akun uji berpenanda @hinggo-test.local,
+dan laporkan status HTTP serta bukti tiap uji.
+
+Uji yang HARUS BERHASIL:
+1. Katalog memuat 12 produk; filter dan pencarian bekerja.
+2. Detail produk terbuka dengan slug yang valid.
+3. Tamu: tambah ke keranjang lalu refresh, barang tetap ada.
+4. Login dengan OTP demo; sesi bertahan setelah refresh.
+5. Checkout simulasi menghasilkan pesanan yang muncul di Supabase.
+
+Uji yang HARUS DITOLAK:
+6. Cookie sesi dipalsukan atau lama (hingo_user_email) -> 401.
+7. OTP salah -> ditolak; percobaan ke-6 -> terkunci.
+8. Mengakses pesanan milik pengguna lain -> 403/404.
+9. /admin dengan akun biasa -> ditolak.
+10. Respons send-otp tidak mengandung kode OTP.
+
+Setelah selesai, hapus semua data uji dari uji ini (tampilkan SQL dan tunggu persetujuan), lalu
+tulis laporan: daftar uji, hasil, dan masalah yang tersisa.
+```
+
+Selesai kalau: 5 uji berhasil dan 5 uji penolakan lolos.
+
+
 ## Catatan
 
-- Kalau Antigravity "berhasil" tapi hasil di produksi masih salah, kembali ke Step 1 dan minta diagnosis ulang dengan bukti permintaan nyata.
+- Kalau Antigravity "berhasil" tapi hasil di produksi masih salah, kembali ke Step 1 (atau Step 14 untuk masalah keamanan) dan minta diagnosis ulang dengan bukti permintaan nyata.
+- Selalu minta bukti berupa permintaan nyata, bukan sekadar status 200. Uji penolakan (cookie palsu, OTP salah, akses data orang lain) sama pentingnya dengan uji yang berhasil.
 - Kalau Figma MCP bermasalah, hapus kalimat "Baca Figma lewat MCP" dan tempel PNG frame-nya ke chat bersama spesifikasi cadangan di step terkait.
 - Data contoh di Figma (nama pengguna "Naya", kota Tebet/Jakarta Selatan, tanggal Okt 2026) hanya contoh; jangan di-hardcode.
 - Beranda di Figma memakai ilustrasi vektor, sedangkan Katalog dan Detail memakai foto produk. Ikuti Figma per layar.

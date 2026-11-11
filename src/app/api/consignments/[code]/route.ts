@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 
@@ -7,6 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Sesi login diperlukan." },
+        { status: 401 }
+      );
+    }
+
     const { code } = await params;
     const item = await prisma.consignmentItem.findUnique({
       where: { code },
@@ -26,6 +35,19 @@ export async function GET(
 
         if (sbItems && sbItems.length > 0) {
           const s = sbItems[0];
+          const userEmailNorm = user.email?.trim()?.toLowerCase();
+          const isOwner =
+            s.seller_id === user.id ||
+            (userEmailNorm && s.seller_email?.toLowerCase() === userEmailNorm);
+          const isAdmin = user.role === "ADMIN";
+
+          if (!isOwner && !isAdmin) {
+            return NextResponse.json(
+              { error: "Forbidden. Anda tidak memiliki akses ke barang titipan ini." },
+              { status: 403 }
+            );
+          }
+
           return NextResponse.json({
             consignment: {
               id: s.id,
@@ -64,6 +86,20 @@ export async function GET(
       return NextResponse.json({ error: "Barang titipan tidak ditemukan" }, { status: 404 });
     }
 
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
+    const isOwner =
+      item.sellerId === user.id ||
+      (userEmailNorm && (item as any).seller?.email?.toLowerCase() === userEmailNorm) ||
+      (userEmailNorm && (item as any).sellerEmail?.toLowerCase() === userEmailNorm);
+    const isAdmin = user.role === "ADMIN";
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden. Anda tidak memiliki akses ke barang titipan ini." },
+        { status: 403 }
+      );
+    }
+
     let parsedPhotos: string[] = [];
     try {
       parsedPhotos = typeof item.photos === "string" ? JSON.parse(item.photos || "[]") : item.photos;
@@ -87,6 +123,14 @@ export async function PUT(
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Sesi login diperlukan." },
+        { status: 401 }
+      );
+    }
+
     const { code } = await params;
     const body = await req.json();
     const { action } = body;
@@ -98,6 +142,20 @@ export async function PUT(
 
     if (!item) {
       return NextResponse.json({ error: "Barang titipan tidak ditemukan" }, { status: 404 });
+    }
+
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
+    const isOwner =
+      item.sellerId === user.id ||
+      (userEmailNorm && (item as any).seller?.email?.toLowerCase() === userEmailNorm) ||
+      (userEmailNorm && (item as any).sellerEmail?.toLowerCase() === userEmailNorm);
+    const isAdmin = user.role === "ADMIN";
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden. Anda tidak memiliki izin untuk mengubah barang titipan ini." },
+        { status: 403 }
+      );
     }
 
     if (action === "SUBMIT_SHIPMENT") {

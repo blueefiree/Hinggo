@@ -11,54 +11,101 @@ const PROTECTED_PREFIXES = [
   "/admin",
 ];
 
-function isSessionValid(sessionCookie?: string, userIdCookie?: string, userEmailCookie?: string): boolean {
-  if (sessionCookie && sessionCookie.includes(".")) {
-    try {
-      const parts = sessionCookie.split(".");
-      if (parts.length === 2) {
-        const jsonStr = atob(parts[0].replace(/-/g, "+").replace(/_/g, "/"));
-        const payload = JSON.parse(jsonStr);
-        if (payload && payload.exp && Date.now() < payload.exp) {
-          return true;
-        }
-        return false;
-      }
-    } catch {
-      return false;
-    }
+async function verifySessionTokenEdge(
+  sessionToken?: string
+): Promise<{ isValid: boolean; role?: string; userId?: string }> {
+  if (!sessionToken || !sessionToken.includes(".")) {
+    return { isValid: false };
   }
 
-  const tokenOrIdOrEmail = sessionCookie || userIdCookie || userEmailCookie;
-  return Boolean(tokenOrIdOrEmail && tokenOrIdOrEmail !== "user-naya" && tokenOrIdOrEmail.length > 5);
+  try {
+    const [data, signature] = sessionToken.split(".");
+    if (!data || !signature) return { isValid: false };
+
+    const secret = process.env.SESSION_SECRET;
+    if (!secret || secret.trim() === "") return { isValid: false };
+
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+    const bytes = new Uint8Array(sigBuf);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const expectedSig = btoa(binary)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    if (signature !== expectedSig) {
+      return { isValid: false };
+    }
+
+    const jsonStr = atob(data.replace(/-/g, "+").replace(/_/g, "/"));
+    const payload = JSON.parse(jsonStr);
+
+    if (!payload || !payload.exp || Date.now() > payload.exp) {
+      return { isValid: false };
+    }
+
+    return {
+      isValid: true,
+      role: payload.role || "USER",
+      userId: payload.userId,
+    };
+  } catch {
+    return { isValid: false };
+  }
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   const sessionCookie = request.cookies.get("hingo_session")?.value;
-  const userIdCookie = request.cookies.get("hingo_user_id")?.value;
-  const userEmailCookie = request.cookies.get("hingo_user_email")?.value;
+  const session = await verifySessionTokenEdge(sessionCookie);
 
-  const isAuthenticated = isSessionValid(sessionCookie, userIdCookie, userEmailCookie);
-
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
-
   const isAuthRoute = pathname === "/auth/login" || pathname === "/auth/verify-otp";
 
-  // 1. Kalo baru (belum login) mengakses halaman privat, suruh login (redirect ke halaman login)
-  if (isProtected && !isAuthenticated) {
+  // 1. Proteksi Khusus Admin: Wajib login DAN Wajib role ADMIN
+  if (isAdminRoute) {
+    if (!session.isValid) {
+      const callbackUrl = encodeURIComponent(pathname + search);
+      return NextResponse.redirect(
+        new URL(`/auth/login?callbackUrl=${callbackUrl}`, request.url)
+      );
+    }
+    if (session.role !== "ADMIN") {
+      // User biasa mengakses /admin -> Ditolak (redirect ke /account dengan notifikasi akses ditolak)
+      return NextResponse.redirect(
+        new URL("/account?error=unauthorized_admin", request.url)
+      );
+    }
+    return NextResponse.next();
+  }
+
+  // 2. Proteksi Halaman Privat
+  if (isProtected && !session.isValid) {
     const callbackUrl = encodeURIComponent(pathname + search);
     return NextResponse.redirect(
       new URL(`/auth/login?callbackUrl=${callbackUrl}`, request.url)
     );
   }
 
-  // 2. Kalo lama (sesi aktif / sudah login) membuka halaman login, langsung arahkan ke akun/dashboard
-  if (isAuthRoute && isAuthenticated) {
+  // 3. Pengguna yang sudah login membuka halaman auth login -> langsung ke dashboard
+  if (isAuthRoute && session.isValid) {
     const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
-    const dest = (callbackUrl && !callbackUrl.includes("/auth/")) ? callbackUrl : "/account";
+    const dest = callbackUrl && !callbackUrl.includes("/auth/") ? callbackUrl : "/account";
     return NextResponse.redirect(new URL(dest, request.url));
   }
 

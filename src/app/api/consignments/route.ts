@@ -8,7 +8,10 @@ export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ consignments: [] });
+      return NextResponse.json(
+        { error: "Unauthorized. Sesi login diperlukan." },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(req.url);

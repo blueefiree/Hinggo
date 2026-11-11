@@ -24,10 +24,17 @@ export async function POST() {
     // Call Supabase signOut
     await supabase.auth.signOut().catch(() => {});
 
-    // Delete cookies
-    cookieStore.delete("hingo_session");
-    cookieStore.delete("hingo_user_id");
-    cookieStore.delete("hingo_user_email");
+    // Delete cookies properly with clear maxAge 0 and options
+    cookieStore.set("hingo_session", "", {
+      path: "/",
+      maxAge: 0,
+      expires: new Date(0),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+    cookieStore.set("hingo_user_id", "", { path: "/", maxAge: 0, expires: new Date(0) });
+    cookieStore.set("hingo_user_email", "", { path: "/", maxAge: 0, expires: new Date(0) });
 
     return NextResponse.json({ success: true, message: "Berhasil keluar dari akun" });
   } catch (error: any) {

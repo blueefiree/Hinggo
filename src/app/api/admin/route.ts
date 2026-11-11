@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized. Sesi login diperlukan." }, { status: 401 });
+    }
+    if (user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden. Hanya admin yang memiliki akses." }, { status: 403 });
+    }
     // 1. Ambil data dari Prisma
     const [kycDocs, consignments, orders, users, products] = await Promise.all([
       prisma.kycDocument.findMany({
@@ -237,6 +245,14 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized. Sesi login diperlukan." }, { status: 401 });
+    }
+    if (user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden. Hanya admin yang memiliki akses." }, { status: 403 });
+    }
+
     const body = await req.json();
     const { action } = body;
 
@@ -537,6 +553,14 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized. Sesi login diperlukan." }, { status: 401 });
+    }
+    if (user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden. Hanya admin yang memiliki akses." }, { status: 403 });
+    }
+
     const body = await req.json();
     const { action } = body;
 

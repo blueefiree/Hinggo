@@ -8,6 +8,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Sesi login diperlukan." },
+        { status: 401 }
+      );
+    }
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Sesi login diperlukan." },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     let order: any = await prisma.order.findFirst({
       where: {
@@ -60,6 +74,20 @@ export async function GET(
       return NextResponse.json({ error: "Pesanan tidak ditemukan" }, { status: 404 });
     }
 
+    // Verifikasi otorisasi kepemilikan pesanan
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
+    const isOwner =
+      order.buyerId === user.id ||
+      (userEmailNorm && order.buyerEmail?.toLowerCase() === userEmailNorm);
+    const isAdmin = user.role === "ADMIN";
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden. Anda tidak memiliki akses ke pesanan ini." },
+        { status: 403 }
+      );
+    }
+
     let parsedImages: string[] = [];
     if (order.product?.images) {
       try {
@@ -93,6 +121,12 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Sesi login diperlukan." },
+        { status: 401 }
+      );
+    }
     const { id } = await params;
     const { action, trackingNumber } = await req.json();
 
@@ -105,6 +139,20 @@ export async function PUT(
 
     if (!order) {
       return NextResponse.json({ error: "Pesanan tidak ditemukan" }, { status: 404 });
+    }
+
+    // Verifikasi otorisasi kepemilikan pesanan
+    const userEmailNorm = user.email?.trim()?.toLowerCase();
+    const isOwner =
+      order.buyerId === user.id ||
+      (userEmailNorm && order.buyerEmail?.toLowerCase() === userEmailNorm);
+    const isAdmin = user.role === "ADMIN";
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden. Anda tidak memiliki akses ke pesanan ini." },
+        { status: 403 }
+      );
     }
 
     if (action === "SIMULATE_PAYMENT") {

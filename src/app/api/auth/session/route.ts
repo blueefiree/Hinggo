@@ -16,11 +16,21 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const currentUser = await getCurrentUser();
     const { userId, role } = await req.json();
     const cookieStore = await cookies();
 
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    }
+
+    // Hanya izinkan pengalihan ke ADMIN jika pemanggil adalah ADMIN atau DEMO_MODE aktif
+    const isDemoMode = process.env.DEMO_MODE === "true";
+    if (role === "ADMIN" && !isDemoMode && currentUser?.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Forbidden. Hanya admin yang memiliki akses untuk peran ini." },
+        { status: 403 }
+      );
     }
 
     let user: any = null;
@@ -110,28 +120,17 @@ export async function POST(req: Request) {
       });
     } catch {}
 
-    const userEmail = user.email || (user.phone ? `${user.phone.replace(/\D/g, "")}@wa.hingo.id` : null);
-    if (userEmail) {
-      cookieStore.set("hingo_user_email", userEmail, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 30, // 30 hari
-      });
-    }
-
     cookieStore.set("hingo_session", sessionToken, {
       path: "/",
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30, // 30 hari
     });
-    cookieStore.set("hingo_user_id", user.id, {
-      path: "/",
-      httpOnly: false,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30,
-    });
+
+    // Hapus cookie plain text lama
+    cookieStore.set("hingo_user_email", "", { path: "/", maxAge: 0, expires: new Date(0) });
+    cookieStore.set("hingo_user_id", "", { path: "/", maxAge: 0, expires: new Date(0) });
 
     return NextResponse.json({ success: true, user });
   } catch (error: any) {
@@ -150,8 +149,15 @@ export async function DELETE() {
     }).catch(() => {});
   }
 
-  cookieStore.delete("hingo_session");
-  cookieStore.delete("hingo_user_id");
-  cookieStore.delete("hingo_user_email");
+  cookieStore.set("hingo_session", "", {
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+  cookieStore.set("hingo_user_id", "", { path: "/", maxAge: 0, expires: new Date(0) });
+  cookieStore.set("hingo_user_email", "", { path: "/", maxAge: 0, expires: new Date(0) });
   return NextResponse.json({ success: true, message: "Logged out" });
 }

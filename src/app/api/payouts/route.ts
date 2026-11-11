@@ -6,13 +6,10 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({
-        payouts: [],
-        stats: {
-          totalDisbursed: 0,
-          totalPending: 0,
-        },
-      });
+      return NextResponse.json(
+        { error: "Unauthorized. Sesi login diperlukan." },
+        { status: 401 }
+      );
     }
 
     const payouts = await prisma.payout.findMany({

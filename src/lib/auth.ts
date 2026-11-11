@@ -5,11 +5,8 @@ import { supabase } from "@/lib/supabase";
 
 function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Variabel SESSION_SECRET belum diisi");
-    }
-    return "hinggo-secret-session-key-2026";
+  if (!secret || secret.trim() === "") {
+    throw new Error("Variabel SESSION_SECRET belum diisi");
   }
   return secret;
 }
@@ -59,7 +56,13 @@ export function verifySessionToken(token: string): SessionPayload | null {
       .createHmac("sha256", getSessionSecret())
       .update(data)
       .digest("base64url");
-    if (signature !== expectedSig) return null;
+
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSig);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return null;
+    }
+
     const payload: SessionPayload = JSON.parse(
       Buffer.from(data, "base64url").toString("utf8")
     );
@@ -186,181 +189,84 @@ export async function getCurrentUser() {
   try {
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("hingo_session")?.value;
-    const userId = cookieStore.get("hingo_user_id")?.value;
-    const userEmail = cookieStore.get("hingo_user_email")?.value;
 
-    const tokenOrIdOrEmail = sessionToken || userId || userEmail;
-    if (!tokenOrIdOrEmail || tokenOrIdOrEmail === "user-naya") {
+    if (!sessionToken || !sessionToken.includes(".")) {
       return null;
     }
 
-    // ====================================================================
-    // ATURAN 1: RESOLUSI UTAMA BERBASIS EMAIL PENGGUNA (Anti-Hilang saat refresh)
-    // ====================================================================
-    if (userEmail && userEmail.includes("@")) {
-      const normEmail = userEmail.trim().toLowerCase();
-      try {
-        const dbUser = await prisma.user.findFirst({
-          where: { email: normEmail },
-          include: {
-            kycDocument: true,
-            addresses: true,
-            bankAccounts: true,
-          },
-        });
-        if (dbUser) {
-          return dbUser;
-        }
-      } catch (err) {
-        console.warn("Prisma user by email lookup error:", err);
-      }
-
-      // Cek Supabase jika di Prisma lokal belum ada (Sinkronisasi cloud ke lokal)
-      try {
-        const { data: sbUsers } = await supabase
-          .from("users")
-          .select("*")
-          .eq("email", normEmail)
-          .limit(1);
-
-        if (sbUsers && sbUsers.length > 0) {
-          const su = sbUsers[0];
-          const ensured = await ensurePrismaUser({
-            id: su.id || crypto.randomUUID(),
-            name: su.name || normEmail.split("@")[0],
-            email: normEmail,
-            phone: su.phone || null,
-            city: su.city || "Jakarta Selatan",
-            role: su.role || "USER",
-            emailVerified: Boolean(su.email_verified),
-            phoneVerified: Boolean(su.phone_verified),
-            kycStatus: su.kyc_status || "UNVERIFIED",
-            avatarUrl: su.avatar_url || null,
-          });
-
-          if (ensured) return ensured;
-
-          return {
-            id: su.id || `user-${Date.now()}`,
-            name: su.name || normEmail.split("@")[0],
-            email: normEmail,
-            phone: su.phone || null,
-            city: su.city || "Jakarta Selatan",
-            role: su.role || "USER",
-            emailVerified: true,
-            phoneVerified: Boolean(su.phone_verified),
-            kycStatus: su.kyc_status || "UNVERIFIED",
-            avatarUrl: su.avatar_url || null,
-            bio: null,
-            createdAt: new Date(),
-            addresses: [],
-            bankAccounts: [],
-            kycDocument: null,
-          };
-        }
-      } catch (sbErr) {
-        console.warn("Supabase user by email lookup bypassed:", sbErr);
-      }
+    const payload = verifySessionToken(sessionToken);
+    if (!payload || !payload.userId) {
+      return null;
     }
 
-    // ====================================================================
-    // RESOLUSI KEDUA: VERIFIED SIGNED SESSION TOKEN (30 Hari)
-    // ====================================================================
-    if (sessionToken && sessionToken.includes(".")) {
-      const payload = verifySessionToken(sessionToken);
-      if (payload) {
-        const targetEmail = payload.email?.trim()?.toLowerCase();
-        try {
-          const dbUser = await prisma.user.findFirst({
-            where: {
-              OR: [
-                ...(targetEmail ? [{ email: targetEmail }] : []),
-                { id: payload.userId },
-              ],
-            },
-            include: {
-              kycDocument: true,
-              addresses: true,
-              bankAccounts: true,
-            },
-          });
-          if (dbUser) {
-            return dbUser;
-          }
-        } catch {}
+    // Ambil detail profil user dari database lokal Prisma untuk relasi (addresses, bankAccounts, kycDocument)
+    let userFromDb: any = null;
+    try {
+      userFromDb = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        include: {
+          kycDocument: true,
+          addresses: true,
+          bankAccounts: true,
+        },
+      });
+    } catch {}
 
-        // Pastikan user ini tersimpan secara fisik di Prisma SQLite
-        const ensured = await ensurePrismaUser({
-          id: payload.userId,
-          name: payload.name,
-          email: payload.email || (payload.phone ? `${payload.phone.replace(/\D/g, "")}@wa.hingo.id` : null),
-          phone: payload.phone || null,
-          city: payload.city || "Jakarta Selatan",
-          role: payload.role || "USER",
-          phoneVerified: Boolean(payload.phoneVerified),
-          emailVerified: Boolean(payload.emailVerified),
-          kycStatus: payload.kycStatus || "UNVERIFIED",
-          avatarUrl: payload.avatarUrl || null,
-          bio: payload.bio || null,
-        });
+    if (userFromDb) {
+      return {
+        ...userFromDb,
+        role: payload.role || userFromDb.role || "USER",
+      };
+    }
 
-        await ensureSupabaseUser({
-          id: payload.userId,
-          name: payload.name,
-          email: payload.email,
-          phone: payload.phone,
-          city: payload.city,
-          role: payload.role,
-          phoneVerified: payload.phoneVerified,
-          emailVerified: payload.emailVerified,
-          kycStatus: payload.kycStatus,
-        });
+    // Jika di Prisma lokal belum ada (misal di serverless Vercel), cek Supabase users
+    try {
+      const { data: sbUsers } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", payload.userId)
+        .limit(1);
 
-        if (ensured) return ensured;
-
-        // Return user tepercaya dari session payload
+      if (sbUsers && sbUsers.length > 0) {
+        const su = sbUsers[0];
         return {
-          id: payload.userId,
-          name: payload.name,
-          phone: payload.phone || null,
-          email: payload.email || (payload.phone ? `${payload.phone.replace(/\D/g, "")}@wa.hingo.id` : null),
-          city: payload.city || "Jakarta Selatan",
-          role: payload.role || "USER",
-          phoneVerified: Boolean(payload.phoneVerified),
-          emailVerified: Boolean(payload.emailVerified),
-          kycStatus: payload.kycStatus || "UNVERIFIED",
-          avatarUrl: payload.avatarUrl || null,
-          bio: payload.bio || null,
-          createdAt: payload.createdAt ? new Date(payload.createdAt) : new Date(),
+          id: su.id,
+          name: su.name || payload.name,
+          email: su.email || payload.email || null,
+          phone: su.phone || payload.phone || null,
+          city: su.city || payload.city || "Jakarta Selatan",
+          role: payload.role || su.role || "USER",
+          emailVerified: Boolean(su.email_verified ?? payload.emailVerified),
+          phoneVerified: Boolean(su.phone_verified ?? payload.phoneVerified),
+          kycStatus: su.kyc_status || payload.kycStatus || "UNVERIFIED",
+          avatarUrl: su.avatar_url || payload.avatarUrl || null,
+          bio: su.bio || payload.bio || null,
+          createdAt: su.created_at ? new Date(su.created_at) : new Date(),
           addresses: [],
           bankAccounts: [],
           kycDocument: null,
         };
       }
-    }
+    } catch {}
 
-    // ====================================================================
-    // RESOLUSI KETIGA: FALLBACK DIRECT USER ID DI PRISMA
-    // ====================================================================
-    const targetUserId = userId || (sessionToken && !sessionToken.includes(".") ? sessionToken : null);
-    if (targetUserId && targetUserId !== "user-naya") {
-      try {
-        const directUser = await prisma.user.findUnique({
-          where: { id: targetUserId },
-          include: {
-            kycDocument: true,
-            addresses: true,
-            bankAccounts: true,
-          },
-        });
-
-        if (directUser) {
-          return directUser;
-        }
-      } catch {}
-    }
-
-    return null;
+    // Fallback ke data payload terverifikasi
+    return {
+      id: payload.userId,
+      name: payload.name,
+      phone: payload.phone || null,
+      email: payload.email || null,
+      city: payload.city || "Jakarta Selatan",
+      role: payload.role || "USER",
+      phoneVerified: Boolean(payload.phoneVerified),
+      emailVerified: Boolean(payload.emailVerified),
+      kycStatus: payload.kycStatus || "UNVERIFIED",
+      avatarUrl: payload.avatarUrl || null,
+      bio: payload.bio || null,
+      createdAt: payload.createdAt ? new Date(payload.createdAt) : new Date(),
+      addresses: [],
+      bankAccounts: [],
+      kycDocument: null,
+    };
   } catch (error) {
     console.error("getCurrentUser error:", error);
     return null;

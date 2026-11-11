@@ -745,6 +745,36 @@ export default function AdminDashboardPage() {
     setTimeout(() => setSqlCopied(false), 3000);
   };
 
+  if (!loadingData && (!user || user.role !== "ADMIN")) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-20 text-center">
+        <div className="rounded-3xl border border-red-200 bg-white p-8 shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+            <ShieldCheck className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-black text-[#1A1A1A] mb-2">Akses Ditolak: Khusus Admin</h2>
+          <p className="text-sm text-neutral-600 mb-6">
+            Halaman ini hanya dapat diakses oleh akun dengan peran Administrator. Silakan masuk dengan akun admin atau kembali ke beranda.
+          </p>
+          <div className="flex justify-center gap-3">
+            <Link
+              href="/"
+              className="rounded-xl border border-neutral-300 px-5 py-2.5 text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition-colors"
+            >
+              Kembali ke Beranda
+            </Link>
+            <Link
+              href="/auth/login?callbackUrl=/admin"
+              className="rounded-xl bg-[#FFC72C] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] hover:bg-[#F5BD23] transition-colors"
+            >
+              Masuk Akun Admin
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-4 py-4 md:py-8 pb-20">
       {/* Top Banner */}
