@@ -58,17 +58,132 @@ export async function GET() {
       tablesStatus.consignments = !consRes.error;
       tablesStatus.orders = !orderRes.error;
       supabaseConnected = true;
-    } catch (e) {
+    } catch {
       supabaseConnected = false;
     }
 
+    // 3. Dual-Read Fallback dari Supabase jika Prisma SQLite lokal kosong
+    let finalProducts: any[] = products;
+    let finalConsignments: any[] = consignments;
+    let finalOrders: any[] = orders;
+    let finalUsers: any[] = users;
+
+    if (products.length === 0 || consignments.length === 0 || orders.length === 0) {
+      try {
+        const [sbProd, sbCons, sbOrders, sbUsers] = await Promise.all([
+          supabase.from("products").select("*").order("created_at", { ascending: false }),
+          supabase.from("consignments").select("*").order("created_at", { ascending: false }),
+          supabase.from("orders").select("*").order("created_at", { ascending: false }),
+          supabase.from("users").select("*").order("created_at", { ascending: false }),
+        ]);
+
+        if (products.length === 0 && sbProd.data && sbProd.data.length > 0) {
+          finalProducts = sbProd.data.map((item: any) => ({
+            id: item.id,
+            code: item.code,
+            slug: item.slug,
+            brand: item.brand,
+            name: item.name,
+            subtitle: item.subtitle,
+            category: item.category,
+            condition: item.condition,
+            usageDuration: item.usage_duration,
+            switchOrVariant: item.switch_or_variant,
+            completeness: item.completeness,
+            description: item.description,
+            defectNotes: item.defect_notes,
+            price: Number(item.price),
+            originalNewPrice: Number(item.original_new_price || 0),
+            stock: item.stock || 1,
+            location: item.location || "Jakarta Selatan",
+            rating: Number(item.rating || 5.0),
+            soldCount: item.sold_count || 0,
+            isVerifiedByTeam: Boolean(item.is_verified_by_team),
+            images: Array.isArray(item.images) ? JSON.stringify(item.images) : (item.images || "[]"),
+            status: item.status || "AVAILABLE",
+            createdAt: new Date(item.created_at || Date.now()),
+          }));
+        }
+
+        if (consignments.length === 0 && sbCons.data && sbCons.data.length > 0) {
+          finalConsignments = sbCons.data.map((item: any) => ({
+            id: item.id,
+            code: item.code,
+            sellerId: item.seller_id,
+            sellerEmail: item.seller_email,
+            category: item.category,
+            brandModel: item.brand_model,
+            variantSpec: item.variant_spec,
+            usageDuration: item.usage_duration,
+            currentCondition: item.current_condition,
+            completeness: item.completeness,
+            photos: Array.isArray(item.photos) ? JSON.stringify(item.photos) : (item.photos || "[]"),
+            expectedPrice: item.expected_price,
+            proposedPrice: item.proposed_price,
+            consignmentFeeAmount: item.consignment_fee,
+            estimatedNetPayout: item.estimated_net_payout,
+            originCity: item.origin_city,
+            stage: item.stage,
+            badgeLabel: item.badge_label,
+            statusSummary: item.status_summary,
+            timeline: [],
+            seller: null,
+            createdAt: new Date(item.created_at || Date.now()),
+            updatedAt: new Date(item.updated_at || Date.now()),
+          }));
+        }
+
+        if (orders.length === 0 && sbOrders.data && sbOrders.data.length > 0) {
+          finalOrders = sbOrders.data.map((item: any) => ({
+            id: item.id,
+            orderCode: item.order_code,
+            buyerId: item.buyer_id,
+            buyerEmail: item.buyer_email,
+            productId: item.product_id,
+            itemPrice: item.item_price,
+            shippingCourier: item.shipping_courier,
+            shippingCost: item.shipping_cost,
+            shippingProtection: item.shipping_protection,
+            serviceFee: item.service_fee,
+            totalAmount: item.total_amount,
+            paymentMethod: item.payment_method,
+            trackingNumber: item.tracking_number,
+            escrowStatus: item.escrow_status,
+            orderStatus: item.order_status,
+            timeline: [],
+            product: null,
+            buyer: null,
+            address: null,
+            disputes: [],
+            createdAt: new Date(item.created_at || Date.now()),
+          }));
+        }
+
+        if (users.length === 0 && sbUsers.data && sbUsers.data.length > 0) {
+          finalUsers = sbUsers.data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            email: item.email,
+            phone: item.phone,
+            city: item.city,
+            bio: item.bio,
+            role: item.role,
+            phoneVerified: item.phone_verified,
+            emailVerified: item.email_verified,
+            kycStatus: item.kyc_status,
+            createdAt: new Date(item.created_at || Date.now()),
+          }));
+        }
+      } catch {}
+    }
+
     return NextResponse.json({
-      products: products.map((p) => {
+      products: finalProducts.map((p) => {
         let parsedImages: string[] = [];
         try {
           parsedImages = JSON.parse(p.images || "[]");
         } catch {
-          parsedImages = p.images ? [p.images] : [];
+          parsedImages = p.images ? (Array.isArray(p.images) ? p.images : [p.images]) : [];
         }
         return {
           ...p,
@@ -76,20 +191,38 @@ export async function GET() {
         };
       }),
       kycDocs,
-      consignments: consignments.map((c) => ({
-        ...c,
-        photos: JSON.parse(c.photos || "[]"),
-      })),
-      orders: orders.map((o) => ({
-        ...o,
-        product: o.product
-          ? {
-              ...o.product,
-              images: JSON.parse(o.product.images || "[]"),
-            }
-          : null,
-      })),
-      users,
+      consignments: finalConsignments.map((c) => {
+        let parsedPhotos: string[] = [];
+        try {
+          parsedPhotos = JSON.parse(c.photos || "[]");
+        } catch {
+          parsedPhotos = c.photos ? (Array.isArray(c.photos) ? c.photos : [c.photos]) : [];
+        }
+        return {
+          ...c,
+          photos: parsedPhotos,
+        };
+      }),
+      orders: finalOrders.map((o) => {
+        let parsedImages: string[] = [];
+        if (o.product?.images) {
+          try {
+            parsedImages = JSON.parse(o.product.images || "[]");
+          } catch {
+            parsedImages = Array.isArray(o.product.images) ? o.product.images : [o.product.images];
+          }
+        }
+        return {
+          ...o,
+          product: o.product
+            ? {
+                ...o.product,
+                images: parsedImages,
+              }
+            : null,
+        };
+      }),
+      users: finalUsers,
       supabaseStatus: {
         connected: supabaseConnected,
         url: "https://obdczozspvkdebhtyhoh.supabase.co",

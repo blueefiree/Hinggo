@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   req: Request,
@@ -8,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const order = await prisma.order.findFirst({
+    let order: any = await prisma.order.findFirst({
       where: {
         OR: [{ id }, { orderCode: id }],
       },
@@ -21,16 +22,64 @@ export async function GET(
     });
 
     if (!order) {
+      try {
+        const { data: sbOrder } = await supabase
+          .from("orders")
+          .select("*, product:products(*)")
+          .or(`id.eq.${id},order_code.eq.${id}`)
+          .single();
+
+        if (sbOrder) {
+          order = {
+            id: sbOrder.id,
+            orderCode: sbOrder.order_code,
+            buyerId: sbOrder.buyer_id,
+            buyerEmail: sbOrder.buyer_email,
+            productId: sbOrder.product_id,
+            itemPrice: sbOrder.item_price,
+            shippingCourier: sbOrder.shipping_courier,
+            shippingCost: sbOrder.shipping_cost,
+            shippingProtection: sbOrder.shipping_protection,
+            serviceFee: sbOrder.service_fee,
+            totalAmount: sbOrder.total_amount,
+            paymentMethod: sbOrder.payment_method,
+            trackingNumber: sbOrder.tracking_number,
+            escrowStatus: sbOrder.escrow_status,
+            orderStatus: sbOrder.order_status,
+            createdAt: sbOrder.created_at,
+            product: sbOrder.product,
+            address: null,
+            timeline: [],
+            disputes: [],
+          };
+        }
+      } catch {}
+    }
+
+    if (!order) {
       return NextResponse.json({ error: "Pesanan tidak ditemukan" }, { status: 404 });
+    }
+
+    let parsedImages: string[] = [];
+    if (order.product?.images) {
+      try {
+        parsedImages = JSON.parse(order.product.images || "[]");
+      } catch {
+        parsedImages = Array.isArray(order.product.images)
+          ? order.product.images
+          : [order.product.images];
+      }
     }
 
     return NextResponse.json({
       order: {
         ...order,
-        product: {
-          ...order.product,
-          images: JSON.parse(order.product.images || "[]"),
-        },
+        product: order.product
+          ? {
+              ...order.product,
+              images: parsedImages,
+            }
+          : null,
       },
     });
   } catch (error: any) {
