@@ -20,6 +20,7 @@ export interface Product {
   location: string;
   isVerifiedByTeam: boolean;
   images: string[];
+  createdAt?: string;
 }
 
 export interface ConsignmentItem {
