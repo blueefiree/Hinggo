@@ -186,10 +186,12 @@ export default function CheckoutPage() {
             </div>
 
             <div className="pt-2">
-              <label className="block text-xs font-bold text-neutral-700 mb-1">
+              <label htmlFor="buyerNote" className="block text-xs font-bold text-neutral-700 mb-1">
                 Catatan untuk tim Hingo (opsional)
               </label>
               <input
+                id="buyerNote"
+                name="buyerNote"
                 type="text"
                 value={buyerNote}
                 onChange={(e) => setBuyerNote(e.target.value)}
@@ -252,8 +254,10 @@ export default function CheckoutPage() {
             </div>
 
             {/* Perlindungan pengiriman checkbox */}
-            <label className="mt-2 flex items-start gap-3 rounded-2xl bg-[#F6F6F4] p-3.5 border border-neutral-200 cursor-pointer">
+            <label htmlFor="shippingProtection" className="mt-2 flex items-start gap-3 rounded-2xl bg-[#F6F6F4] p-3.5 border border-neutral-200 cursor-pointer">
               <input
+                id="shippingProtection"
+                name="shippingProtection"
                 type="checkbox"
                 checked={shippingProtection}
                 onChange={(e) => setShippingProtection(e.target.checked)}

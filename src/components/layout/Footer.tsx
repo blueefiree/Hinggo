@@ -105,12 +105,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works" className="hover:text-white transition">
+                <Link href="/privacy" className="hover:text-white transition">
                   Kebijakan Privasi
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works" className="hover:text-white transition">
+                <Link href="/terms" className="hover:text-white transition">
                   Syarat & Ketentuan
                 </Link>
               </li>

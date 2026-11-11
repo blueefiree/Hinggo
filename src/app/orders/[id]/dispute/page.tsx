@@ -260,7 +260,10 @@ export default function OrderDisputePage() {
             </p>
           </div>
 
+          <label htmlFor="disputeDescription" className="sr-only">Jelaskan Kendala Secara Detail</label>
           <textarea
+            id="disputeDescription"
+            name="disputeDescription"
             rows={4}
             required
             value={description}

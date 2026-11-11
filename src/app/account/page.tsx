@@ -723,8 +723,10 @@ function AccountContent() {
                 <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 text-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block font-bold text-neutral-700 mb-1">Nama Lengkap *</label>
+                      <label htmlFor="account-name-input" className="block font-bold text-neutral-700 mb-1">Nama Lengkap *</label>
                       <input
+                        id="account-name-input"
+                        name="fullName"
                         type="text"
                         required
                         value={nameInput}
@@ -735,8 +737,10 @@ function AccountContent() {
                     </div>
 
                     <div>
-                      <label className="block font-bold text-neutral-700 mb-1">Kota Domisili *</label>
+                      <label htmlFor="account-city-input" className="block font-bold text-neutral-700 mb-1">Kota Domisili *</label>
                       <input
+                        id="account-city-input"
+                        name="city"
                         type="text"
                         required
                         value={cityInput}
@@ -748,8 +752,10 @@ function AccountContent() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-neutral-700 mb-1">Bio Singkat</label>
+                    <label htmlFor="account-bio-input" className="block font-bold text-neutral-700 mb-1">Bio Singkat</label>
                     <textarea
+                      id="account-bio-input"
+                      name="bio"
                       rows={2}
                       value={bioInput}
                       onChange={(e) => setBioInput(e.target.value)}
@@ -1301,8 +1307,10 @@ function AccountContent() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Atau Masukkan URL Gambar Sendiri</label>
+                <label htmlFor="avatar-url-input" className="block font-bold text-neutral-700 mb-1">Atau Masukkan URL Gambar Sendiri</label>
                 <input
+                  id="avatar-url-input"
+                  name="avatarUrl"
                   type="url"
                   placeholder="https://..."
                   value={avatarUrlInput}
@@ -1372,11 +1380,13 @@ function AccountContent() {
               )}
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">
+                <label htmlFor="contact-target-input" className="block font-bold text-neutral-700 mb-1">
                   {contactType === "EMAIL" ? "Alamat Email Tujuan" : "Nomor WhatsApp (+62 / 08...)"}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
+                    id="contact-target-input"
+                    name="contactTarget"
                     type={contactType === "EMAIL" ? "email" : "tel"}
                     required
                     disabled={contactOtpSent}
@@ -1400,10 +1410,12 @@ function AccountContent() {
 
               {contactOtpSent && (
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">
+                  <label htmlFor="contact-otp-input" className="block font-bold text-neutral-700 mb-1">
                     Masukkan 6 Digit Kode OTP
                   </label>
                   <input
+                    id="contact-otp-input"
+                    name="contactOtp"
                     type="text"
                     maxLength={6}
                     value={contactOtp}
@@ -1467,8 +1479,10 @@ function AccountContent() {
 
             <form onSubmit={handleSaveAddress} className="mt-4 flex flex-col gap-3.5 text-xs">
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Label Alamat</label>
+                <label htmlFor="addr-label" className="block font-bold text-neutral-700 mb-1">Label Alamat</label>
                 <input
+                  id="addr-label"
+                  name="label"
                   type="text"
                   required
                   value={addrLabel}
@@ -1480,8 +1494,10 @@ function AccountContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Nama Penerima</label>
+                  <label htmlFor="addr-recipient" className="block font-bold text-neutral-700 mb-1">Nama Penerima</label>
                   <input
+                    id="addr-recipient"
+                    name="recipient"
                     type="text"
                     required
                     value={addrRecipient}
@@ -1490,8 +1506,10 @@ function AccountContent() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Nomor Telepon</label>
+                  <label htmlFor="addr-phone" className="block font-bold text-neutral-700 mb-1">Nomor Telepon</label>
                   <input
+                    id="addr-phone"
+                    name="phone"
                     type="text"
                     required
                     value={addrPhone}
@@ -1502,8 +1520,10 @@ function AccountContent() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Alamat Lengkap</label>
+                <label htmlFor="addr-full" className="block font-bold text-neutral-700 mb-1">Alamat Lengkap</label>
                 <textarea
+                  id="addr-full"
+                  name="fullAddress"
                   rows={2}
                   required
                   value={addrFull}
@@ -1515,8 +1535,10 @@ function AccountContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Kota / Kabupaten</label>
+                  <label htmlFor="addr-city" className="block font-bold text-neutral-700 mb-1">Kota / Kabupaten</label>
                   <input
+                    id="addr-city"
+                    name="city"
                     type="text"
                     required
                     value={addrCity}
@@ -1525,8 +1547,10 @@ function AccountContent() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Kode Pos</label>
+                  <label htmlFor="addr-postal" className="block font-bold text-neutral-700 mb-1">Kode Pos</label>
                   <input
+                    id="addr-postal"
+                    name="postalCode"
                     type="text"
                     value={addrPostal}
                     onChange={(e) => setAddrPostal(e.target.value)}
@@ -1536,8 +1560,10 @@ function AccountContent() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 pt-1 cursor-pointer">
+              <label htmlFor="addr-is-primary" className="flex items-center gap-2 pt-1 cursor-pointer">
                 <input
+                  id="addr-is-primary"
+                  name="isPrimary"
                   type="checkbox"
                   checked={addrIsPrimary}
                   onChange={(e) => setAddrIsPrimary(e.target.checked)}
@@ -1586,8 +1612,10 @@ function AccountContent() {
 
             <form onSubmit={handleSaveBank} className="mt-4 flex flex-col gap-3.5 text-xs">
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Nama Bank / E-Wallet</label>
+                <label htmlFor="bank-name" className="block font-bold text-neutral-700 mb-1">Nama Bank / E-Wallet</label>
                 <select
+                  id="bank-name"
+                  name="bankName"
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
                   className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] px-3.5 py-2.5 font-bold text-neutral-800 outline-none focus:border-[#FFC629] focus:bg-white"
@@ -1603,8 +1631,10 @@ function AccountContent() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Nomor Rekening / No. HP E-Wallet *</label>
+                <label htmlFor="account-number" className="block font-bold text-neutral-700 mb-1">Nomor Rekening / No. HP E-Wallet *</label>
                 <input
+                  id="account-number"
+                  name="accountNumber"
                   type="text"
                   required
                   value={accountNumber}
@@ -1615,8 +1645,10 @@ function AccountContent() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Nama Pemilik Rekening *</label>
+                <label htmlFor="account-holder" className="block font-bold text-neutral-700 mb-1">Nama Pemilik Rekening *</label>
                 <input
+                  id="account-holder"
+                  name="accountHolder"
                   type="text"
                   required
                   value={accountHolder}
@@ -1628,8 +1660,10 @@ function AccountContent() {
                 </span>
               </div>
 
-              <label className="flex items-center gap-2 pt-1 cursor-pointer">
+              <label htmlFor="bank-is-primary" className="flex items-center gap-2 pt-1 cursor-pointer">
                 <input
+                  id="bank-is-primary"
+                  name="isPrimary"
                   type="checkbox"
                   checked={bankIsPrimary}
                   onChange={(e) => setBankIsPrimary(e.target.checked)}

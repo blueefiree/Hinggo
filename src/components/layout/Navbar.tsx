@@ -158,10 +158,13 @@ export default function Navbar() {
         >
           <div className="relative w-full">
             <input
+              id="navbar-search"
+              name="search"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari barang preloved impianmu..."
+              aria-label="Cari barang preloved impianmu"
               className="w-full rounded-full bg-[#F6F6F4] py-2.5 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-neutral-400 outline-none transition border border-transparent focus:border-[#FFC629] focus:bg-white focus:ring-2 focus:ring-[#FFC629]/30"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />

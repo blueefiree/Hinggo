@@ -231,11 +231,13 @@ function CatalogContent() {
     <div className="mx-auto max-w-7xl px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
       {/* 0. Mobile Search Input (Visible on < 768px sesuai Figma node 10:25319) */}
       <div className="md:hidden mb-3">
-        <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
+        <label htmlFor="catalog-search" className="block text-[11px] font-semibold text-neutral-600 mb-1">
           Cari barang preloved
         </label>
         <div className="relative">
           <input
+            id="catalog-search"
+            name="search"
             type="text"
             value={searchQuery}
             onChange={(e) => {
@@ -416,8 +418,10 @@ function CatalogContent() {
               </label>
               <div className="flex flex-col gap-2.5">
                 <div>
-                  <span className="text-[10px] text-neutral-500 font-semibold">Harga Minimum</span>
+                  <label htmlFor="catalog-min-price" className="text-[10px] text-neutral-500 font-semibold block">Harga Minimum</label>
                   <input
+                    id="catalog-min-price"
+                    name="minPrice"
                     type="number"
                     value={minPrice}
                     onChange={(e) => handlePriceChange(Number(e.target.value), maxPrice)}
@@ -426,8 +430,10 @@ function CatalogContent() {
                   />
                 </div>
                 <div>
-                  <span className="text-[10px] text-neutral-500 font-semibold">Harga Maksimum</span>
+                  <label htmlFor="catalog-max-price" className="text-[10px] text-neutral-500 font-semibold block">Harga Maksimum</label>
                   <input
+                    id="catalog-max-price"
+                    name="maxPrice"
                     type="number"
                     value={maxPrice}
                     onChange={(e) => handlePriceChange(minPrice, Number(e.target.value))}
@@ -468,6 +474,9 @@ function CatalogContent() {
             <div className="hidden sm:flex items-center gap-2">
               <div className="relative">
                 <select
+                  id="catalog-sort-desktop"
+                  name="sortBy"
+                  aria-label="Urutkan produk"
                   value={sortBy}
                   onChange={(e) => handleSortChange(e.target.value)}
                   className="appearance-none rounded-xl border border-[#EBEBEB] bg-white pl-3.5 pr-8 py-2 text-xs font-bold text-[#1A1A1A] outline-none hover:border-neutral-400 cursor-pointer shadow-xs"
@@ -496,6 +505,9 @@ function CatalogContent() {
 
             {/* Mobile Sort Dropdown */}
             <select
+              id="catalog-sort-mobile"
+              name="sortBy"
+              aria-label="Urutkan produk"
               value={sortBy}
               onChange={(e) => handleSortChange(e.target.value)}
               className="rounded-full border border-neutral-300 bg-white px-3 py-1.5 font-bold text-neutral-800 shrink-0 outline-none"

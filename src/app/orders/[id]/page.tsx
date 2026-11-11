@@ -601,7 +601,10 @@ export default function OrderDetailPage() {
             </p>
 
             <form onSubmit={submitIssue} className="flex flex-col gap-4">
+              <label htmlFor="issueText" className="sr-only">Deskripsi Kendala</label>
               <textarea
+                id="issueText"
+                name="issueText"
                 rows={4}
                 value={issueText}
                 onChange={(e) => setIssueText(e.target.value)}

@@ -106,10 +106,13 @@ export default function MobileBottomNav() {
           >
             <Search className="h-4 w-4 text-neutral-400 shrink-0" />
             <input
+              id="mobile-bottom-search"
+              name="search"
               type="text"
               value={mobileSearch}
               onChange={(e) => setMobileSearch(e.target.value)}
               placeholder="Cari keyboard, mouse, headset..."
+              aria-label="Cari keyboard, mouse, headset"
               className="w-full bg-transparent text-xs text-[#1A1A1A] placeholder:text-neutral-400 outline-none"
             />
           </form>

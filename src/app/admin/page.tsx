@@ -884,10 +884,13 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-2">
               <div className="relative w-full sm:w-72">
                 <input
+                  id="admin-product-search"
+                  name="productSearch"
                   type="text"
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
                   placeholder="Cari kode, nama, atau brand..."
+                  aria-label="Cari kode, nama, atau brand"
                   className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] py-2 pl-9 pr-3 text-xs text-[#1A1A1A] outline-none focus:border-[#FFC629] focus:bg-white"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
@@ -1313,7 +1316,10 @@ export default function AdminDashboardPage() {
           </div>
 
           <form onSubmit={handleSendChat} className="flex flex-col gap-3">
+            <label htmlFor="admin-chat-message-text" className="sr-only">Balasan Resmi Chat</label>
             <textarea
+              id="admin-chat-message-text"
+              name="chatMessageText"
               rows={4}
               value={chatMessageText}
               onChange={(e) => setChatMessageText(e.target.value)}
@@ -1437,8 +1443,10 @@ export default function AdminDashboardPage() {
             <form onSubmit={handleSaveProduct} className="mt-4 flex flex-col gap-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Nama Barang *</label>
+                  <label htmlFor="form-name" className="block font-bold text-neutral-700 mb-1">Nama Barang *</label>
                   <input
+                    id="form-name"
+                    name="name"
                     type="text"
                     required
                     value={formName}
@@ -1448,8 +1456,10 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Brand / Merek *</label>
+                  <label htmlFor="form-brand" className="block font-bold text-neutral-700 mb-1">Brand / Merek *</label>
                   <input
+                    id="form-brand"
+                    name="brand"
                     type="text"
                     required
                     value={formBrand}
@@ -1462,8 +1472,10 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Kategori *</label>
+                  <label htmlFor="form-category" className="block font-bold text-neutral-700 mb-1">Kategori *</label>
                   <select
+                    id="form-category"
+                    name="category"
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
                     className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] px-3 py-2.5 text-xs text-[#1A1A1A] outline-none focus:border-[#FFC629] focus:bg-white"
@@ -1476,8 +1488,10 @@ export default function AdminDashboardPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Kondisi</label>
+                  <label htmlFor="form-condition" className="block font-bold text-neutral-700 mb-1">Kondisi</label>
                   <select
+                    id="form-condition"
+                    name="condition"
                     value={formCondition}
                     onChange={(e) => setFormCondition(e.target.value)}
                     className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] px-3 py-2.5 text-xs text-[#1A1A1A] outline-none focus:border-[#FFC629] focus:bg-white"
@@ -1487,8 +1501,10 @@ export default function AdminDashboardPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Lama Pemakaian</label>
+                  <label htmlFor="form-duration" className="block font-bold text-neutral-700 mb-1">Lama Pemakaian</label>
                   <input
+                    id="form-duration"
+                    name="usageDuration"
                     type="text"
                     value={formDuration}
                     onChange={(e) => setFormDuration(e.target.value)}
@@ -1500,8 +1516,10 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Harga Jual Hingo (Rp) *</label>
+                  <label htmlFor="form-price" className="block font-bold text-neutral-700 mb-1">Harga Jual Hingo (Rp) *</label>
                   <input
+                    id="form-price"
+                    name="price"
                     type="number"
                     required
                     value={formPrice}
@@ -1511,8 +1529,10 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Harga Baru Referensi (Rp)</label>
+                  <label htmlFor="form-original-price" className="block font-bold text-neutral-700 mb-1">Harga Baru Referensi (Rp)</label>
                   <input
+                    id="form-original-price"
+                    name="originalPrice"
                     type="number"
                     value={formOriginalPrice}
                     onChange={(e) => setFormOriginalPrice(e.target.value)}
@@ -1524,8 +1544,10 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Varian / Switch</label>
+                  <label htmlFor="form-variant" className="block font-bold text-neutral-700 mb-1">Varian / Switch</label>
                   <input
+                    id="form-variant"
+                    name="variant"
                     type="text"
                     value={formVariant}
                     onChange={(e) => setFormVariant(e.target.value)}
@@ -1534,8 +1556,10 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Kelengkapan</label>
+                  <label htmlFor="form-completeness" className="block font-bold text-neutral-700 mb-1">Kelengkapan</label>
                   <input
+                    id="form-completeness"
+                    name="completeness"
                     type="text"
                     value={formCompleteness}
                     onChange={(e) => setFormCompleteness(e.target.value)}
@@ -1546,8 +1570,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Deskripsi Hasil Uji Inspeksi</label>
+                <label htmlFor="form-desc" className="block font-bold text-neutral-700 mb-1">Deskripsi Hasil Uji Inspeksi</label>
                 <textarea
+                  id="form-desc"
+                  name="description"
                   rows={2}
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
@@ -1557,8 +1583,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Catatan Cacat Kosmetik</label>
+                <label htmlFor="form-defect" className="block font-bold text-neutral-700 mb-1">Catatan Cacat Kosmetik</label>
                 <input
+                  id="form-defect"
+                  name="defect"
                   type="text"
                   value={formDefect}
                   onChange={(e) => setFormDefect(e.target.value)}
@@ -1575,6 +1603,8 @@ export default function AdminDashboardPage() {
 
                 <div className="flex flex-col sm:flex-row items-center gap-2 mb-3">
                   <input
+                    id="form-file-upload"
+                    name="fileUpload"
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileUpload}
@@ -1593,6 +1623,8 @@ export default function AdminDashboardPage() {
 
                   <div className="flex-1 flex items-center gap-1.5 w-full">
                     <input
+                      id="form-url-input"
+                      name="urlInput"
                       type="text"
                       value={formUrlInput}
                       onChange={(e) => setFormUrlInput(e.target.value)}
@@ -1670,8 +1702,10 @@ export default function AdminDashboardPage() {
 
             <form onSubmit={handleSaveInspection} className="mt-4 flex flex-col gap-3 text-xs">
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Spesifikasi Terverifikasi</label>
+                <label htmlFor="ins-specs" className="block font-bold text-neutral-700 mb-1">Spesifikasi Terverifikasi</label>
                 <input
+                  id="ins-specs"
+                  name="specs"
                   type="text"
                   required
                   value={insSpecs}
@@ -1681,8 +1715,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Uji Fungsi Switch & Sensor</label>
+                <label htmlFor="ins-func" className="block font-bold text-neutral-700 mb-1">Uji Fungsi Switch & Sensor</label>
                 <textarea
+                  id="ins-func"
+                  name="functionality"
                   rows={2}
                   required
                   value={insFunc}
@@ -1692,8 +1728,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Kondisi Aktual & Cacat Fisik</label>
+                <label htmlFor="ins-defect" className="block font-bold text-neutral-700 mb-1">Kondisi Aktual & Cacat Fisik</label>
                 <input
+                  id="ins-defect"
+                  name="defect"
                   type="text"
                   required
                   value={insDefect}
@@ -1703,8 +1741,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Kelengkapan Diterima</label>
+                <label htmlFor="ins-comp" className="block font-bold text-neutral-700 mb-1">Kelengkapan Diterima</label>
                 <input
+                  id="ins-comp"
+                  name="completeness"
                   type="text"
                   required
                   value={insComp}
@@ -1714,8 +1754,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Usulan Harga Jual Final (Rp) *</label>
+                <label htmlFor="ins-price" className="block font-bold text-neutral-700 mb-1">Usulan Harga Jual Final (Rp) *</label>
                 <input
+                  id="ins-price"
+                  name="price"
                   type="number"
                   required
                   value={insPrice}
@@ -1768,8 +1810,10 @@ export default function AdminDashboardPage() {
 
             <form onSubmit={handleSaveShippingTracking} className="mt-4 flex flex-col gap-3 text-xs">
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Kurir Ekspedisi</label>
+                <label htmlFor="courier-input" className="block font-bold text-neutral-700 mb-1">Kurir Ekspedisi</label>
                 <select
+                  id="courier-input"
+                  name="courier"
                   value={courierInput}
                   onChange={(e) => setCourierInput(e.target.value)}
                   className="w-full rounded-xl border border-neutral-300 bg-[#F6F6F4] p-2.5 text-xs font-bold"
@@ -1781,8 +1825,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Nomor Resi Pengiriman *</label>
+                <label htmlFor="resi-input" className="block font-bold text-neutral-700 mb-1">Nomor Resi Pengiriman *</label>
                 <input
+                  id="resi-input"
+                  name="trackingNumber"
                   type="text"
                   required
                   value={resiInput}

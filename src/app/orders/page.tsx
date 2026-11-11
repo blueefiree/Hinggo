@@ -158,10 +158,13 @@ export default function BuyerOrdersPage() {
         {/* Search Input */}
         <div className="relative w-full md:w-72">
           <input
+            id="orders-search"
+            name="search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nomor pesanan / gear..."
+            aria-label="Cari nomor pesanan atau nama gear"
             className="w-full rounded-full bg-[#F6F6F4] py-2 pl-9 pr-4 text-xs text-[#1A1A1A] outline-none border border-neutral-200 focus:border-[#FFC629] focus:bg-white"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />

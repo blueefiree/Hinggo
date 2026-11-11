@@ -147,8 +147,10 @@ export default function ConsignmentShipPage() {
             </h3>
 
             <div className="flex flex-col gap-3 text-xs">
-              <label className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100 transition">
+              <label htmlFor="chk-bubble-wrap" className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100 transition">
                 <input
+                  id="chk-bubble-wrap"
+                  name="bubbleWrap"
                   type="checkbox"
                   checked={checkedChecklist.bubbleWrap}
                   onChange={(e) =>
@@ -162,8 +164,10 @@ export default function ConsignmentShipPage() {
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100 transition">
+              <label htmlFor="chk-complete-gear" className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100 transition">
                 <input
+                  id="chk-complete-gear"
+                  name="completeGear"
                   type="checkbox"
                   checked={checkedChecklist.completeGear}
                   onChange={(e) =>
@@ -177,8 +181,10 @@ export default function ConsignmentShipPage() {
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 rounded-2xl border border-[#FFC629] bg-[#FFFBEB] cursor-pointer hover:bg-amber-100/60 transition">
+              <label htmlFor="chk-code-note" className="flex items-start gap-3 p-3 rounded-2xl border border-[#FFC629] bg-[#FFFBEB] cursor-pointer hover:bg-amber-100/60 transition">
                 <input
+                  id="chk-code-note"
+                  name="codeNote"
                   type="checkbox"
                   checked={checkedChecklist.codeNote}
                   onChange={(e) =>

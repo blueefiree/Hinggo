@@ -229,7 +229,7 @@ export default function HowItWorksPage() {
               {/* Price Slider & Input */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-neutral-700">
+                  <label htmlFor="estimatedPrice" className="text-xs font-bold text-neutral-700">
                     Estimasi Harga Jual Pasar
                   </label>
                   <span className="font-mono text-base font-black text-amber-950">
@@ -238,6 +238,8 @@ export default function HowItWorksPage() {
                 </div>
 
                 <input
+                  id="estimatedPrice"
+                  name="estimatedPrice"
                   type="range"
                   min="200000"
                   max="5000000"

@@ -79,8 +79,10 @@ export default function CartPage() {
           <div className="lg:col-span-8 flex flex-col gap-4">
             {/* Bar Pilih Semua */}
             <div className="flex items-center justify-between rounded-2xl border border-[#EBEBEB] bg-white p-3.5 sm:p-4 shadow-xs">
-              <label className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#1A1A1A] cursor-pointer select-none">
+              <label htmlFor="cart-select-all" className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#1A1A1A] cursor-pointer select-none">
                 <input
+                  id="cart-select-all"
+                  name="selectAll"
                   type="checkbox"
                   checked={allSelected}
                   onChange={handleSelectAllToggle}
@@ -114,6 +116,9 @@ export default function CartPage() {
                   <div className="flex items-center justify-between pb-3 border-b border-neutral-100 text-xs">
                     <div className="flex items-center gap-2">
                       <input
+                        id={`cart-item-${itemId}`}
+                        name={`cart-item-${itemId}`}
+                        aria-label={`Pilih ${item.product.name}`}
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleCartItemSelection(itemId, !isSelected)}
