@@ -71,11 +71,6 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product) return;
-    if (!user) {
-      showToast("Silakan masuk terlebih dahulu untuk melanjutkan");
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/product/${product.slug}`)}`);
-      return;
-    }
     const res = await addToCart(product);
     if (res.alreadyInCart) {
       router.push("/cart");

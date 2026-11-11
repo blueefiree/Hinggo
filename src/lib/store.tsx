@@ -114,6 +114,38 @@ interface HingoStoreContextType {
 
 const HingoStoreContext = createContext<HingoStoreContextType | null>(null);
 
+const GUEST_CART_KEY = "hingo_guest_cart";
+const GUEST_WISHLIST_KEY = "hingo_guest_wishlist";
+
+function getLocalStorage<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (e) {
+    console.warn(`Error reading localStorage key "${key}":`, e);
+    return fallback;
+  }
+}
+
+function setLocalStorage<T>(key: string, value: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn(`Error writing localStorage key "${key}":`, e);
+  }
+}
+
+function removeLocalStorage(key: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch (e) {
+    console.warn(`Error removing localStorage key "${key}":`, e);
+  }
+}
+
 export function HingoProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -251,39 +283,84 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
         }
         setBankAccounts(data.user.bankAccounts || []);
 
+        // GABUNGKAN (Merge) cart & wishlist tamu dari localStorage ke akun jika ada
+        const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
+        const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
+
+        if (guestCart.length > 0) {
+          try {
+            await fetch("/api/cart", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                mergeItems: guestCart.map((c) => ({
+                  productId: c.product?.id || (c as any).productId,
+                  quantity: 1,
+                })),
+              }),
+            });
+            removeLocalStorage(GUEST_CART_KEY);
+          } catch (e) {
+            console.warn("Failed merging guest cart:", e);
+          }
+        }
+
+        if (guestWishlist.length > 0) {
+          try {
+            await fetch("/api/wishlist", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                mergeProductIds: guestWishlist.map((w) => w.id),
+              }),
+            });
+            removeLocalStorage(GUEST_WISHLIST_KEY);
+          } catch (e) {
+            console.warn("Failed merging guest wishlist:", e);
+          }
+        }
+
         // Load logged-in user data
-        refreshWishlist();
-        refreshCart();
-        refreshOrders();
-        refreshConsignments();
-        refreshPayouts();
-        refreshChat();
+        await Promise.all([
+          refreshWishlist(),
+          refreshCart(),
+          refreshOrders(),
+          refreshConsignments(),
+          refreshPayouts(),
+          refreshChat(),
+        ]);
       } else {
-        // Strict Guest: empty all user-related state
+        // Strict Guest: load guest cart & wishlist from localStorage
         setUser(null);
         setRole("USER");
         setAddresses([]);
         setBankAccounts([]);
-        setWishlist([]);
-        setWishlistIds([]);
-        setCart([]);
         setOrders([]);
         setConsignments([]);
         setPayouts([]);
         setChatThreads([]);
+
+        const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
+        const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
+        setCart(guestCart);
+        setWishlist(guestWishlist);
+        setWishlistIds(guestWishlist.map((w) => w.id));
       }
     } catch (e) {
       setUser(null);
       setRole("USER");
       setAddresses([]);
       setBankAccounts([]);
-      setWishlist([]);
-      setWishlistIds([]);
-      setCart([]);
       setOrders([]);
       setConsignments([]);
       setPayouts([]);
       setChatThreads([]);
+
+      const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
+      const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
+      setCart(guestCart);
+      setWishlist(guestWishlist);
+      setWishlistIds(guestWishlist.map((w) => w.id));
     } finally {
       setIsLoadingUser(false);
     }
@@ -311,13 +388,17 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     setRole("USER");
     setAddresses([]);
     setBankAccounts([]);
-    setWishlist([]);
-    setWishlistIds([]);
-    setCart([]);
     setOrders([]);
     setConsignments([]);
     setPayouts([]);
     setChatThreads([]);
+
+    const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
+    const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
+    setCart(guestCart);
+    setWishlist(guestWishlist);
+    setWishlistIds(guestWishlist.map((w) => w.id));
+
     showToast("Berhasil keluar dari akun");
     window.location.href = "/";
   };
@@ -388,16 +469,6 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleWishlist = async (product: Product): Promise<boolean> => {
-    if (!user) {
-      const callbackUrl = encodeURIComponent(
-        typeof window !== "undefined"
-          ? window.location.pathname + window.location.search
-          : "/"
-      );
-      router.push(`/auth/login?callbackUrl=${callbackUrl}`);
-      return false;
-    }
-
     const wasIn = isInWishlist(product.id);
 
     // Optimistic UI update
@@ -413,6 +484,20 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
       showToast(`Disimpan ke wishlist: ${product.name}`);
     }
 
+    if (!user) {
+      // Mode Tamu: Simpan ke localStorage
+      const currentWish = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
+      let updated: Product[];
+      if (wasIn) {
+        updated = currentWish.filter((p) => p.id !== product.id);
+      } else {
+        updated = [product, ...currentWish.filter((p) => p.id !== product.id)];
+      }
+      setLocalStorage(GUEST_WISHLIST_KEY, updated);
+      return !wasIn;
+    }
+
+    // Mode User: Simpan ke server Supabase
     try {
       const res = await fetch("/api/wishlist/toggle", {
         method: "POST",
@@ -443,26 +528,15 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     if (item) {
       return await toggleWishlist(item);
     } else {
-      // Just toggle by dummy product with id
       return await toggleWishlist({ id: productId } as any);
     }
   };
 
-  // Cart Actions Real-Time
+  // Cart Actions Real-Time (Mendukung Tamu & Pengguna Login)
   const addToCart = async (
     product: Product,
     quantity = 1
   ): Promise<{ success: boolean; alreadyInCart?: boolean }> => {
-    if (!user) {
-      const callbackUrl = encodeURIComponent(
-        typeof window !== "undefined"
-          ? window.location.pathname + window.location.search
-          : "/"
-      );
-      router.push(`/auth/login?callbackUrl=${callbackUrl}`);
-      return { success: false };
-    }
-
     const existing = cart.find(
       (item) => item.product.id === product.id || (item as any).productId === product.id
     );
@@ -472,7 +546,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
       return { success: true, alreadyInCart: true };
     }
 
-    // Optimistic UI update
+    // Preloved hanya tersedia 1 (stok 1)
     const optimisticItem: CartItem = {
       id: `cart-${Date.now()}`,
       product,
@@ -482,11 +556,22 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     setCart((prev) => [optimisticItem, ...prev]);
     showToast("Berhasil ditambahkan ke keranjang!");
 
+    if (!user) {
+      // Simpan ke localStorage untuk mode tamu
+      const currentGuest = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
+      const filtered = currentGuest.filter(
+        (i) => i.product.id !== product.id && (i as any).productId !== product.id
+      );
+      setLocalStorage(GUEST_CART_KEY, [optimisticItem, ...filtered]);
+      return { success: true, alreadyInCart: false };
+    }
+
+    // Mode User Terautentikasi: Simpan ke Supabase via API
     try {
       const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, quantity }),
+        body: JSON.stringify({ productId: product.id, quantity: 1 }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -504,7 +589,6 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromCart = async (idOrProductId: string) => {
-    // Optimistic update
     setCart((prev) =>
       prev.filter(
         (item) =>
@@ -515,24 +599,45 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     );
     showToast("Barang dihapus dari keranjang");
 
+    if (!user) {
+      const currentGuest = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
+      const filtered = currentGuest.filter(
+        (i) =>
+          i.id !== idOrProductId &&
+          i.product.id !== idOrProductId &&
+          (i as any).productId !== idOrProductId
+      );
+      setLocalStorage(GUEST_CART_KEY, filtered);
+      return;
+    }
+
     try {
-      await fetch(`/api/cart?id=${encodeURIComponent(idOrProductId)}`, {
-        method: "DELETE",
-      });
+      await fetch(
+        `/api/cart?id=${encodeURIComponent(idOrProductId)}&productId=${encodeURIComponent(
+          idOrProductId
+        )}`,
+        { method: "DELETE" }
+      );
     } catch (e) {
       refreshCart();
     }
   };
 
   const toggleCartItemSelection = async (idOrProductId: string, selected: boolean) => {
-    setCart((prev) =>
-      prev.map((item) => {
+    setCart((prev) => {
+      const updated = prev.map((item) => {
         if (item.id === idOrProductId || item.product.id === idOrProductId) {
           return { ...item, selected };
         }
         return item;
-      })
-    );
+      });
+      if (!user) {
+        setLocalStorage(GUEST_CART_KEY, updated);
+      }
+      return updated;
+    });
+
+    if (!user) return;
 
     try {
       await fetch("/api/cart", {
@@ -546,7 +651,15 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleSelectAllCart = async (selected: boolean) => {
-    setCart((prev) => prev.map((item) => ({ ...item, selected })));
+    setCart((prev) => {
+      const updated = prev.map((item) => ({ ...item, selected }));
+      if (!user) {
+        setLocalStorage(GUEST_CART_KEY, updated);
+      }
+      return updated;
+    });
+
+    if (!user) return;
 
     try {
       await fetch("/api/cart", {
@@ -561,6 +674,10 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = async () => {
     setCart([]);
+    if (!user) {
+      removeLocalStorage(GUEST_CART_KEY);
+      return;
+    }
     try {
       await fetch("/api/cart", { method: "DELETE" });
     } catch (e) {

@@ -102,6 +102,7 @@ export async function POST(req: Request) {
       } else {
         // Buat user baru di Supabase
         const newPayload = {
+          id: userId,
           name: formattedName,
           email: userEmail,
           phone: userPhone,
@@ -166,18 +167,19 @@ export async function POST(req: Request) {
     }
 
     // 4. Buat signed session 30 hari (tahan banting di lingkungan serverless)
+    const finalUserId = userData?.id || userId || localUser.id;
     const sessionToken = createSessionToken({
-      userId: localUser.id,
-      name: localUser.name,
-      phone: localUser.phone,
-      email: localUser.email,
-      role: localUser.role,
-      city: localUser.city,
-      avatarUrl: localUser.avatarUrl,
-      bio: (localUser as any).bio || null,
-      phoneVerified: localUser.phoneVerified,
-      emailVerified: localUser.emailVerified,
-      kycStatus: localUser.kycStatus,
+      userId: finalUserId,
+      name: userData?.name || localUser.name,
+      phone: userData?.phone || localUser.phone,
+      email: userData?.email || localUser.email,
+      role: userData?.role || localUser.role,
+      city: userData?.city || localUser.city,
+      avatarUrl: userData?.avatar_url || localUser.avatarUrl,
+      bio: (userData as any)?.bio || (localUser as any).bio || null,
+      phoneVerified: Boolean(userData?.phone_verified ?? localUser.phoneVerified),
+      emailVerified: Boolean(userData?.email_verified ?? localUser.emailVerified),
+      kycStatus: userData?.kyc_status || localUser.kycStatus,
       createdAt: localUser.createdAt?.toISOString?.() || new Date().toISOString(),
     });
 
@@ -202,7 +204,7 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24 * 30, // 30 hari
     });
 
-    cookieStore.set("hingo_user_id", localUser.id, {
+    cookieStore.set("hingo_user_id", finalUserId, {
       path: "/",
       httpOnly: false,
       sameSite: "lax",
@@ -218,7 +220,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      user: localUser,
+      user: {
+        ...localUser,
+        id: finalUserId,
+      },
       redirectTo: "/account",
     });
   } catch (error: any) {

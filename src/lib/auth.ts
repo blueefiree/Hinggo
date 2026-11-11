@@ -74,6 +74,43 @@ export function verifySessionToken(token: string): SessionPayload | null {
  * Memastikan record User secara fisik tersimpan di database Prisma SQLite lokal.
  * Mencegah error 'Foreign key constraint violated' saat pembuatan barang titipan, alamat, atau pesanan.
  */
+export async function ensureSupabaseUser(user: {
+  id: string;
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  role?: string | null;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+  kycStatus?: string | null;
+}) {
+  if (!user || !user.id || user.id === "user-naya") return;
+  try {
+    const { data: existing } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase.from("users").insert({
+        id: user.id,
+        name: user.name || "Pengguna Hingo",
+        email: user.email || null,
+        phone: user.phone || null,
+        city: user.city || "Jakarta Selatan",
+        role: user.role || "USER",
+        phone_verified: Boolean(user.phoneVerified),
+        email_verified: Boolean(user.emailVerified),
+        kyc_status: user.kycStatus || "UNVERIFIED",
+      });
+    }
+  } catch (e) {
+    console.warn("ensureSupabaseUser fallback:", e);
+  }
+}
+
 export async function ensurePrismaUser(user: {
   id: string;
   name?: string | null;
@@ -265,6 +302,18 @@ export async function getCurrentUser() {
           kycStatus: payload.kycStatus || "UNVERIFIED",
           avatarUrl: payload.avatarUrl || null,
           bio: payload.bio || null,
+        });
+
+        await ensureSupabaseUser({
+          id: payload.userId,
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone,
+          city: payload.city,
+          role: payload.role,
+          phoneVerified: payload.phoneVerified,
+          emailVerified: payload.emailVerified,
+          kycStatus: payload.kycStatus,
         });
 
         if (ensured) return ensured;

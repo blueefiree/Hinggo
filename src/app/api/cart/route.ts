@@ -1,7 +1,41 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
+
+function formatProduct(item: any) {
+  if (!item) return null;
+  return {
+    id: item.id,
+    code: item.code,
+    slug: item.slug,
+    brand: item.brand,
+    name: item.name,
+    subtitle: item.subtitle,
+    category: item.category,
+    condition: item.condition,
+    usageDuration: item.usage_duration || item.usageDuration,
+    switchOrVariant: item.switch_or_variant || item.switchOrVariant,
+    completeness: item.completeness,
+    description: item.description,
+    defectNotes: item.defect_notes || item.defectNotes,
+    price: Number(item.price),
+    originalNewPrice: Number(item.original_new_price || item.originalNewPrice || 0),
+    stock: item.stock || 1,
+    location: item.location || "Jakarta Selatan",
+    rating: Number(item.rating || 5.0),
+    soldCount: item.sold_count || item.soldCount || 0,
+    isVerifiedByTeam: Boolean(item.is_verified_by_team ?? item.isVerifiedByTeam),
+    images: Array.isArray(item.images)
+      ? item.images
+      : typeof item.images === "string"
+      ? JSON.parse(item.images || "[]")
+      : [],
+    status: item.status || "AVAILABLE",
+    createdAt: item.created_at || item.createdAt,
+  };
+}
 
 export async function GET() {
   try {
@@ -10,29 +44,75 @@ export async function GET() {
       return NextResponse.json({ items: [] });
     }
 
-    const userEmailNorm = user.email?.trim()?.toLowerCase();
-    const items = await prisma.cartItem.findMany({
-      where: {
-        OR: [
-          ...(userEmailNorm ? [{ userEmail: userEmailNorm }] : []),
-          { userId: user.id },
-        ],
-      },
-      include: {
-        product: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    // 1. Ambil dari Supabase cart_items
+    try {
+      const { data: sbItems, error: sbErr } = await supabase
+        .from("cart_items")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-    const parsedItems = items.map((item) => ({
-      ...item,
-      product: {
-        ...item.product,
-        images: JSON.parse(item.product.images || "[]"),
-      },
-    }));
+      if (!sbErr && sbItems && sbItems.length > 0) {
+        const productIds = sbItems.map((i: any) => i.product_id);
+        const { data: prods } = await supabase
+          .from("products")
+          .select("*")
+          .in("id", productIds);
 
-    return NextResponse.json({ items: parsedItems });
+        const prodMap = new Map((prods || []).map((p: any) => [p.id, formatProduct(p)]));
+
+        const parsedItems = sbItems
+          .map((item: any) => {
+            const product = prodMap.get(item.product_id);
+            if (!product) return null;
+            return {
+              id: item.id,
+              userId: item.user_id,
+              productId: item.product_id,
+              quantity: item.quantity || 1,
+              selected: item.selected !== false,
+              product,
+              createdAt: item.created_at,
+            };
+          })
+          .filter(Boolean);
+
+        return NextResponse.json({ items: parsedItems });
+      } else if (!sbErr && sbItems && sbItems.length === 0) {
+        return NextResponse.json({ items: [] });
+      }
+    } catch (sbError) {
+      console.warn("Supabase cart GET error, falling back to local:", sbError);
+    }
+
+    // 2. Fallback Prisma jika Supabase tidak tersedia
+    try {
+      const userEmailNorm = user.email?.trim()?.toLowerCase();
+      const items = await prisma.cartItem.findMany({
+        where: {
+          OR: [
+            ...(userEmailNorm ? [{ userEmail: userEmailNorm }] : []),
+            { userId: user.id },
+          ],
+        },
+        include: {
+          product: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const parsedItems = items.map((item) => ({
+        ...item,
+        product: {
+          ...item.product,
+          images: JSON.parse(item.product.images || "[]"),
+        },
+      }));
+
+      return NextResponse.json({ items: parsedItems });
+    } catch {
+      return NextResponse.json({ items: [] });
+    }
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -48,11 +128,66 @@ export async function POST(req: Request) {
       );
     }
 
-    const { productId, quantity = 1 } = await req.json();
+    const body = await req.json();
 
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-    });
+    // Skenario Penggabungan (Merge) dari Keranjang Tamu (localStorage) saat login
+    if (Array.isArray(body.mergeItems)) {
+      const mergeItems: Array<{ productId: string; quantity?: number }> = body.mergeItems;
+      let mergedCount = 0;
+
+      for (const m of mergeItems) {
+        if (!m.productId) continue;
+        try {
+          const { data: existing } = await supabase
+            .from("cart_items")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("product_id", m.productId)
+            .maybeSingle();
+
+          if (!existing) {
+            await supabase.from("cart_items").insert({
+              id: crypto.randomUUID(),
+              user_id: user.id,
+              product_id: m.productId,
+              quantity: 1, // Preloved stok 1
+              selected: true,
+            });
+            mergedCount++;
+          }
+        } catch {}
+      }
+
+      return NextResponse.json({ success: true, mergedCount });
+    }
+
+    const { productId, quantity = 1 } = body;
+    if (!productId) {
+      return NextResponse.json({ error: "Product ID diperlukan" }, { status: 400 });
+    }
+
+    // Cek ketersediaan produk di Supabase
+    let product: any = null;
+    try {
+      const { data: p } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .maybeSingle();
+      if (p) product = formatProduct(p);
+    } catch {}
+
+    if (!product) {
+      try {
+        const localP = await prisma.product.findUnique({ where: { id: productId } });
+        if (localP) {
+          product = {
+            ...localP,
+            images: JSON.parse(localP.images || "[]"),
+          };
+        }
+      } catch {}
+    }
 
     if (!product || product.stock <= 0 || product.status !== "AVAILABLE") {
       return NextResponse.json(
@@ -61,60 +196,100 @@ export async function POST(req: Request) {
       );
     }
 
-    const existing = await prisma.cartItem.findFirst({
-      where: { userId: user.id, productId },
-      include: { product: true },
-    });
+    // Cek duplikasi di keranjang
+    let alreadyInCart = false;
+    let existingItem: any = null;
 
-    if (existing) {
+    try {
+      const { data: existing } = await supabase
+        .from("cart_items")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("product_id", productId)
+        .maybeSingle();
+
+      if (existing) {
+        alreadyInCart = true;
+        existingItem = {
+          id: existing.id,
+          userId: existing.user_id,
+          productId: existing.product_id,
+          quantity: 1,
+          selected: existing.selected !== false,
+          product,
+        };
+      }
+    } catch {}
+
+    if (!alreadyInCart) {
+      try {
+        const localExisting = await prisma.cartItem.findFirst({
+          where: { userId: user.id, productId },
+          include: { product: true },
+        });
+        if (localExisting) {
+          alreadyInCart = true;
+          existingItem = {
+            ...localExisting,
+            product: {
+              ...localExisting.product,
+              images: JSON.parse(localExisting.product.images || "[]"),
+            },
+          };
+        }
+      } catch {}
+    }
+
+    if (alreadyInCart) {
       return NextResponse.json({
         success: true,
         alreadyInCart: true,
-        item: {
-          ...existing,
-          product: {
-            ...existing.product,
-            images: JSON.parse(existing.product.images || "[]"),
-          },
-        },
+        item: existingItem,
       });
     }
 
-    const userEmailNorm = user.email?.trim()?.toLowerCase();
-    const created = await prisma.cartItem.create({
-      data: {
-        userId: user.id,
-        userEmail: userEmailNorm,
-        productId,
-        quantity: 1,
-        selected: true,
-      },
-      include: {
-        product: true,
-      },
-    });
+    // Tambahkan item baru ke Supabase
+    const cartItemId = crypto.randomUUID();
+    const newItem = {
+      id: cartItemId,
+      userId: user.id,
+      productId,
+      quantity: 1, // Preloved hanya tersedia 1
+      selected: true,
+      product,
+    };
 
-    // Sinkronkan ke Supabase
     try {
       await supabase.from("cart_items").insert({
+        id: cartItemId,
         user_id: user.id,
-        user_email: userEmailNorm,
         product_id: productId,
         quantity: 1,
         selected: true,
       });
-    } catch (e) {}
+    } catch (sbErr) {
+      console.warn("Supabase insert cart error:", sbErr);
+    }
+
+    // Sinkronkan ke Prisma lokal
+    try {
+      const userEmailNorm = user.email?.trim()?.toLowerCase();
+      await prisma.cartItem.create({
+        data: {
+          id: cartItemId,
+          userId: user.id,
+          userEmail: userEmailNorm,
+          productId,
+          quantity: 1,
+          selected: true,
+        },
+      });
+    } catch {}
 
     return NextResponse.json({
       success: true,
       alreadyInCart: false,
-      item: {
-        ...created,
-        product: {
-          ...created.product,
-          images: JSON.parse(created.product.images || "[]"),
-        },
-      },
+      item: newItem,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -131,21 +306,36 @@ export async function PATCH(req: Request) {
     const { id, selected, selectAll } = await req.json();
 
     if (selectAll !== undefined) {
-      await prisma.cartItem.updateMany({
-        where: { userId: user.id },
-        data: { selected: !!selectAll },
-      });
+      try {
+        await supabase
+          .from("cart_items")
+          .update({ selected: Boolean(selectAll) })
+          .eq("user_id", user.id);
+      } catch {}
+      try {
+        await prisma.cartItem.updateMany({
+          where: { userId: user.id },
+          data: { selected: Boolean(selectAll) },
+        });
+      } catch {}
       return NextResponse.json({ success: true });
     }
 
     if (id) {
-      const updated = await prisma.cartItem.update({
-        where: { id },
-        data: {
-          ...(selected !== undefined ? { selected: !!selected } : {}),
-        },
-      });
-      return NextResponse.json({ success: true, item: updated });
+      try {
+        await supabase
+          .from("cart_items")
+          .update({ selected: Boolean(selected) })
+          .eq("id", id)
+          .eq("user_id", user.id);
+      } catch {}
+      try {
+        await prisma.cartItem.update({
+          where: { id },
+          data: { selected: Boolean(selected) },
+        });
+      } catch {}
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Parameter id atau selectAll diperlukan" }, { status: 400 });
@@ -166,32 +356,29 @@ export async function DELETE(req: Request) {
     const productId = searchParams.get("productId");
     const selectedOnly = searchParams.get("selectedOnly") === "true";
 
-    if (id) {
-      await prisma.cartItem.deleteMany({
-        where: { id, userId: user.id },
-      });
-    } else if (productId) {
-      await prisma.cartItem.deleteMany({
-        where: { productId, userId: user.id },
-      });
-    } else if (selectedOnly) {
-      await prisma.cartItem.deleteMany({
-        where: { userId: user.id, selected: true },
-      });
-    } else {
-      await prisma.cartItem.deleteMany({
-        where: { userId: user.id },
-      });
-    }
-
-    // Sync delete to Supabase
     try {
-      if (productId) {
-        await supabase.from("cart_items").delete().eq("user_id", user.id).eq("product_id", productId);
+      if (id) {
+        await supabase.from("cart_items").delete().eq("id", id).eq("user_id", user.id);
+      } else if (productId) {
+        await supabase.from("cart_items").delete().eq("product_id", productId).eq("user_id", user.id);
+      } else if (selectedOnly) {
+        await supabase.from("cart_items").delete().eq("user_id", user.id).eq("selected", true);
       } else {
         await supabase.from("cart_items").delete().eq("user_id", user.id);
       }
-    } catch (e) {}
+    } catch {}
+
+    try {
+      if (id) {
+        await prisma.cartItem.deleteMany({ where: { id, userId: user.id } });
+      } else if (productId) {
+        await prisma.cartItem.deleteMany({ where: { productId, userId: user.id } });
+      } else if (selectedOnly) {
+        await prisma.cartItem.deleteMany({ where: { userId: user.id, selected: true } });
+      } else {
+        await prisma.cartItem.deleteMany({ where: { userId: user.id } });
+      }
+    } catch {}
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

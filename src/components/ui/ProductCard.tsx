@@ -28,11 +28,6 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
   const handleHeartClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user) {
-      showToast("Silakan masuk terlebih dahulu untuk melanjutkan");
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/catalog")}`);
-      return;
-    }
     toggleWishlist(product);
   };
 

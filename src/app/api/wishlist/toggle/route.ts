@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
@@ -19,42 +20,50 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     }
 
-    const existing = await prisma.wishlist.findUnique({
-      where: {
-        userId_productId: { userId: user.id, productId },
-      },
-    });
+    let isWishlisted = false;
 
-    if (existing) {
-      await prisma.wishlist.delete({
-        where: { id: existing.id },
-      });
-      // Sinkronkan ke Supabase
-      try {
-        await supabase
-          .from("wishlists")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("product_id", productId);
-      } catch (e) {}
+    // Supabase
+    try {
+      const { data: existing } = await supabase
+        .from("wishlists")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("product_id", productId)
+        .maybeSingle();
 
-      const count = await prisma.wishlist.count({ where: { userId: user.id } });
-      return NextResponse.json({ success: true, isWishlisted: false, count, productId });
+      if (existing) {
+        await supabase.from("wishlists").delete().eq("id", existing.id);
+        isWishlisted = false;
+      } else {
+        await supabase.from("wishlists").insert({
+          id: crypto.randomUUID(),
+          user_id: user.id,
+          product_id: productId,
+        });
+        isWishlisted = true;
+      }
+    } catch (e) {
+      console.warn("Supabase toggle wishlist error:", e);
     }
 
-    await prisma.wishlist.create({
-      data: { userId: user.id, productId },
-    });
-    // Sinkronkan ke Supabase
+    // Prisma fallback sync
     try {
-      await supabase
-        .from("wishlists")
-        .insert({ user_id: user.id, product_id: productId });
-    } catch (e) {}
+      const existing = await prisma.wishlist.findUnique({
+        where: {
+          userId_productId: { userId: user.id, productId },
+        },
+      });
 
-    const count = await prisma.wishlist.count({ where: { userId: user.id } });
+      if (existing) {
+        await prisma.wishlist.delete({ where: { id: existing.id } });
+      } else {
+        await prisma.wishlist.create({
+          data: { userId: user.id, productId },
+        });
+      }
+    } catch {}
 
-    return NextResponse.json({ success: true, isWishlisted: true, count, productId });
+    return NextResponse.json({ success: true, isWishlisted, productId });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

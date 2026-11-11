@@ -209,13 +209,12 @@ export default function Navbar() {
 
             {/* Wishlist Button */}
             <Link
-              href={user ? "/wishlist" : "/auth/login?callbackUrl=/wishlist"}
-              onClick={(e) => handleProtectedClick(e, "/wishlist")}
+              href="/wishlist"
               aria-label="Wishlist"
               className="relative flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
             >
               <Heart className="h-5 w-5" />
-              {user && wishlist.length > 0 && (
+              {wishlist.length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white animate-in zoom-in">
                   {wishlist.length}
                 </span>
@@ -224,13 +223,12 @@ export default function Navbar() {
 
             {/* Cart Button */}
             <Link
-              href={user ? "/cart" : "/auth/login?callbackUrl=/cart"}
-              onClick={(e) => handleProtectedClick(e, "/cart")}
+              href="/cart"
               aria-label="Keranjang"
               className="relative flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition"
             >
               <ShoppingBag className="h-5 w-5" />
-              {user && cart.length > 0 && (
+              {cart.length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#1A1A1A] text-[10px] font-bold text-white animate-in zoom-in">
                   {cart.length}
                 </span>
@@ -378,13 +376,12 @@ export default function Navbar() {
                 <MessageSquare className="h-4.5 w-4.5" />
               </Link>
               <Link
-                href={user ? "/cart" : "/auth/login?callbackUrl=/cart"}
-                onClick={(e) => handleProtectedClick(e, "/cart")}
+                href="/cart"
                 aria-label="Keranjang"
                 className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-[#F6F6F4] transition active:scale-95"
               >
                 <ShoppingBag className="h-4.5 w-4.5" />
-                {user && cart.length > 0 && (
+                {cart.length > 0 && (
                   <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#1A1A1A] text-[9px] font-bold text-white">
                     {cart.length}
                   </span>

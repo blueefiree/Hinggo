@@ -47,6 +47,12 @@ export default function CheckoutPage() {
   };
 
   const handlePay = async () => {
+    if (!user) {
+      showToast("Silakan masuk terlebih dahulu untuk menyelesaikan pembayaran");
+      router.push("/auth/login?callbackUrl=/checkout");
+      return;
+    }
+
     if (!targetProduct) {
       router.push("/cart");
       return;
