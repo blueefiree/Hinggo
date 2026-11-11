@@ -4,18 +4,18 @@
   :root {
     --brand-yellow: #FFC629;
     --brand-yellow-hover: #FFC420;
-    --brand-yellow-border: #F59E0B;
+    --brand-yellow-border: #FFE58A;
     --warm-cream: #FFFBEB;
-    --warm-cream-alt: #FFF9E4;
-    --warm-cream-border: #FDE68A;
+    --warm-cream-alt: #FFF3C4;
+    --warm-cream-border: #FFE58A;
     --surface-dark: #1A1A1A;
     --surface-neutral: #F6F6F4;
-    --surface-card-border: #E5E5E5;
+    --surface-card-border: #EBEBEB;
     --text-primary: #1A1A1A;
-    --text-muted: #666666;
-    --text-light: #8A8A8A;
-    --verified-green: #16A34A;
-    --verified-green-bg: #DCFCE7;
+    --text-secondary: #4B4B4B;
+    --text-muted: #8A8A8A;
+    --verified-green: #1F9D55;
+    --verified-green-bg: #E8F8EE;
   }
 
   body {
@@ -26,7 +26,7 @@
   }
 }
 
-/* Custom utilities matching Hingo Design System */
+/* Custom utilities matching Hingo Design System tokens from Figma */
 .bg-hingo-yellow {
   background-color: #FFC629;
 }
@@ -36,8 +36,8 @@
 .border-hingo-yellow {
   border-color: #FFC629;
 }
-.border-hingo-amber {
-  border-color: #F59E0B;
+.border-hingo-border {
+  border-color: #FFE58A;
 }
 .text-hingo-yellow {
   color: #D97706;
@@ -46,7 +46,7 @@
   background-color: #FFFBEB;
 }
 .border-warm-cream {
-  border-color: #FDE68A;
+  border-color: #FFE58A;
 }
 .bg-surface-neutral {
   background-color: #F6F6F4;
@@ -55,7 +55,7 @@
   background-color: #1A1A1A;
 }
 .border-surface-card {
-  border-color: #E5E5E5;
+  border-color: #EBEBEB;
 }
 
 /* Custom scrollbars */

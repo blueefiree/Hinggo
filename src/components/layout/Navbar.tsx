@@ -114,13 +114,12 @@ export default function Navbar() {
                   Kami cek, simpan, dan pasarkan.
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-neutral-600">
+              <div className="flex items-center gap-2 text-neutral-600 font-medium">
                 <Link
                   href="/how-it-works"
-                  className="flex items-center gap-1 font-medium hover:text-black hover:underline"
+                  className="hover:text-black hover:underline"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                  Cara titip jual
+                  Konsinyasi dikelola tim kami
                 </Link>
                 <span>·</span>
                 <Link
@@ -162,7 +161,7 @@ export default function Navbar() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari keyboard, mouse, headset, monitor..."
+              placeholder="Cari barang preloved impianmu..."
               className="w-full rounded-full bg-[#F6F6F4] py-2.5 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-neutral-400 outline-none transition border border-transparent focus:border-[#FFC629] focus:bg-white focus:ring-2 focus:ring-[#FFC629]/30"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
@@ -174,7 +173,7 @@ export default function Navbar() {
           {/* Quick links */}
           <nav className="flex items-center gap-5 text-sm font-semibold text-neutral-700">
             <Link href="/catalog" className="hover:text-black transition">
-              Katalog
+              Kategori
             </Link>
             <Link
               href="/promo"
@@ -238,7 +237,7 @@ export default function Navbar() {
 
           <div className="h-6 w-px bg-neutral-200" />
 
-          {/* User Section Desktop: If Guest -> Yellow Masuk button; If User -> Profil Pill with Dropdown */}
+          {/* User Section Desktop: If Guest -> Yellow Masuk button; If User -> Yellow Pill with User Name & Dropdown */}
           {!user ? (
             <Link
               href="/auth/login"
@@ -252,23 +251,21 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2 rounded-full border border-neutral-200 bg-[#F6F6F4] px-3 py-1.5 hover:bg-[#EAEAEA] transition cursor-pointer"
+                className="flex items-center gap-1.5 rounded-full bg-[#FFC629] px-3.5 py-1.5 text-xs font-black text-[#1A1A1A] shadow-xs hover:bg-[#FFC420] transition cursor-pointer active:scale-95"
               >
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
                     alt={user.name}
-                    className="h-6 w-6 rounded-full object-cover border border-[#FFC629]"
+                    className="h-5 w-5 rounded-full object-cover border border-[#1A1A1A]/20"
                   />
                 ) : (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FFC629] text-[10px] font-bold text-black uppercase">
-                    {user.name.charAt(0)}
-                  </div>
+                  <User className="h-3.5 w-3.5" />
                 )}
-                <span className="text-xs font-bold text-[#1A1A1A]">
-                  Profil
+                <span className="font-extrabold max-w-[120px] truncate">
+                  {user.name.split(" ")[0]}
                 </span>
-                <ChevronDown className="h-3 w-3 text-neutral-400" />
+                <ChevronDown className="h-3 w-3 text-black/60" />
               </button>
 
               {/* Profile Dropdown */}
