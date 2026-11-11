@@ -117,6 +117,18 @@ const HingoStoreContext = createContext<HingoStoreContextType | null>(null);
 const GUEST_CART_KEY = "hingo_guest_cart";
 const GUEST_WISHLIST_KEY = "hingo_guest_wishlist";
 
+export interface MinimalGuestCartItem {
+  productId: string;
+  quantity: number;
+  addedAt: string;
+  selected?: boolean;
+}
+
+export interface MinimalGuestWishlistItem {
+  productId: string;
+  addedAt: string;
+}
+
 function getLocalStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -143,6 +155,51 @@ function removeLocalStorage(key: string): void {
     window.localStorage.removeItem(key);
   } catch (e) {
     console.warn(`Error removing localStorage key "${key}":`, e);
+  }
+}
+
+async function hydrateGuestCart(minimalItems: MinimalGuestCartItem[]): Promise<CartItem[]> {
+  if (!minimalItems || minimalItems.length === 0) return [];
+  try {
+    const res = await fetch("/api/products?all=true", { cache: "no-store" });
+    const data = await res.json();
+    const allProducts: Product[] = data?.products || [];
+    const hydrated: CartItem[] = [];
+    for (const item of minimalItems) {
+      const p = allProducts.find((prod) => prod.id === item.productId);
+      if (p && p.status === "AVAILABLE") {
+        hydrated.push({
+          id: `guest-${p.id}`,
+          product: p,
+          quantity: 1, // Preloved stok 1
+          selected: item.selected ?? true,
+        });
+      }
+    }
+    return hydrated;
+  } catch (e) {
+    console.warn("Error hydrating guest cart:", e);
+    return [];
+  }
+}
+
+async function hydrateGuestWishlist(minimalItems: MinimalGuestWishlistItem[]): Promise<Product[]> {
+  if (!minimalItems || minimalItems.length === 0) return [];
+  try {
+    const res = await fetch("/api/products?all=true", { cache: "no-store" });
+    const data = await res.json();
+    const allProducts: Product[] = data?.products || [];
+    const hydrated: Product[] = [];
+    for (const item of minimalItems) {
+      const p = allProducts.find((prod) => prod.id === item.productId);
+      if (p) {
+        hydrated.push(p);
+      }
+    }
+    return hydrated;
+  } catch (e) {
+    console.warn("Error hydrating guest wishlist:", e);
+    return [];
   }
 }
 
@@ -284,8 +341,8 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
         setBankAccounts(data.user.bankAccounts || []);
 
         // GABUNGKAN (Merge) cart & wishlist tamu dari localStorage ke akun jika ada
-        const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
-        const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
+        const guestCart = getLocalStorage<MinimalGuestCartItem[]>(GUEST_CART_KEY, []);
+        const guestWishlist = getLocalStorage<MinimalGuestWishlistItem[]>(GUEST_WISHLIST_KEY, []);
 
         if (guestCart.length > 0) {
           try {
@@ -294,7 +351,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 mergeItems: guestCart.map((c) => ({
-                  productId: c.product?.id || (c as any).productId,
+                  productId: c.productId,
                   quantity: 1,
                 })),
               }),
@@ -311,7 +368,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                mergeProductIds: guestWishlist.map((w) => w.id),
+                mergeProductIds: guestWishlist.map((w) => w.productId),
               }),
             });
             removeLocalStorage(GUEST_WISHLIST_KEY);
@@ -330,7 +387,7 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
           refreshChat(),
         ]);
       } else {
-        // Strict Guest: load guest cart & wishlist from localStorage
+        // Strict Guest: load guest cart & wishlist from localStorage with Supabase product hydration
         setUser(null);
         setRole("USER");
         setAddresses([]);
@@ -340,11 +397,15 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
         setPayouts([]);
         setChatThreads([]);
 
-        const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
-        const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
-        setCart(guestCart);
-        setWishlist(guestWishlist);
-        setWishlistIds(guestWishlist.map((w) => w.id));
+        const guestCartRaw = getLocalStorage<MinimalGuestCartItem[]>(GUEST_CART_KEY, []);
+        const guestWishlistRaw = getLocalStorage<MinimalGuestWishlistItem[]>(GUEST_WISHLIST_KEY, []);
+        const [hydratedCart, hydratedWishlist] = await Promise.all([
+          hydrateGuestCart(guestCartRaw),
+          hydrateGuestWishlist(guestWishlistRaw),
+        ]);
+        setCart(hydratedCart);
+        setWishlist(hydratedWishlist);
+        setWishlistIds(hydratedWishlist.map((w) => w.id));
       }
     } catch (e) {
       setUser(null);
@@ -356,11 +417,15 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
       setPayouts([]);
       setChatThreads([]);
 
-      const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
-      const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
-      setCart(guestCart);
-      setWishlist(guestWishlist);
-      setWishlistIds(guestWishlist.map((w) => w.id));
+      const guestCartRaw = getLocalStorage<MinimalGuestCartItem[]>(GUEST_CART_KEY, []);
+      const guestWishlistRaw = getLocalStorage<MinimalGuestWishlistItem[]>(GUEST_WISHLIST_KEY, []);
+      const [hydratedCart, hydratedWishlist] = await Promise.all([
+        hydrateGuestCart(guestCartRaw),
+        hydrateGuestWishlist(guestWishlistRaw),
+      ]);
+      setCart(hydratedCart);
+      setWishlist(hydratedWishlist);
+      setWishlistIds(hydratedWishlist.map((w) => w.id));
     } finally {
       setIsLoadingUser(false);
     }
@@ -393,11 +458,11 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     setPayouts([]);
     setChatThreads([]);
 
-    const guestCart = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
-    const guestWishlist = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
-    setCart(guestCart);
-    setWishlist(guestWishlist);
-    setWishlistIds(guestWishlist.map((w) => w.id));
+    removeLocalStorage(GUEST_CART_KEY);
+    removeLocalStorage(GUEST_WISHLIST_KEY);
+    setCart([]);
+    setWishlist([]);
+    setWishlistIds([]);
 
     showToast("Berhasil keluar dari akun");
     window.location.href = "/";
@@ -485,13 +550,16 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!user) {
-      // Mode Tamu: Simpan ke localStorage
-      const currentWish = getLocalStorage<Product[]>(GUEST_WISHLIST_KEY, []);
-      let updated: Product[];
+      // Mode Tamu: Simpan data minimal ke localStorage
+      const currentWish = getLocalStorage<MinimalGuestWishlistItem[]>(GUEST_WISHLIST_KEY, []);
+      let updated: MinimalGuestWishlistItem[];
       if (wasIn) {
-        updated = currentWish.filter((p) => p.id !== product.id);
+        updated = currentWish.filter((p) => p.productId !== product.id);
       } else {
-        updated = [product, ...currentWish.filter((p) => p.id !== product.id)];
+        updated = [
+          { productId: product.id, addedAt: new Date().toISOString() },
+          ...currentWish.filter((p) => p.productId !== product.id),
+        ];
       }
       setLocalStorage(GUEST_WISHLIST_KEY, updated);
       return !wasIn;
@@ -542,27 +610,35 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     );
 
     if (existing) {
-      showToast("Sudah ada di keranjangmu");
+      showToast("Gear preloved ini sudah ada di keranjangmu (stok: 1)");
       return { success: true, alreadyInCart: true };
     }
 
-    // Preloved hanya tersedia 1 (stok 1)
-    const optimisticItem: CartItem = {
-      id: `cart-${Date.now()}`,
-      product,
-      quantity: 1,
-      selected: true,
-    };
-    setCart((prev) => [optimisticItem, ...prev]);
-    showToast("Berhasil ditambahkan ke keranjang!");
-
     if (!user) {
-      // Simpan ke localStorage untuk mode tamu
-      const currentGuest = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
-      const filtered = currentGuest.filter(
-        (i) => i.product.id !== product.id && (i as any).productId !== product.id
-      );
-      setLocalStorage(GUEST_CART_KEY, [optimisticItem, ...filtered]);
+      // Validasi batas wajar keranjang tamu: maksimal 20 barang
+      const currentGuest = getLocalStorage<MinimalGuestCartItem[]>(GUEST_CART_KEY, []);
+      if (currentGuest.length >= 20) {
+        showToast("Keranjang sudah mencapai batas maksimal 20 barang.");
+        return { success: false };
+      }
+
+      const filtered = currentGuest.filter((i) => i.productId !== product.id);
+      const minimalItem: MinimalGuestCartItem = {
+        productId: product.id,
+        quantity: 1, // Preloved stok 1
+        addedAt: new Date().toISOString(),
+        selected: true,
+      };
+      setLocalStorage(GUEST_CART_KEY, [minimalItem, ...filtered]);
+
+      const optimisticItem: CartItem = {
+        id: `guest-${product.id}`,
+        product,
+        quantity: 1,
+        selected: true,
+      };
+      setCart((prev) => [optimisticItem, ...prev.filter((i) => i.product.id !== product.id)]);
+      showToast("Berhasil ditambahkan ke keranjang!");
       return { success: true, alreadyInCart: false };
     }
 
@@ -579,8 +655,17 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
         return { success: false };
       }
       if (data?.alreadyInCart) {
+        showToast("Gear preloved ini sudah ada di keranjangmu (stok: 1)");
         return { success: true, alreadyInCart: true };
       }
+      const optimisticItem: CartItem = {
+        id: `cart-${Date.now()}`,
+        product,
+        quantity: 1,
+        selected: true,
+      };
+      setCart((prev) => [optimisticItem, ...prev.filter((i) => i.product.id !== product.id)]);
+      showToast("Berhasil ditambahkan ke keranjang!");
       return { success: true, alreadyInCart: false };
     } catch (e) {
       refreshCart();
@@ -600,12 +685,9 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     showToast("Barang dihapus dari keranjang");
 
     if (!user) {
-      const currentGuest = getLocalStorage<CartItem[]>(GUEST_CART_KEY, []);
+      const currentGuest = getLocalStorage<MinimalGuestCartItem[]>(GUEST_CART_KEY, []);
       const filtered = currentGuest.filter(
-        (i) =>
-          i.id !== idOrProductId &&
-          i.product.id !== idOrProductId &&
-          (i as any).productId !== idOrProductId
+        (i) => i.productId !== idOrProductId
       );
       setLocalStorage(GUEST_CART_KEY, filtered);
       return;
@@ -632,7 +714,14 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
         return item;
       });
       if (!user) {
-        setLocalStorage(GUEST_CART_KEY, updated);
+        const currentGuest = getLocalStorage<MinimalGuestCartItem[]>(GUEST_CART_KEY, []);
+        const updatedGuest = currentGuest.map((i) => {
+          if (i.productId === idOrProductId) {
+            return { ...i, selected };
+          }
+          return i;
+        });
+        setLocalStorage(GUEST_CART_KEY, updatedGuest);
       }
       return updated;
     });
@@ -654,7 +743,9 @@ export function HingoProvider({ children }: { children: React.ReactNode }) {
     setCart((prev) => {
       const updated = prev.map((item) => ({ ...item, selected }));
       if (!user) {
-        setLocalStorage(GUEST_CART_KEY, updated);
+        const currentGuest = getLocalStorage<MinimalGuestCartItem[]>(GUEST_CART_KEY, []);
+        const updatedGuest = currentGuest.map((i) => ({ ...i, selected }));
+        setLocalStorage(GUEST_CART_KEY, updatedGuest);
       }
       return updated;
     });

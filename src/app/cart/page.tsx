@@ -31,11 +31,12 @@ export default function CartPage() {
     }).format(val || 0);
   };
 
-  const allSelected = cart.length > 0 && cart.every((c) => c.selected !== false);
-  const selectedItems = cart.filter((c) => c.selected !== false);
+  const validCart = cart.filter((c) => c && c.product && c.product.id);
+  const allSelected = validCart.length > 0 && validCart.every((c) => c.selected !== false);
+  const selectedItems = validCart.filter((c) => c.selected !== false);
 
   const itemPrice = selectedItems.reduce(
-    (acc, curr) => acc + curr.product.price * curr.quantity,
+    (acc, curr) => acc + (curr.product?.price || 0) * (curr.quantity || 1),
     0
   );
   const shippingCost = selectedItems.length > 0 ? 18000 : 0;
@@ -88,7 +89,7 @@ export default function CartPage() {
                   onChange={handleSelectAllToggle}
                   className="h-4 w-4 rounded-md accent-[#FFC629] cursor-pointer"
                 />
-                <span>Pilih semua ({cart.length} barang)</span>
+                <span>Pilih semua ({validCart.length} barang)</span>
               </label>
 
               {selectedItems.length > 0 && (
@@ -103,9 +104,11 @@ export default function CartPage() {
             </div>
 
             {/* Daftar Kartu Barang */}
-            {cart.map((item) => {
+            {validCart.map((item) => {
+              if (!item || !item.product) return null;
               const isSelected = item.selected !== false;
               const itemId = item.id || item.product.id;
+              const productImage = (Array.isArray(item.product.images) && item.product.images[0]) || "/images/placeholder.png";
 
               return (
                 <div
@@ -137,7 +140,7 @@ export default function CartPage() {
                     {/* Foto */}
                     <div className="relative aspect-square w-20 h-20 sm:w-24 sm:h-24 shrink-0 overflow-hidden rounded-xl bg-[#F6F6F4] border border-[#EBEBEB]">
                       <img
-                        src={item.product.images[0] || "/images/placeholder.png"}
+                        src={productImage}
                         alt={item.product.name}
                         className="h-full w-full object-cover"
                       />

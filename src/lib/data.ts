@@ -17,6 +17,7 @@ export interface Product {
   rating: number;
   soldCount: number;
   stock: number;
+  status?: string;
   location: string;
   isVerifiedByTeam: boolean;
   images: string[];
