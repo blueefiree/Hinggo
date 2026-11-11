@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, ensurePrismaUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -33,9 +34,51 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Pilih produk yang ingin di-checkout" }, { status: 400 });
     }
 
-    const product = await prisma.product.findUnique({
+    let product = await prisma.product.findUnique({
       where: { id: targetProductId },
     });
+
+    // Supabase fallback if not found in local prisma
+    if (!product) {
+      try {
+        const { data: sbProduct } = await supabase
+          .from("products")
+          .select("*")
+          .eq("id", targetProductId)
+          .single();
+
+        if (sbProduct) {
+          product = await prisma.product.upsert({
+            where: { id: sbProduct.id },
+            update: {},
+            create: {
+              id: sbProduct.id,
+              code: sbProduct.code || `PRD-${Date.now().toString().slice(-6)}`,
+              slug: sbProduct.slug || `prod-${Date.now()}`,
+              name: sbProduct.name,
+              brand: sbProduct.brand,
+              category: sbProduct.category,
+              price: Number(sbProduct.price),
+              originalPrice: Number(sbProduct.original_price || sbProduct.price),
+              condition: sbProduct.condition || "Bekas",
+              usageDuration: sbProduct.usage_duration || "Pemakaian normal",
+              location: sbProduct.location || "Jakarta Selatan",
+              images: typeof sbProduct.images === "string" ? sbProduct.images : JSON.stringify(sbProduct.images || []),
+              rating: Number(sbProduct.rating || 5.0),
+              reviewCount: Number(sbProduct.review_count || 1),
+              stock: Number(sbProduct.stock || 1),
+              status: sbProduct.status || "AVAILABLE",
+              description: sbProduct.description || "",
+              specs: typeof sbProduct.specs === "string" ? sbProduct.specs : JSON.stringify(sbProduct.specs || []),
+              defect: sbProduct.defect || "",
+              completeness: sbProduct.completeness || "",
+            },
+          });
+        }
+      } catch (sbErr) {
+        console.warn("Supabase checkout product fallback error:", sbErr);
+      }
+    }
 
     if (!product || product.stock <= 0 || product.status !== "AVAILABLE") {
       return NextResponse.json(
