@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { sendOtpEmail } from "@/lib/otp-sender";
 import { dispatchWhatsAppOtp } from "@/lib/whatsapp-gateway";
+import { prepareSendOtp, hashOtp } from "@/lib/otp";
 
 export async function POST(req: Request) {
   try {
@@ -15,15 +16,24 @@ export async function POST(req: Request) {
     const isEmail = cleanTarget.includes("@");
     const channel = isEmail ? "email" : "whatsapp";
 
-    // Generate fresh 6-digit OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
+    // 1. Validasi Rate Limit, Lockout, & Persiapan OTP
+    const prep = prepareSendOtp(cleanTarget);
+    if (!prep.allowed) {
+      return NextResponse.json(
+        { error: prep.error },
+        { status: prep.statusCode || 429 }
+      );
+    }
 
-    // 1. Simpan ke tabel public.otp_verifications di Supabase
+    const otpCode = prep.otpCode!;
+    const hashed = hashOtp(cleanTarget, otpCode);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
+
+    // 2. Simpan HASH OTP ke Supabase otp_verifications
     try {
       await supabase.from("otp_verifications").insert({
         target: cleanTarget,
-        otp_code: otpCode,
+        otp_code: hashed,
         channel,
         verified: false,
         expires_at: expiresAt.toISOString(),
@@ -32,7 +42,7 @@ export async function POST(req: Request) {
       console.warn("Supabase otp_verifications insert fallback:", sbErr);
     }
 
-    // 2. Simpan juga ke Prisma lokal untuk sinkronisasi hybrid
+    // 3. Simpan juga HASH ke Prisma lokal
     try {
       await prisma.otpVerification.updateMany({
         where: { target: cleanTarget, verified: false },
@@ -41,7 +51,7 @@ export async function POST(req: Request) {
       await prisma.otpVerification.create({
         data: {
           target: cleanTarget,
-          otpCode,
+          otpCode: hashed,
           expiresAt,
           verified: false,
         },
@@ -50,11 +60,10 @@ export async function POST(req: Request) {
       console.warn("Prisma otpVerification fallback:", prismaErr);
     }
 
-    // 3. Dispatch real message
+    // 4. Dispatch pengiriman nyata
     let sendResult = { delivered: false, channel: "", info: "" };
 
     if (isEmail) {
-      // Kirim via Supabase Auth & Nodemailer
       await supabase.auth.signInWithOtp({ email: cleanTarget }).catch(() => {});
       const emailRes = await sendOtpEmail(cleanTarget, otpCode);
       sendResult = {
@@ -63,7 +72,6 @@ export async function POST(req: Request) {
         info: emailRes.info || "Email OTP dikirim",
       };
     } else {
-      // Kirim via Baileys WhatsApp Web QR / Fonnte
       const waRes = await dispatchWhatsAppOtp(cleanTarget, otpCode);
       sendResult = {
         delivered: waRes.delivered,
@@ -72,19 +80,23 @@ export async function POST(req: Request) {
       };
     }
 
+    // Hanya log di environment development, TIDAK mencetak kode ke log produksi
+    if (process.env.NODE_ENV !== "production" && !prep.isDemo) {
+      console.log(`[DEV OTP LOG] Target: ${cleanTarget} | OTP: ${otpCode}`);
+    }
+
+    // Respons seragam tanpa membocorkan kode OTP ke client
     return NextResponse.json({
       success: true,
       message: isEmail
-        ? `Kode OTP 6-digit berhasil dikirimkan ke email ${cleanTarget}`
-        : `Kode OTP 6-digit berhasil dikirimkan ke WhatsApp ${cleanTarget}`,
+        ? `Kode verifikasi telah dikirimkan ke email ${cleanTarget}`
+        : `Kode verifikasi telah dikirimkan ke WhatsApp ${cleanTarget}`,
       channel,
       delivered: sendResult.delivered,
-      deliveryInfo: sendResult.info,
-      otpCode, // Tersedia untuk auto-fill & pengujian instan
-      devOtpCode: otpCode,
+      isDemo: prep.isDemo,
     });
   } catch (error: any) {
     console.error("Error in /api/auth/send-otp:", error);
-    return NextResponse.json({ error: error.message || "Gagal memproses pengiriman OTP" }, { status: 500 });
+    return NextResponse.json({ error: "Gagal memproses pengiriman kode verifikasi" }, { status: 500 });
   }
 }

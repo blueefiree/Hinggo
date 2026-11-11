@@ -19,7 +19,7 @@ function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetParam = searchParams.get("target") || "+62 812 3456 7890";
-  const devOtpParam = searchParams.get("devOtp") || "123456";
+  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === "true" || searchParams.get("demo") === "true";
 
   const { user, setUser, refreshSession, showToast } = useHingoStore();
 
@@ -28,7 +28,6 @@ function VerifyOtpContent() {
   const [countdown, setCountdown] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeOtpCode, setActiveOtpCode] = useState<string>(devOtpParam);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -40,13 +39,6 @@ function VerifyOtpContent() {
       router.replace(dest);
     }
   }, [user, router, searchParams]);
-
-  // Pre-fill with first digits if demo
-  useEffect(() => {
-    if (activeOtpCode && activeOtpCode.length === 6) {
-      setOtp(activeOtpCode.split(""));
-    }
-  }, [activeOtpCode]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -91,7 +83,6 @@ function VerifyOtpContent() {
   };
 
   const handleResend = async () => {
-    setCountdown(60);
     setErrorMsg(null);
     try {
       const res = await fetch("/api/auth/send-otp", {
@@ -100,12 +91,14 @@ function VerifyOtpContent() {
         body: JSON.stringify({ target }),
       });
       const data = await res.json();
-      if (data.otpCode) {
-        setActiveOtpCode(data.otpCode);
-        setOtp(data.otpCode.split(""));
+      if (!res.ok) {
+        setErrorMsg(data.error || "Gagal mengirim ulang kode");
+        return;
       }
+      setCountdown(60);
+      showToast("Kode verifikasi baru berhasil dikirim!");
     } catch (e) {
-      console.error(e);
+      setErrorMsg("Gagal menghubungi server");
     }
   };
 
@@ -113,7 +106,7 @@ function VerifyOtpContent() {
     e.preventDefault();
     const fullOtp = otp.join("");
     if (fullOtp.length !== 6) {
-      setErrorMsg("Mohon masukkan 6 digit kode OTP secara lengkap");
+      setErrorMsg("Mohon masukkan 6 digit kode verifikasi secara lengkap");
       return;
     }
 
@@ -138,7 +131,7 @@ function VerifyOtpContent() {
           : (data.redirectTo || "/account");
         window.location.href = finalDest;
       } else {
-        setErrorMsg(data.error || "Kode OTP salah atau tidak cocok");
+        setErrorMsg(data.error || "Kode verifikasi salah atau telah kedaluwarsa");
       }
     } catch (err: any) {
       setErrorMsg("Gagal menghubungi server database");
@@ -149,47 +142,31 @@ function VerifyOtpContent() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:py-14">
-      {/* Notifikasi Pop-up / Banner Pesan Masuk WhatsApp/Email */}
-      <div className="mb-6 rounded-2xl bg-[#FFFBEB] border-2 border-[#FFC629] p-4 sm:p-5 shadow-sm text-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFC629] text-black">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-amber-900">
-                Pesan Masuk ({target.includes("@") ? "Email" : "WhatsApp"})
-              </span>
-              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                Instan Terkirim
-              </span>
+      {/* Banner Mode Demo Eksplisit jika DEMO_MODE aktif */}
+      {isDemo && (
+        <div className="mb-6 rounded-2xl bg-[#FFFBEB] border-2 border-[#FFC629] p-4 sm:p-5 shadow-sm text-neutral-800 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFC629] text-black">
+              <Sparkles className="h-5 w-5" />
             </div>
-            <p className="text-xs sm:text-sm text-neutral-700 mt-0.5">
-              Kode OTP kamu adalah:{" "}
-              <strong className="font-mono text-base font-black text-black bg-amber-200/70 px-2 py-0.5 rounded border border-amber-300">
-                {activeOtpCode}
-              </strong>{" "}
-              <span className="text-neutral-500 text-xs hidden md:inline">(berlaku 5 menit)</span>
-            </p>
+            <div>
+              <span className="text-xs font-black uppercase tracking-wider text-amber-900 block">
+                Mode Demo Aktif
+              </span>
+              <p className="text-xs sm:text-sm text-neutral-700 mt-0.5">
+                Mode demo: gunakan kode yang diberikan penyelenggara (misal: <strong>123456</strong>).
+              </p>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
-            onClick={() => setOtp(activeOtpCode.split(""))}
-            className="flex-1 sm:flex-none rounded-xl bg-[#FFC629] px-4 py-2 text-xs font-black text-black shadow-xs hover:bg-[#FFC420] transition active:scale-95 cursor-pointer text-center"
+            onClick={() => setOtp(["1", "2", "3", "4", "5", "6"])}
+            className="rounded-xl bg-[#FFC629] px-4 py-2 text-xs font-black text-black shadow-xs hover:bg-[#FFC420] transition active:scale-95 cursor-pointer text-center whitespace-nowrap"
           >
-            Klik untuk Isi Otomatis
+            Isi Demo (123456)
           </button>
-          <Link
-            href="/auth/login"
-            className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition text-center"
-          >
-            Hubungkan QR WhatsApp
-          </Link>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* Left Editorial Panel */}

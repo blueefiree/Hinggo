@@ -4,63 +4,41 @@ import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken } from "@/lib/auth";
+import { verifyOtpInput } from "@/lib/otp";
 
 export async function POST(req: Request) {
   try {
     const { target, otpCode } = await req.json();
     if (!target || !otpCode) {
-      return NextResponse.json({ error: "Target dan kode OTP 6-digit wajib diisi" }, { status: 400 });
+      return NextResponse.json({ error: "Target dan kode verifikasi 6-digit wajib diisi" }, { status: 400 });
     }
 
     const cleanTarget = target.trim();
     const cleanOtp = otpCode.trim();
     const isEmail = cleanTarget.includes("@");
-    const isMasterDemoOtp = cleanOtp === "123456";
 
-    // 1. Validasi OTP di Supabase
-    let isValidOtp = isMasterDemoOtp;
+    // 1. Validasi Kode OTP & Limit Percobaan
+    const verifyResult = verifyOtpInput(cleanTarget, cleanOtp);
+    if (!verifyResult.valid) {
+      return NextResponse.json(
+        { error: verifyResult.error || "Kode verifikasi salah atau telah kedaluwarsa." },
+        { status: verifyResult.statusCode || 400 }
+      );
+    }
 
-    const { data: sbOtpList } = await supabase
-      .from("otp_verifications")
-      .select("*")
-      .eq("target", cleanTarget)
-      .eq("otp_code", cleanOtp)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (sbOtpList && sbOtpList.length > 0) {
-      isValidOtp = true;
+    try {
       await supabase
         .from("otp_verifications")
         .update({ verified: true })
-        .eq("id", sbOtpList[0].id);
-    } else {
-      // Fallback cek Prisma lokal
-      const localRecord = await prisma.otpVerification.findFirst({
-        where: {
-          target: cleanTarget,
-          otpCode: cleanOtp,
-          expiresAt: { gt: new Date() },
-        },
-        orderBy: { createdAt: "desc" },
+        .eq("target", cleanTarget);
+    } catch {}
+
+    try {
+      await prisma.otpVerification.updateMany({
+        where: { target: cleanTarget },
+        data: { verified: true },
       });
-
-      if (localRecord) {
-        isValidOtp = true;
-        await prisma.otpVerification.update({
-          where: { id: localRecord.id },
-          data: { verified: true },
-        });
-      }
-    }
-
-    if (!isValidOtp) {
-      return NextResponse.json(
-        { error: "Kode OTP salah atau telah kedaluwarsa. Silakan kirim ulang." },
-        { status: 400 }
-      );
-    }
+    } catch {}
 
     // 2. Tentukan Email Unik & Konsisten Pengguna (Anti-Hilang saat refresh)
     const cleanDigits = cleanTarget.replace(/\D/g, "");
