@@ -713,10 +713,12 @@ export default function ConsignmentDetailPage() {
 
             <form onSubmit={handleSendNegotiation} className="mt-4 flex flex-col gap-4 text-xs">
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">
+                <label htmlFor="counter-price" className="block font-bold text-neutral-700 mb-1">
                   Usulan Harga Final dari Anda (Rp)
                 </label>
                 <input
+                  id="counter-price"
+                  name="counterPrice"
                   type="text"
                   required
                   value={counterPrice}
@@ -729,10 +731,12 @@ export default function ConsignmentDetailPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">
+                <label htmlFor="negotiation-note" className="block font-bold text-neutral-700 mb-1">
                   Alasan / Catatan untuk Tim Kurasi Hingo
                 </label>
                 <textarea
+                  id="negotiation-note"
+                  name="negotiationNote"
                   rows={3}
                   required
                   value={negotiationNote}
@@ -792,8 +796,9 @@ export default function ConsignmentDetailPage() {
                   Pilih Metode Pengembalian
                 </label>
                 <div className="flex flex-col gap-2">
-                  <label className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100">
+                  <label htmlFor="return-opt-jne" className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100">
                     <input
+                      id="return-opt-jne"
                       type="radio"
                       name="returnOpt"
                       checked={returnOption === "jne"}
@@ -808,8 +813,9 @@ export default function ConsignmentDetailPage() {
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100">
+                  <label htmlFor="return-opt-pickup" className="flex items-start gap-3 p-3 rounded-2xl border border-neutral-200 bg-[#F6F6F4] cursor-pointer hover:bg-neutral-100">
                     <input
+                      id="return-opt-pickup"
                       type="radio"
                       name="returnOpt"
                       checked={returnOption === "pickup"}

@@ -152,10 +152,12 @@ export default function ConsignmentRevisePage() {
 
         {/* Note Textarea */}
         <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs flex flex-col gap-4">
-          <h3 className="text-sm font-extrabold text-[#1A1A1A]">
+          <label htmlFor="revisionNotes" className="text-sm font-extrabold text-[#1A1A1A]">
             Penjelasan & Tanggapan Anda
-          </h3>
+          </label>
           <textarea
+            id="revisionNotes"
+            name="revisionNotes"
             rows={4}
             value={revisionNotes}
             onChange={(e) => setRevisionNotes(e.target.value)}

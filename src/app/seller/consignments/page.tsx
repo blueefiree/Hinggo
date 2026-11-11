@@ -249,10 +249,13 @@ export default function SellerConsignmentsPage() {
 
             <div className="relative w-full sm:w-60">
               <input
+                id="seller-consignment-search"
+                name="search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari kode atau nama barang"
+                aria-label="Cari kode atau nama barang"
                 className="w-full rounded-full bg-[#F6F6F4] py-1.5 pl-8 pr-3 text-xs text-[#1A1A1A] outline-none border border-neutral-200 focus:border-[#FFC629] focus:bg-white"
               />
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />

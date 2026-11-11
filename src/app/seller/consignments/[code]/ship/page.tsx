@@ -237,10 +237,12 @@ export default function ConsignmentShipPage() {
 
             {/* Tracking Number Input */}
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-2">
+              <label htmlFor="trackingNumber" className="block text-xs font-bold text-neutral-700 mb-2">
                 Nomor Resi Pengiriman
               </label>
               <input
+                id="trackingNumber"
+                name="trackingNumber"
                 type="text"
                 required
                 value={trackingNumber}

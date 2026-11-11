@@ -275,10 +275,12 @@ export default function NewConsignmentPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                  <label htmlFor="category" className="block text-xs font-bold text-neutral-700 mb-1.5">
                     Kategori Gear
                   </label>
                   <select
+                    id="category"
+                    name="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
                     className="w-full rounded-xl border border-neutral-300 py-2.5 px-3.5 text-xs font-semibold text-[#1A1A1A] bg-white outline-none focus:border-[#FFC629]"
@@ -292,10 +294,12 @@ export default function NewConsignmentPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                  <label htmlFor="brandModel" className="block text-xs font-bold text-neutral-700 mb-1.5">
                     Nama Merek & Seri Model
                   </label>
                   <input
+                    id="brandModel"
+                    name="brandModel"
                     type="text"
                     value={brandModel}
                     onChange={(e) => setBrandModel(e.target.value)}
@@ -306,10 +310,12 @@ export default function NewConsignmentPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                  <label htmlFor="variantSpec" className="block text-xs font-bold text-neutral-700 mb-1.5">
                     Varian / Spesifikasi Kunci
                   </label>
                   <input
+                    id="variantSpec"
+                    name="variantSpec"
                     type="text"
                     value={variantSpec}
                     onChange={(e) => setVariantSpec(e.target.value)}
@@ -320,10 +326,12 @@ export default function NewConsignmentPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                  <label htmlFor="usageDuration" className="block text-xs font-bold text-neutral-700 mb-1.5">
                     Lama Pemakaian
                   </label>
                   <input
+                    id="usageDuration"
+                    name="usageDuration"
                     type="text"
                     value={usageDuration}
                     onChange={(e) => setUsageDuration(e.target.value)}
@@ -335,10 +343,12 @@ export default function NewConsignmentPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label htmlFor="additionalSpecs" className="block text-xs font-bold text-neutral-700 mb-1.5">
                   Spesifikasi Tambahan & Catatan Modifikasi
                 </label>
                 <textarea
+                  id="additionalSpecs"
+                  name="additionalSpecs"
                   rows={2}
                   value={additionalSpecs}
                   onChange={(e) => setAdditionalSpecs(e.target.value)}
@@ -355,10 +365,12 @@ export default function NewConsignmentPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                  <label htmlFor="currentCondition" className="block text-xs font-bold text-neutral-700 mb-1.5">
                     Kondisi Saat Ini
                   </label>
                   <select
+                    id="currentCondition"
+                    name="currentCondition"
                     value={currentCondition}
                     onChange={(e) => setCurrentCondition(e.target.value)}
                     className="w-full rounded-xl border border-neutral-300 py-2.5 px-3.5 text-xs font-semibold text-[#1A1A1A] bg-white outline-none focus:border-[#FFC629]"
@@ -370,10 +382,12 @@ export default function NewConsignmentPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                  <label htmlFor="completeness" className="block text-xs font-bold text-neutral-700 mb-1.5">
                     Kelengkapan yang Ikut Dititipkan
                   </label>
                   <input
+                    id="completeness"
+                    name="completeness"
                     type="text"
                     value={completeness}
                     onChange={(e) => setCompleteness(e.target.value)}
@@ -385,10 +399,12 @@ export default function NewConsignmentPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label htmlFor="defectDetails" className="block text-xs font-bold text-neutral-700 mb-1.5">
                   Kondisi Aktual & Detail Cacat (Transparan)
                 </label>
                 <textarea
+                  id="defectDetails"
+                  name="defectDetails"
                   rows={2}
                   value={defectDetails}
                   onChange={(e) => setDefectDetails(e.target.value)}
@@ -418,6 +434,8 @@ export default function NewConsignmentPage() {
                 </button>
                 <input
                   ref={fileInputRef}
+                  id="consignment-file-upload"
+                  name="fileUpload"
                   type="file"
                   accept="image/*"
                   multiple
@@ -429,6 +447,8 @@ export default function NewConsignmentPage() {
               {/* URL Input */}
               <div className="flex items-center gap-2">
                 <input
+                  id="consignment-url-input"
+                  name="urlInput"
                   type="url"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
@@ -504,7 +524,7 @@ export default function NewConsignmentPage() {
               </h2>
 
               <div className="max-w-xs">
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label htmlFor="expectedPrice" className="block text-xs font-bold text-neutral-700 mb-1.5">
                   Ekspektasi Harga Bersih (Rp)
                 </label>
                 <div className="relative">
@@ -512,6 +532,8 @@ export default function NewConsignmentPage() {
                     Rp
                   </span>
                   <input
+                    id="expectedPrice"
+                    name="expectedPrice"
                     type="number"
                     value={expectedPrice}
                     onChange={(e) => setExpectedPrice(Number(e.target.value))}
@@ -591,8 +613,10 @@ export default function NewConsignmentPage() {
 
               {/* Consent check */}
               <div className="pt-3 border-t border-neutral-100 flex flex-col gap-2 text-xs text-neutral-700">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label htmlFor="consentOriginal" className="flex items-center gap-2 cursor-pointer">
                   <input
+                    id="consentOriginal"
+                    name="consentOriginal"
                     type="checkbox"
                     checked={consentCheck.original}
                     onChange={(e) =>
@@ -602,8 +626,10 @@ export default function NewConsignmentPage() {
                   />
                   <span>Barang adalah unit original milik pribadi tanpa masalah hukum.</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label htmlFor="consentInspection" className="flex items-center gap-2 cursor-pointer">
                   <input
+                    id="consentInspection"
+                    name="consentInspection"
                     type="checkbox"
                     checked={consentCheck.inspection}
                     onChange={(e) =>
