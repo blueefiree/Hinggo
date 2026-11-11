@@ -212,7 +212,7 @@ export default function Home() {
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#1A1A1A]">Chat admin & CS</h4>
+                <h4 className="text-sm font-bold text-[#1A1A1A]">Chat admin</h4>
                 <p className="text-xs text-neutral-500">Tanya langsung sebelum transaksi</p>
               </div>
             </div>
@@ -340,7 +340,7 @@ export default function Home() {
             href="/catalog"
             className="flex items-center gap-1 text-xs sm:text-sm font-bold text-neutral-700 hover:text-black"
           >
-            Jelajah semua
+            Lihat semua
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -480,7 +480,7 @@ export default function Home() {
               Rekomendasi Untukmu
             </h2>
             <p className="text-xs sm:text-sm text-neutral-500">
-              Gear terverifikasi siap kirim dari Jakarta Selatan
+              Barang titipan yang dikelola tim kami
             </p>
           </div>
           <Link
