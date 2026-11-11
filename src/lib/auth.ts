@@ -3,7 +3,16 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "hinggo-secret-session-key-2026";
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Variabel SESSION_SECRET belum diisi");
+    }
+    return "hinggo-secret-session-key-2026";
+  }
+  return secret;
+}
 
 export interface SessionPayload {
   userId: string;
@@ -36,7 +45,7 @@ export function createSessionToken(
   };
   const data = Buffer.from(JSON.stringify(fullPayload)).toString("base64url");
   const signature = crypto
-    .createHmac("sha256", SESSION_SECRET)
+    .createHmac("sha256", getSessionSecret())
     .update(data)
     .digest("base64url");
   return `${data}.${signature}`;
@@ -47,7 +56,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
     const [data, signature] = token.split(".");
     if (!data || !signature) return null;
     const expectedSig = crypto
-      .createHmac("sha256", SESSION_SECRET)
+      .createHmac("sha256", getSessionSecret())
       .update(data)
       .digest("base64url");
     if (signature !== expectedSig) return null;

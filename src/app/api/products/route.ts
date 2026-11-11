@@ -17,6 +17,7 @@ export async function GET(req: Request) {
 
     // 1. Coba ambil dari Supabase public.products jika tersedia
     let supabaseProducts: any[] = [];
+    let supabaseCounts: any = null;
     try {
       let sbQuery = supabase.from("products").select("*");
       if (!all) {
@@ -34,6 +35,19 @@ export async function GET(req: Request) {
       if (maxPrice) {
         sbQuery = sbQuery.lte("price", parseInt(maxPrice, 10));
       }
+      if (search) {
+        sbQuery = sbQuery.or(`name.ilike.%${search}%,brand.ilike.%${search}%,description.ilike.%${search}%`);
+      }
+      if (sort === "price_asc") {
+        sbQuery = sbQuery.order("price", { ascending: true });
+      } else if (sort === "price_desc") {
+        sbQuery = sbQuery.order("price", { ascending: false });
+      } else if (sort === "popular") {
+        sbQuery = sbQuery.order("sold_count", { ascending: false });
+      } else {
+        sbQuery = sbQuery.order("created_at", { ascending: false });
+      }
+
       const { data, error } = await sbQuery;
       if (!error && data && data.length > 0) {
         supabaseProducts = data.map((item: any) => ({
@@ -61,12 +75,25 @@ export async function GET(req: Request) {
           status: item.status || "AVAILABLE",
           createdAt: item.created_at,
         }));
+
+        // Hitung count kategori dari Supabase
+        const { data: allCatData } = await supabase.from("products").select("category").eq("status", "AVAILABLE");
+        if (allCatData) {
+          supabaseCounts = {
+            KEYBOARD: allCatData.filter((i) => i.category?.toUpperCase() === "KEYBOARD").length,
+            MOUSE: allCatData.filter((i) => i.category?.toUpperCase() === "MOUSE").length,
+            HEADSET: allCatData.filter((i) => i.category?.toUpperCase() === "HEADSET").length,
+            MONITOR: allCatData.filter((i) => i.category?.toUpperCase() === "MONITOR").length,
+            ACCESSORIES: allCatData.filter((i) => i.category?.toUpperCase() === "ACCESSORIES").length,
+            TOTAL: allCatData.length,
+          };
+        }
       }
     } catch (e) {
       // safe fallback
     }
 
-    // 2. Query Prisma lokal
+    // 2. Query Prisma lokal (hanya jika supabase kosong)
     const where: any = {};
     if (!all) {
       where.status = "AVAILABLE";
@@ -103,18 +130,38 @@ export async function GET(req: Request) {
       orderBy = { soldCount: "desc" };
     }
 
-    const [prismaProducts, keyboardCount, mouseCount, headsetCount, monitorCount, accessoriesCount, totalCount] =
-      await Promise.all([
-        prisma.product.findMany({ where, orderBy }),
-        prisma.product.count({ where: { category: "KEYBOARD", status: "AVAILABLE" } }),
-        prisma.product.count({ where: { category: "MOUSE", status: "AVAILABLE" } }),
-        prisma.product.count({ where: { category: "HEADSET", status: "AVAILABLE" } }),
-        prisma.product.count({ where: { category: "MONITOR", status: "AVAILABLE" } }),
-        prisma.product.count({ where: { category: "ACCESSORIES", status: "AVAILABLE" } }),
-        prisma.product.count({ where: { status: "AVAILABLE" } }),
-      ]);
+    let prismaProducts: any[] = [];
+    let keyboardCount = 0;
+    let mouseCount = 0;
+    let headsetCount = 0;
+    let monitorCount = 0;
+    let accessoriesCount = 0;
+    let totalCount = 0;
 
-    // Fallback: jika supabase kosong atau error, gunakan prismaProducts
+    if (supabaseProducts.length === 0) {
+      try {
+        const [pProducts, kCount, mCount, hCount, monCount, aCount, tCount] = await Promise.all([
+          prisma.product.findMany({ where, orderBy }),
+          prisma.product.count({ where: { category: "KEYBOARD", status: "AVAILABLE" } }),
+          prisma.product.count({ where: { category: "MOUSE", status: "AVAILABLE" } }),
+          prisma.product.count({ where: { category: "HEADSET", status: "AVAILABLE" } }),
+          prisma.product.count({ where: { category: "MONITOR", status: "AVAILABLE" } }),
+          prisma.product.count({ where: { category: "ACCESSORIES", status: "AVAILABLE" } }),
+          prisma.product.count({ where: { status: "AVAILABLE" } }),
+        ]);
+        prismaProducts = pProducts;
+        keyboardCount = kCount;
+        mouseCount = mCount;
+        headsetCount = hCount;
+        monitorCount = monCount;
+        accessoriesCount = aCount;
+        totalCount = tCount;
+      } catch (prismaErr) {
+        console.warn("Prisma fallback unavailable:", prismaErr);
+      }
+    }
+
+    // Gunakan supabaseProducts jika tersedia, jika tidak gunakan prismaProducts
     const rawList = supabaseProducts.length > 0 ? supabaseProducts : prismaProducts;
 
     const parsedProducts = rawList.map((p: any) => {
@@ -134,7 +181,7 @@ export async function GET(req: Request) {
       };
     });
 
-    const categoryCounts = {
+    const categoryCounts = supabaseCounts || {
       KEYBOARD: keyboardCount,
       MOUSE: mouseCount,
       HEADSET: headsetCount,

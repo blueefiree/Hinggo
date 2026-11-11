@@ -7,8 +7,10 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://obdczozspvkdebhtyhoh.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_qYJsxxD04jDxX2WXPPysTg_vf8IY1AN";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+if (!supabaseUrl) throw new Error("Variabel NEXT_PUBLIC_SUPABASE_URL belum diisi");
+if (!supabaseKey) throw new Error("Variabel NEXT_PUBLIC_SUPABASE_ANON_KEY belum diisi");
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function main() {
