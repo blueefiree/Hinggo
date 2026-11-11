@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { requireEnv } from "@/lib/env";
 
 export function isDemoMode(): boolean {
   return (
@@ -28,7 +29,7 @@ const otpTracker = globalForOtp.__otpTracker || new Map<string, OtpState>();
 globalForOtp.__otpTracker = otpTracker;
 
 function getOtpSecret(): string {
-  return process.env.SESSION_SECRET || "hinggo-internal-otp-salt-key";
+  return requireEnv("SESSION_SECRET");
 }
 
 export function hashOtp(target: string, otpCode: string): string {

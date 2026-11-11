@@ -1,21 +1,15 @@
 import { createClient as createSupabaseClient, SupabaseClient } from "@supabase/supabase-js";
+import { requireEnv } from "@/lib/env";
 
 /**
  * Validasi dan ambil environment variable wajib untuk Supabase.
  * Melempar error spesifik jika variabel belum terdefinisi.
  */
 export function getSupabaseEnv(): { url: string; key: string } {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url) {
-    throw new Error("Variabel NEXT_PUBLIC_SUPABASE_URL belum diisi");
-  }
-
+  const url = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
   const key =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!key) {
-    throw new Error("Variabel NEXT_PUBLIC_SUPABASE_ANON_KEY belum diisi");
-  }
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    requireEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 
   return { url, key };
 }

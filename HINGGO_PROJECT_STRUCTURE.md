@@ -331,8 +331,8 @@ Untuk menjalankan seluruh fungsionalitas secara sempurna, variabel berikut dikon
 
 ```env
 # Supabase Resmi
-NEXT_PUBLIC_SUPABASE_URL=https://obdczozspvkdebhtyhoh.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_qYJsxxD04jDxX2WXPPysTg_vf8IY1AN
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 
 # Database Prisma Lokal (Fallback & Fast Cache)
 DATABASE_URL="file:./dev.db"

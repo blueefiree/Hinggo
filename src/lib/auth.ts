@@ -2,13 +2,10 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
+import { requireEnv } from "@/lib/env";
 
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.trim() === "") {
-    throw new Error("Variabel SESSION_SECRET belum diisi");
-  }
-  return secret;
+  return requireEnv("SESSION_SECRET");
 }
 
 export interface SessionPayload {
