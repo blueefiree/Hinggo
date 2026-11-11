@@ -15,6 +15,7 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
+  ArrowRight,
   Headphones,
   Loader2,
 } from "lucide-react";
@@ -215,13 +216,14 @@ export default function OrderDetailPage() {
   }
 
   const isCompleted = order.orderStatus === "COMPLETED";
+  const isWaitingPayment = order.orderStatus === "WAITING_PAYMENT";
   const isDisputed =
     order.orderStatus === "COMPLAINT" ||
     order.orderStatus === "ISSUE_REPORTED" ||
     order.escrowStatus === "DISPUTED";
 
   return (
-    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
+    <div className="mx-auto max-w-7xl px-3.5 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
       {/* Header */}
       <div className="flex flex-col gap-1 mb-4 sm:mb-6">
         <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-800">
@@ -232,6 +234,8 @@ export default function OrderDetailPage() {
             <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-[#1A1A1A]">
               {isCompleted
                 ? "Transaksi selesai. Terima kasih!"
+                : isWaitingPayment
+                ? "Menunggu Pembayaran"
                 : isDisputed
                 ? "Kendala dilaporkan ke Tim CS Hingo."
                 : "Barang tiba. Cek dulu, ya."}
@@ -245,35 +249,61 @@ export default function OrderDetailPage() {
             label={
               isCompleted
                 ? "Transaksi Selesai"
+                : isWaitingPayment
+                ? "Menunggu Pembayaran"
                 : isDisputed
                 ? "Kendala Ditinjau CS"
                 : "Paket Tiba — Menunggu Konfirmasi"
             }
-            variant={isCompleted ? "verified" : isDisputed ? "warning" : "warning"}
+            variant={isCompleted ? "verified" : isWaitingPayment ? "warning" : isDisputed ? "warning" : "warning"}
           />
         </div>
       </div>
 
       {/* Escrow Banner */}
-      <div className="rounded-2xl sm:rounded-3xl bg-[#FFFBEB] border border-[#FDE68A] p-4 sm:p-6 mb-4 sm:mb-8 flex items-start gap-3 sm:gap-4 shadow-xs">
+      <div className="rounded-2xl sm:rounded-3xl bg-[#FFFBEB] border border-[#FFE58A] p-4 sm:p-6 mb-4 sm:mb-8 flex items-start gap-3 sm:gap-4 shadow-xs">
         <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-[#FFC629] text-black">
-          <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+          {isWaitingPayment ? <Clock className="h-5 w-5 sm:h-6 sm:w-6" /> : <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />}
         </div>
         <div className="flex-1 text-xs sm:text-sm text-neutral-800 leading-relaxed">
           <strong className="text-black text-xs sm:text-sm font-bold block mb-0.5">
             {isCompleted
               ? "Dana telah diteruskan ke pemilik barang"
+              : isWaitingPayment
+              ? "Menunggu Pembayaran Pembeli"
               : isDisputed
               ? "Dana dibekukan sementara di rekening bersama Hingo"
               : "Dana masih ditahan Hingo — Keamananmu Terjamin"}
           </strong>
           {isCompleted
             ? `Pembayaran ${formatRupiah(order.totalAmount)} telah diteruskan ke pemilik barang setelah konfirmasimu.`
+            : isWaitingPayment
+            ? `Total tagihan ${formatRupiah(order.totalAmount)}. Selesaikan pembayaran untuk memproses pengiriman gear oleh kurator Hingo.`
             : isDisputed
             ? `Dana ${formatRupiah(order.totalAmount)} tetap aman di Hingo sampai laporan kendalamu selesai ditangani CS Mira.`
-            : `${formatRupiah(order.totalAmount)} sudah dibayar via BCA Virtual Account. Dana pemilik barang belum dicairkan sampai kamu menguji switch, tombol, dan koneksi bluetooth. Periksa barang sebelum konfirmasi; laporkan jika ada kendala.`}
+            : `${formatRupiah(order.totalAmount)} sudah dibayar via ${order.paymentMethod || "BCA Virtual Account"}. Dana pemilik barang belum dicairkan sampai kamu menguji switch, tombol, dan koneksi bluetooth. Periksa barang sebelum konfirmasi; laporkan jika ada kendala.`}
         </div>
       </div>
+
+      {isWaitingPayment && (
+        <div className="mb-6 rounded-2xl sm:rounded-3xl border border-[#FFC629] bg-[#FFFBEB] p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <div>
+            <h3 className="text-sm sm:text-base font-extrabold text-[#1A1A1A]">
+              Selesaikan Pembayaran Pesanan Ini
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5">
+              Klik tombol di samping untuk membuka panduan nomor rekening / QRIS dan melakukan simulasi pembayaran.
+            </p>
+          </div>
+          <Link
+            href={`/checkout/payment/${order.orderCode}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] text-black px-5 py-2.5 text-xs font-black shadow-xs transition active:scale-95 shrink-0"
+          >
+            <span>Bayar / Simulasi Sekarang</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
         {/* Left Column */}

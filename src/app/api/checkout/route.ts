@@ -100,8 +100,8 @@ export async function POST(req: Request) {
           vaNumber,
           buyerNote,
           trackingNumber: `JNE${dateStr.slice(2)}${randomSuffix}`,
-          escrowStatus: "HELD_BY_HINGO",
-          orderStatus: "DELIVERED_CHECKING",
+          escrowStatus: "WAITING_PAYMENT",
+          orderStatus: "WAITING_PAYMENT",
           inspectionDeadline: "48 jam setelah paket tiba",
         },
       });
@@ -112,18 +112,34 @@ export async function POST(req: Request) {
           {
             orderId: ord.id,
             stepOrder: 1,
-            title: "Pembayaran terverifikasi aman di Escrow Hingo",
-            description: `Total pembayaran Rp${totalAmount.toLocaleString("id-ID")} disimpan di Rekening Bersama Hingo.`,
-            timestampText: "Hari ini · Baru saja",
-            isCompleted: true,
+            title: "Menunggu pembayaran pembeli",
+            description: `Menunggu transfer ${paymentMethod === "QRIS" ? "QRIS" : "BCA Virtual Account"} sebesar Rp${totalAmount.toLocaleString("id-ID")}.`,
+            timestampText: "Menunggu pembayaran",
+            isCompleted: false,
           },
           {
             orderId: ord.id,
             stepOrder: 2,
-            title: "Barang disiapkan & dikemas tim kurator Hingo",
-            description: "Pengemasan aman double bubble wrap di Gudang Hingo Jakarta Selatan.",
-            timestampText: "Hari ini",
-            isCompleted: true,
+            title: "Pengemasan aman & pengiriman Hingo",
+            description: "Gudang Hingo Jakarta Selatan.",
+            timestampText: "Menunggu pembayaran",
+            isCompleted: false,
+          },
+          {
+            orderId: ord.id,
+            stepOrder: 3,
+            title: "Paket tiba — masa uji 48 jam",
+            description: "Uji fungsi tombol, switch, sensor, dan kelengkapan sebelum konfirmasi.",
+            timestampText: "Belum dimulai",
+            isCompleted: false,
+          },
+          {
+            orderId: ord.id,
+            stepOrder: 4,
+            title: "Konfirmasi & pencairan dana",
+            description: "Setelah dikonfirmasi sesuai, dana escrow diteruskan ke pemilik gear.",
+            timestampText: "Menunggu konfirmasi pembeli",
+            isCompleted: false,
           },
         ],
       });
@@ -152,7 +168,7 @@ export async function POST(req: Request) {
       success: true,
       orderCode: newOrder.orderCode,
       orderId: newOrder.id,
-      redirectTo: `/orders/${newOrder.orderCode}`,
+      redirectTo: `/checkout/payment/${newOrder.orderCode}?method=${paymentMethod.toLowerCase()}`,
     });
   } catch (error: any) {
     console.error("Checkout transaction error:", error);

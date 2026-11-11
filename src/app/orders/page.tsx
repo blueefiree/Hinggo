@@ -35,7 +35,7 @@ export default function BuyerOrdersPage() {
     {
       id: "AWAITING_PAYMENT",
       label: "Menunggu Bayar",
-      count: orders.filter((o) => o.orderStatus === "AWAITING_PAYMENT").length,
+      count: orders.filter((o) => (o.orderStatus as string) === "AWAITING_PAYMENT" || (o.orderStatus as string) === "WAITING_PAYMENT").length,
     },
     {
       id: "SHIPPED",
@@ -71,7 +71,7 @@ export default function BuyerOrdersPage() {
       }
 
       if (activeTab === "ALL") return true;
-      if (activeTab === "AWAITING_PAYMENT") return o.orderStatus === "AWAITING_PAYMENT";
+      if (activeTab === "AWAITING_PAYMENT") return (o.orderStatus as string) === "AWAITING_PAYMENT" || (o.orderStatus as string) === "WAITING_PAYMENT";
       if (activeTab === "SHIPPED") return o.orderStatus === "SHIPPED";
       if (activeTab === "DELIVERED_CHECKING") return o.orderStatus === "DELIVERED_CHECKING";
       if (activeTab === "COMPLETED") return o.orderStatus === "COMPLETED";

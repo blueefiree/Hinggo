@@ -76,8 +76,8 @@ export default function CheckoutPage() {
       if (res.ok && data.orderCode) {
         await clearCart();
         await refreshOrders();
-        showToast("Pesanan berhasil dibuat!");
-        router.push(`/orders/${data.orderCode}`);
+        showToast("Pesanan berhasil dibuat. Silakan selesaikan pembayaran!");
+        router.push(data.redirectTo || `/checkout/payment/${data.orderCode}`);
       } else {
         alert(data.error || "Gagal membuat pesanan");
       }
