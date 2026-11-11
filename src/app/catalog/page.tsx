@@ -14,7 +14,6 @@ import {
   Package,
   Plus,
   Loader2,
-  Check,
 } from "lucide-react";
 import ProductCard from "@/components/ui/ProductCard";
 import { Product } from "@/lib/data";

@@ -11,7 +11,6 @@ import {
   User,
   ChevronDown,
   ArrowRight,
-  Sparkles,
   LogOut,
   Package,
   Layers,
@@ -46,7 +45,7 @@ export default function Navbar() {
     };
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);

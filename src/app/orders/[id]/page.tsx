@@ -14,7 +14,6 @@ import {
   Copy,
   Check,
   ExternalLink,
-  ChevronRight,
   ArrowRight,
   Headphones,
   Loader2,
@@ -159,7 +158,7 @@ export default function OrderDetailPage() {
     }
   };
 
-  const submitIssue = async (e: React.FormEvent) => {
+  const submitIssue = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!order || !issueText.trim()) return;
     try {

@@ -5,14 +5,10 @@ import Link from "next/link";
 import {
   Package,
   Search,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
   Truck,
   ArrowRight,
   ShieldCheck,
   ChevronRight,
-  Filter,
 } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { useHingoStore } from "@/lib/store";
