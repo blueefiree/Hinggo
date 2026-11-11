@@ -195,6 +195,8 @@ export default function VerifyIdentityPage() {
                     Nama lengkap sesuai KTP
                   </label>
                   <input
+                    id="fullName"
+                    name="fullName"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
@@ -209,6 +211,8 @@ export default function VerifyIdentityPage() {
                     NIK {isVerified ? "(disamarkan demi privasi)" : "(16 digit)"}
                   </label>
                   <input
+                    id="nik"
+                    name="nik"
                     type="text"
                     value={nik}
                     onChange={(e) => setNik(e.target.value)}

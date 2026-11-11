@@ -347,6 +347,8 @@ function ChatSupportContent() {
               <Paperclip className="h-4 w-4" />
             </button>
             <input
+              id="support-chat-message"
+              name="support-chat-message"
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}

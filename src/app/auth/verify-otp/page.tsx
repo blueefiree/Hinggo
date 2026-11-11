@@ -265,6 +265,8 @@ function VerifyOtpContent() {
                 {otp.map((digit, idx) => (
                   <input
                     key={idx}
+                    id={`otp-${idx}`}
+                    name={`otp-${idx}`}
                     ref={(el) => {
                       inputRefs.current[idx] = el;
                     }}

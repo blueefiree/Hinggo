@@ -408,6 +408,8 @@ function ChatProductContent() {
               <Paperclip className="h-4 w-4" />
             </button>
             <input
+              id="product-chat-message"
+              name="product-chat-message"
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}

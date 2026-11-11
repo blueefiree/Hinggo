@@ -262,6 +262,8 @@ function LoginContent() {
                       +62
                     </span>
                     <input
+                      id="phone"
+                      name="phone"
                       type="tel"
                       required
                       value={phone}
@@ -301,6 +303,8 @@ function LoginContent() {
                     Alamat Email
                   </label>
                   <input
+                    id="email"
+                    name="email"
                     type="email"
                     required
                     value={email}
