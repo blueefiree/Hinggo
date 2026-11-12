@@ -14,6 +14,19 @@ export function getSupabaseEnv(): { url: string; key: string } {
   return { url, key };
 }
 
+/**
+ * Validasi dan ambil environment variable wajib untuk Supabase server-only (service_role).
+ * Tidak pernah dipakai di browser dan tidak menggunakan fallback ke anon key.
+ */
+function getServerSupabaseEnv(): { url: string; serviceRoleKey: string } {
+  if (typeof window !== "undefined") {
+    throw new Error("Server Supabase client dengan service_role tidak boleh diakses di browser.");
+  }
+  const url = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+  return { url, serviceRoleKey };
+}
+
 // 1. Client Browser (menggunakan Anon/Publishable Key)
 let browserClient: SupabaseClient | null = null;
 export function getBrowserSupabase(): SupabaseClient {
@@ -28,17 +41,18 @@ export function getBrowserSupabase(): SupabaseClient {
   return browserClient;
 }
 
-// 2. Client Server (menggunakan Anon Key, tanpa key rahasia di client)
+// 2. Client Server (menggunakan SUPABASE_SERVICE_ROLE_KEY untuk akses tabel ber-RLS setelah verifikasi sesi)
 export function createServerSupabase(): SupabaseClient {
-  const { url, key } = getSupabaseEnv();
-  return createSupabaseClient(url, key, {
+  const { url, serviceRoleKey } = getServerSupabaseEnv();
+  return createSupabaseClient(url, serviceRoleKey, {
     auth: {
       persistSession: false,
+      autoRefreshToken: false,
     },
   });
 }
 
-// Singleton proxy export untuk backward-compatibility dengan rute API yang sudah ada
+// Singleton proxy export untuk rute API server
 const globalForSupabase = globalThis as unknown as {
   supabaseClient?: SupabaseClient;
 };
@@ -47,10 +61,11 @@ function getOrCreateServerClient(): SupabaseClient {
   if (globalForSupabase.supabaseClient) {
     return globalForSupabase.supabaseClient;
   }
-  const { url, key } = getSupabaseEnv();
-  const client = createSupabaseClient(url, key, {
+  const { url, serviceRoleKey } = getServerSupabaseEnv();
+  const client = createSupabaseClient(url, serviceRoleKey, {
     auth: {
       persistSession: false,
+      autoRefreshToken: false,
     },
   });
   if (process.env.NODE_ENV !== "production") {
