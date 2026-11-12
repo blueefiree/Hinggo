@@ -90,7 +90,7 @@ function LoginContent() {
     return () => clearInterval(interval);
   }, [qrModalOpen, waConnected]);
 
-  const handleSubmit = async (e: React.FormEvent, forcedMode?: "phone" | "email") => {
+  const handleSubmit = async (e: React.SyntheticEvent, forcedMode?: "phone" | "email") => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -189,14 +189,14 @@ function LoginContent() {
         </div>
 
         {/* KOLOM KANAN (Figma Login Form) */}
-        <div className="lg:col-span-6 rounded-3xl border border-[#E5E5E5] bg-white p-8 sm:p-10 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-6 lg:rounded-3xl lg:border lg:border-[#E5E5E5] bg-white p-1 sm:p-6 lg:p-10 lg:shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <Link href="/" className="inline-flex items-center gap-2 group">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FFC629] font-black text-xl text-[#1A1A1A] shadow-xs transition group-hover:scale-105">
+            <div className="flex items-center justify-between mb-5 sm:mb-6">
+              <Link href="/" className="hidden sm:inline-flex items-center gap-2 group">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFC629] font-black text-xl text-[#1A1A1A] shadow-xs transition group-hover:scale-105">
                   H
                 </div>
-                <span className="font-black text-lg text-[#1A1A1A] tracking-tight">HINGO</span>
+                <span className="font-black text-lg text-[#1A1A1A] tracking-tight">Hingo</span>
               </Link>
 
               {/* Status WA Gateway indicator */}
@@ -215,37 +215,37 @@ function LoginContent() {
               </button>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A] tracking-tight">
+            <h1 className="text-[28px] sm:text-3xl font-black text-[#1A1A1A] tracking-tight">
               Masuk atau daftar
             </h1>
-            <p className="text-xs sm:text-sm text-neutral-500 mt-1 mb-6 leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-500 mt-1 mb-5 leading-relaxed">
               Mulai dengan nomor HP, email, atau akun Google.
             </p>
 
-            {/* Method Toggle Tabs */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-[#F6F6F4] rounded-2xl mb-6 text-xs font-bold">
+            {/* Method Toggle Pills (Sesuai Figma node 10:25941 & 10:26026) */}
+            <div className="flex items-center gap-2 mb-5 text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setAuthMode("phone")}
-                className={`flex items-center justify-center gap-2 py-2.5 rounded-xl transition cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-full transition cursor-pointer ${
                   authMode === "phone"
-                    ? "bg-[#FFFBEB] text-[#92400E] border border-[#F59E0B] shadow-xs font-black"
-                    : "text-neutral-500 hover:text-black border border-transparent"
+                    ? "bg-[#FFF3C4] text-[#1A1A1A] border border-[#FFC629] shadow-2xs font-bold"
+                    : "bg-white text-neutral-600 hover:text-black border border-neutral-200"
                 }`}
               >
-                <Phone className="h-4 w-4" />
+                <Phone className="h-3.5 w-3.5" />
                 <span>Nomor HP</span>
               </button>
               <button
                 type="button"
                 onClick={() => setAuthMode("email")}
-                className={`flex items-center justify-center gap-2 py-2.5 rounded-xl transition cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-full transition cursor-pointer ${
                   authMode === "email"
-                    ? "bg-[#FFFBEB] text-[#92400E] border border-[#F59E0B] shadow-xs font-black"
-                    : "text-neutral-500 hover:text-black border border-transparent"
+                    ? "bg-[#FFF3C4] text-[#1A1A1A] border border-[#FFC629] shadow-2xs font-bold"
+                    : "bg-white text-neutral-600 hover:text-black border border-neutral-200"
                 }`}
               >
-                <Mail className="h-4 w-4" />
+                <Mail className="h-3.5 w-3.5" />
                 <span>Email</span>
               </button>
             </div>
@@ -388,15 +388,15 @@ function LoginContent() {
           {/* Privacy Note & Footer Ringkas Mobile */}
           <div className="mt-6 pt-4 border-t border-neutral-100 flex flex-col gap-3">
             <p className="text-[11px] text-neutral-400 text-center leading-relaxed">
-              Dengan masuk atau mendaftar, kamu menyetujui{" "}
-              <Link href="/how-it-works" className="text-neutral-700 underline font-medium">
-                Ketentuan Layanan
+              Dengan melanjutkan, kamu menyetujui{" "}
+              <Link href="/terms" className="text-neutral-700 underline font-medium">
+                Syarat &amp; Ketentuan
               </Link>{" "}
-              dan{" "}
-              <Link href="/how-it-works" className="text-neutral-700 underline font-medium">
+              serta{" "}
+              <Link href="/privacy" className="text-neutral-700 underline font-medium">
                 Kebijakan Privasi
               </Link>{" "}
-              Hingo.
+              Hingo. Kami tidak pernah meminta OTP lewat chat.
             </p>
 
             <div className="flex items-center justify-between text-[11px] text-neutral-400 pt-2 border-t border-neutral-100">

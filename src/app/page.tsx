@@ -60,71 +60,85 @@ export default function Home() {
   const recommendations = products.slice(4, 8).length > 0 ? products.slice(4, 8) : products.slice(0, 4);
 
   return (
-    <div className="flex flex-col gap-10 md:gap-16 py-4 md:py-8">
-      {/* 1. HERO BANNER */}
-      <section className="mx-auto w-full max-w-7xl px-4">
-        <div className="relative overflow-hidden rounded-3xl bg-[#FFC629] p-6 sm:p-10 md:p-14 lg:p-16 shadow-md">
+    <div className="flex flex-col gap-6 md:gap-14 py-2 md:py-8">
+      {/* 1A. MOBILE HERO COMPACT (Sesuai Figma node 48:2963, tampil hanya di < 768px) */}
+      <section className="mx-auto w-full max-w-7xl px-4 md:hidden">
+        <Link
+          href={user ? "/seller/consignments/new" : "/catalog"}
+          className="flex items-center justify-between gap-2 rounded-[20px] bg-[#FFC629] p-[18px] shadow-xs active:scale-[0.99] transition"
+        >
+          <div className="flex flex-col gap-2 text-[#1A1A1A] min-w-0">
+            <h1 className="text-[25px] font-extrabold leading-[31px] tracking-[-0.7px]">
+              Titip jual gear,
+              <br />
+              kami yang urus.
+            </h1>
+            <p className="text-[12px] leading-[18px] text-[#1A1A1A]/85 font-normal">
+              Kami cek, simpan, pasarkan,
+              <br />
+              lalu kirim ke pembeli.
+            </p>
+          </div>
+
+          <div className="flex h-[112px] w-[94px] shrink-0 items-center justify-center">
+            <div className="flex h-[104px] w-[82px] rotate-8 items-center justify-center rounded-[24px] bg-[#FFF3C4] shadow-xs">
+              <Mouse className="h-12 w-12 text-[#1A1A1A] stroke-[1.75]" />
+            </div>
+          </div>
+        </Link>
+      </section>
+
+      {/* 1B. DESKTOP HERO BANNER (Sesuai Figma node 1:2, tampil di >= 768px) */}
+      <section className="mx-auto w-full max-w-7xl px-4 hidden md:block">
+        <div className="relative overflow-hidden rounded-[28px] bg-[#FFC629] p-10 lg:p-14 shadow-md">
           {/* Subtle decorative circles */}
           <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/10 blur-2xl pointer-events-none" />
           <div className="absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-black/5 blur-xl pointer-events-none" />
 
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Content */}
-            <div className="lg:col-span-7 flex flex-col items-start gap-4 sm:gap-6">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <div className="lg:col-span-7 flex flex-col items-start gap-5">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1A1A1A] shadow-xs">
+                <ShieldCheck className="h-4 w-4 text-[#1F9D55]" />
                 <span>Konsinyasi dikelola tim kami</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight text-[#1A1A1A] leading-[1.1]">
-                Titip jual gear, <br className="hidden sm:block" />
+              <h1 className="text-4xl lg:text-[52px] font-extrabold tracking-tight text-[#1A1A1A] leading-[1.12]">
+                Titip jual gear, <br />
                 kami yang urus.
               </h1>
 
-              <p className="text-sm sm:text-base md:text-lg text-[#1A1A1A]/85 max-w-xl font-medium leading-relaxed">
-                Titipkan peripheral ke Hingo. Kami cek fisik, simpan aman, pasarkan lewat
-                Instagram, Facebook, dan TikTok, lalu kirim ke pembeli dengan proteksi
-                rekening bersama.
+              <p className="text-base text-[#4B4B4B] max-w-xl font-normal leading-relaxed">
+                Titipkan peripheral ke Hingo. Kami cek, simpan, pasarkan lewat
+                Instagram, Facebook, dan TikTok, lalu kirim ke pembeli.
               </p>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
                   href="/catalog"
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-[#1A1A1A] px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-md transition hover:bg-neutral-800 hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#1A1A1A] px-[22px] py-[12px] text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 active:scale-[0.98]"
                 >
-                  <ShoppingBag className="h-4 w-4" />
                   Belanja sekarang
                 </Link>
                 <Link
                   href="/how-it-works"
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm sm:text-base font-bold text-[#1A1A1A] shadow-md transition hover:bg-neutral-50 hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-[#D9D9D9] bg-white px-[22px] py-[12px] text-sm font-semibold text-[#1A1A1A] shadow-xs transition hover:bg-neutral-50 active:scale-[0.98]"
                 >
                   Cara titip jual
-                  <ArrowRight className="h-4 w-4" />
                 </Link>
-              </div>
-
-              {/* Trust stats */}
-              <div className="pt-2 flex items-center gap-6 text-xs sm:text-sm text-[#1A1A1A]/90 font-semibold">
-                <div className="flex items-center gap-1.5">
-                  <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-ping" />
-                  <span>{categoryCounts.TOTAL} Gear Terverifikasi</span>
-                </div>
-                <span>·</span>
-                <div>Garansi Cek Fisik 100%</div>
               </div>
             </div>
 
             {/* Right Bento Cards with Vector Peripheral Styling */}
             <div className="lg:col-span-5 grid grid-cols-2 gap-3.5">
               {/* Card 1: Top Wide Keyboard */}
-              <div className="col-span-2 rounded-2xl bg-white p-5 shadow-lg border border-white/60 transition hover:-translate-y-1">
+              <div className="col-span-2 rounded-3xl bg-white p-5 shadow-md border border-white/60 transition hover:-translate-y-1">
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="rounded-full bg-[#FFFBEB] px-2.5 py-0.5 text-[11px] font-bold text-amber-800 border border-[#FDE68A]">
                       Top Rated Gear
                     </span>
-                    <h3 className="mt-2 text-base sm:text-lg font-bold text-[#1A1A1A]">
+                    <h3 className="mt-2 text-lg font-bold text-[#1A1A1A]">
                       Mechanical Keyboard
                     </h3>
                     <p className="text-xs text-neutral-500">
@@ -144,7 +158,7 @@ export default function Home() {
               </div>
 
               {/* Card 2: Bottom-Left Mouse */}
-              <div className="col-span-1 rounded-2xl bg-white p-4 shadow-lg border border-white/60 transition hover:-translate-y-1 flex flex-col justify-between">
+              <div className="col-span-1 rounded-3xl bg-white p-4 shadow-md border border-white/60 transition hover:-translate-y-1 flex flex-col justify-between">
                 <div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1A1A1A] text-[#FFC629]">
                     <Mouse className="h-5 w-5" />
@@ -162,7 +176,7 @@ export default function Home() {
               </div>
 
               {/* Card 3: Bottom-Right Headset */}
-              <div className="col-span-1 rounded-2xl bg-white p-4 shadow-lg border border-white/60 transition hover:-translate-y-1 flex flex-col justify-between">
+              <div className="col-span-1 rounded-3xl bg-white p-4 shadow-md border border-white/60 transition hover:-translate-y-1 flex flex-col justify-between">
                 <div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFFBEB] text-amber-800 border border-[#FDE68A]">
                     <Headphones className="h-5 w-5" />
@@ -183,74 +197,105 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. 4 TRUST PILLARS STRIP */}
-      <section className="mx-auto w-full max-w-7xl px-4">
-        <div className="rounded-2xl border border-[#E5E5E5] bg-white p-4 sm:p-6 shadow-xs">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-neutral-100">
-            <div className="flex items-center gap-3.5 pt-2 md:pt-0">
+      {/* 2. 4 TRUST PILLARS STRIP (Desktop >= 768px sesuai Figma node 1:2) */}
+      <section className="mx-auto w-full max-w-7xl px-4 hidden md:block">
+        <div className="rounded-2xl border border-[#EBEBEB] bg-white p-5 sm:p-6 shadow-xs">
+          <div className="grid grid-cols-4 gap-4 divide-x divide-neutral-100">
+            <div className="flex items-center gap-3.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFFBEB] text-amber-700 border border-[#FDE68A]">
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-[#1A1A1A]">Dikelola tim kami</h4>
-                <p className="text-xs text-neutral-500">Kami cek fisik, foto, dan simpan</p>
+                <p className="text-xs text-neutral-500">Dari titip jual hingga pengiriman</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3.5 pt-2 md:pt-0 md:pl-6">
+            <div className="flex items-center gap-3.5 pl-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-[#1A1A1A]">Pengecekan barang</h4>
-                <p className="text-xs text-neutral-500">Transparan tanpa cacat tersembunyi</p>
+                <p className="text-xs text-neutral-500">Kondisi dan kelengkapan dicek</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3.5 pt-2 md:pt-0 md:pl-6">
+            <div className="flex items-center gap-3.5 pl-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-[#1A1A1A]">Chat admin</h4>
-                <p className="text-xs text-neutral-500">Tanya langsung sebelum transaksi</p>
+                <p className="text-xs text-neutral-500">Tanya kondisi dan pengiriman</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3.5 pt-2 md:pt-0 md:pl-6">
+            <div className="flex items-center gap-3.5 pl-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
                 <Truck className="h-5 w-5" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-[#1A1A1A]">Pengiriman terlacak</h4>
-                <p className="text-xs text-neutral-500">Rekening bersama, dana aman</p>
+                <p className="text-xs text-neutral-500">Resi otomatis di setiap pesanan</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. KATEGORI POPULER - 100% DINAMIS DARI DATABASE */}
-      <section className="mx-auto w-full max-w-7xl px-4">
+      {/* 3A. MOBILE KATEGORI COMPACT ("Mau cari apa?" sesuai Figma node 48:2963) */}
+      <section className="mx-auto w-full max-w-7xl px-4 md:hidden">
+        <h2 className="text-[19px] font-extrabold text-[#1A1A1A] mb-3">
+          Mau cari apa?
+        </h2>
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { label: "Keyboard", href: "/catalog?cat=KEYBOARD", icon: Keyboard },
+            { label: "Mouse", href: "/catalog?cat=MOUSE", icon: Mouse },
+            { label: "Headset", href: "/catalog?cat=HEADSET", icon: Headphones },
+            { label: "Monitor", href: "/catalog?cat=MONITOR", icon: Tv },
+          ].map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <Link
+                key={cat.label}
+                href={cat.href}
+                className="flex flex-col items-center gap-1.5 group active:scale-95 transition"
+              >
+                <div className="flex h-12 w-full items-center justify-center rounded-[14px] bg-[#FFFBEB] border border-[#FFF3C4] text-[#1A1A1A]">
+                  <Icon className="h-6 w-6 stroke-[1.8]" />
+                </div>
+                <span className="text-[12px] font-semibold text-[#1A1A1A] whitespace-nowrap">
+                  {cat.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 3B. DESKTOP KATEGORI POPULER (Sesuai Figma node 1:2) */}
+      <section className="mx-auto w-full max-w-7xl px-4 hidden md:block">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-[#1A1A1A]">
-              Kategori Populer
+            <h2 className="text-2xl font-black text-[#1A1A1A]">
+              Kategori populer
             </h2>
-            <p className="text-xs sm:text-sm text-neutral-500">
-              Pilihan gear preloved paling diminati
+            <p className="text-sm text-neutral-500">
+              Mulai dari yang paling dicari
             </p>
           </div>
           <Link
             href="/catalog"
-            className="flex items-center gap-1 text-xs sm:text-sm font-bold text-neutral-700 hover:text-black"
+            className="flex items-center gap-1 text-sm font-bold text-neutral-700 hover:text-black"
           >
             Lihat semua
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <Link
             href="/catalog?cat=KEYBOARD"
             className="group flex flex-col justify-between rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] p-5 transition hover:shadow-md hover:-translate-y-1"
@@ -325,23 +370,28 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. PRODUK TERLARIS */}
+      {/* 4. PRODUK TERLARIS / LAGI BANYAK DICARI */}
       <section className="mx-auto w-full max-w-7xl px-4">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-3.5 md:mb-5">
           <div>
-            <div className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 uppercase tracking-wider">
+            <div className="hidden md:inline-flex items-center gap-1 text-xs font-bold text-amber-700 uppercase tracking-wider">
               <Sparkles className="h-3.5 w-3.5" /> Pilihan Kurator
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-[#1A1A1A]">
-              Produk Terlaris
+            <h2 className="text-[19px] md:text-2xl font-extrabold md:font-black text-[#1A1A1A]">
+              <span className="md:hidden">Lagi banyak dicari</span>
+              <span className="hidden md:inline">Produk terlaris</span>
             </h2>
+            <p className="md:hidden text-xs font-medium text-[#4B4B4B] mt-0.5">
+              Pilihan gear dari barang titipan
+            </p>
           </div>
           <Link
             href="/catalog"
-            className="flex items-center gap-1 text-xs sm:text-sm font-bold text-neutral-700 hover:text-black"
+            className="flex items-center gap-1 text-xs md:text-sm font-medium md:font-bold text-[#1A1A1A] hover:text-black"
           >
-            Lihat semua
-            <ArrowRight className="h-4 w-4" />
+            <span className="md:hidden">Semua</span>
+            <span className="hidden md:inline">Lihat semua</span>
+            <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </Link>
         </div>
 
@@ -351,7 +401,7 @@ export default function Home() {
             <p className="text-xs font-semibold text-neutral-500">Memuat produk pilihan...</p>
           </div>
         ) : bestSellers.length > 0 ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
             {bestSellers.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -372,10 +422,18 @@ export default function Home() {
               className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#1A1A1A] hover:bg-neutral-800 text-white px-5 py-2.5 text-xs font-bold shadow-xs transition"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>+ Ajukan titip jual sekarang</span>
+              <span>Ajukan titip jual sekarang</span>
             </Link>
           </div>
         )}
+
+        {/* Mobile Guarantee Pill Strip (Sesuai Figma node 48:3164) */}
+        <div className="mt-3 flex md:hidden h-12 items-center gap-2 rounded-xl bg-[#F6F6F4] px-3">
+          <ShieldCheck className="h-5 w-5 text-[#1A1A1A] shrink-0" />
+          <span className="text-xs font-medium text-[#4B4B4B]">
+            Kondisi & kelengkapan dicek tim Hingo
+          </span>
+        </div>
       </section>
 
       {/* 5. HOW CONSIGNMENT WORKS */}

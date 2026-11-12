@@ -161,22 +161,22 @@ export default function CheckoutPage() {
           </div>
 
           {/* Card 2: Barang Pesanan */}
-          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 shadow-xs flex flex-col gap-4">
-            <h2 className="text-sm font-bold text-[#1A1A1A] pb-3 border-b border-neutral-100">
+          <div className="rounded-2xl sm:rounded-3xl border border-[#E5E5E5] bg-white p-4 sm:p-6 shadow-xs flex flex-col gap-3.5 sm:gap-4">
+            <h2 className="text-xs sm:text-sm font-bold text-[#1A1A1A] pb-2.5 sm:pb-3 border-b border-neutral-100">
               Barang pesanan (1)
             </h2>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3.5 sm:gap-4">
               <img
                 src={targetProduct.images[0]}
                 alt={targetProduct.name}
-                className="h-16 w-16 rounded-xl object-cover border border-neutral-200"
+                className="h-16 w-16 rounded-xl object-cover border border-neutral-200 shrink-0"
               />
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-[#1A1A1A]">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-[#1A1A1A] truncate">
                   {targetProduct.name}
                 </h3>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-500 truncate">
                   {targetProduct.subtitle} · {targetProduct.condition}
                 </p>
                 <span className="text-sm font-black text-[#1A1A1A] mt-1 block">
@@ -185,7 +185,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1 sm:pt-2">
               <label htmlFor="buyerNote" className="block text-xs font-bold text-neutral-700 mb-1">
                 Catatan untuk tim Hingo (opsional)
               </label>
@@ -202,8 +202,8 @@ export default function CheckoutPage() {
           </div>
 
           {/* Card 3: Pengiriman */}
-          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 shadow-xs flex flex-col gap-4">
-            <h2 className="text-sm font-bold text-[#1A1A1A] pb-3 border-b border-neutral-100">
+          <div className="rounded-2xl sm:rounded-3xl border border-[#E5E5E5] bg-white p-4 sm:p-6 shadow-xs flex flex-col gap-3.5 sm:gap-4">
+            <h2 className="text-xs sm:text-sm font-bold text-[#1A1A1A] pb-2.5 sm:pb-3 border-b border-neutral-100">
               Pilihan kurir pengiriman
             </h2>
 

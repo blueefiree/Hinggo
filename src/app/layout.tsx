@@ -35,7 +35,7 @@ export default function RootLayout({
             <Navbar />
           </Suspense>
           <Suspense fallback={<div className="min-h-[50vh] p-8 text-center text-xs text-neutral-400">Memuat konten Hingo...</div>}>
-            <main className="flex-1 pb-28 md:pb-0">{children}</main>
+            <main className="flex-1 pb-32 md:pb-0">{children}</main>
           </Suspense>
           <Footer />
           <Suspense fallback={null}>

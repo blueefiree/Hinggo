@@ -38,7 +38,7 @@ export default function MobileBottomNav() {
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (mobileSearch.trim()) {
       router.push(`/catalog?q=${encodeURIComponent(mobileSearch.trim())}`);
@@ -47,7 +47,7 @@ export default function MobileBottomNav() {
     }
   };
 
-  const showSearchBar = pathname === "/" || pathname === "/catalog";
+  const showSearchBar = pathname === "/";
 
   const navItems = [
     {

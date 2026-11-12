@@ -211,14 +211,14 @@ export default function CartPage() {
               </p>
             </div>
 
-            {/* Tombol: ← Lanjut jelajahi barang */}
+            {/* Tombol: Lanjut jelajahi barang */}
             <div className="pt-2">
               <Link
                 href="/catalog"
-                className="inline-flex items-center gap-2 font-bold text-xs sm:text-sm text-neutral-800 hover:underline"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#EBEBEB] bg-white px-4 py-2.5 font-bold text-xs sm:text-sm text-neutral-800 hover:bg-[#F6F6F4] transition shadow-2xs"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span>← Lanjut jelajahi barang</span>
+                <span>Lanjut jelajahi barang</span>
               </Link>
             </div>
           </div>

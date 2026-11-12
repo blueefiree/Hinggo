@@ -199,7 +199,7 @@ function VerifyOtpContent() {
 
         {/* Right OTP Verification Card */}
         <div className="lg:col-span-6 flex flex-col justify-center max-w-lg mx-auto w-full">
-          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 sm:p-10 shadow-xs">
+          <div className="sm:rounded-3xl sm:border sm:border-[#E5E5E5] bg-white p-1 sm:p-10 sm:shadow-xs">
             <div className="flex flex-col gap-1.5 mb-6">
               <h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">
                 Verifikasi kode OTP

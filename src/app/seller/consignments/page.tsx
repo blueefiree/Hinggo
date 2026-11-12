@@ -102,23 +102,7 @@ export default function SellerConsignmentsPage() {
   }, [consignments, activeFilter, searchQuery]);
 
   return (
-    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-16 md:pb-10">
-      {/* Mobile Sub-Navbar Penjual */}
-      <div className="flex md:hidden items-center gap-2 border-b border-neutral-200 pb-2.5 mb-3.5">
-        <Link
-          href="/seller/consignments"
-          className="rounded-full bg-[#1A1A1A] px-3.5 py-1 text-xs font-bold text-white"
-        >
-          Barang titipan saya
-        </Link>
-        <Link
-          href="/seller/consignments/new"
-          className="rounded-full bg-[#F6F6F4] px-3.5 py-1 text-xs font-bold text-neutral-600 hover:bg-neutral-200"
-        >
-          Ajukan titip jual
-        </Link>
-      </div>
-
+    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 sm:py-6 md:py-10 pb-24 md:pb-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
@@ -138,7 +122,7 @@ export default function SellerConsignmentsPage() {
           className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#FFC629] hover:bg-[#FFC420] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#1A1A1A] shadow-xs transition active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
-          <span>+ Ajukan titip jual</span>
+          <span>Ajukan titip jual</span>
         </Link>
       </div>
 

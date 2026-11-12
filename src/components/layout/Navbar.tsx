@@ -243,9 +243,8 @@ export default function Navbar() {
           {!user ? (
             <Link
               href="/auth/login"
-              className="flex items-center gap-1.5 rounded-full bg-[#FFC629] px-4 py-2 text-xs font-black text-black shadow-xs hover:bg-[#FFC420] transition active:scale-95"
+              className="flex items-center gap-1.5 rounded-xl bg-[#FFC629] px-5 py-2.5 text-sm font-semibold text-[#1A1A1A] shadow-xs hover:bg-[#FFC420] transition active:scale-95"
             >
-              <User className="h-3.5 w-3.5" />
               <span>Masuk</span>
             </Link>
           ) : (
@@ -253,7 +252,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-1.5 rounded-full bg-[#FFC629] px-3.5 py-1.5 text-xs font-black text-[#1A1A1A] shadow-xs hover:bg-[#FFC420] transition cursor-pointer active:scale-95"
+                className="flex items-center gap-1.5 rounded-xl bg-[#FFC629] px-4 py-2 text-xs font-extrabold text-[#1A1A1A] shadow-xs hover:bg-[#FFC420] transition cursor-pointer active:scale-95"
               >
                 {user.avatarUrl ? (
                   <img
@@ -333,9 +332,17 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Right Navigation for Mobile (< 768px): TEPAT 2 IKON BERSIH SESUAI FIGMA */}
+        {/* Right Navigation for Mobile (< 768px): Beranda sesuai Figma node 48:2963; halaman lain tepat 2 ikon */}
         <div className="flex md:hidden items-center gap-1.5">
-          {isSellerRoute ? (
+          {pathname === "/" ? (
+            <Link
+              href="/how-it-works"
+              className="flex items-center gap-1.5 text-xs font-medium text-[#4B4B4B] hover:text-[#1A1A1A] transition"
+            >
+              <ShieldCheck className="h-4 w-4 text-[#1A1A1A] shrink-0" />
+              <span className="whitespace-nowrap">Gear titipan, kami urus.</span>
+            </Link>
+          ) : isSellerRoute ? (
             <>
               {/* Ruang Penjual: Ikon Chat dan Ikon Profil */}
               <Link
