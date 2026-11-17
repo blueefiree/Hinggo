@@ -42,3 +42,15 @@ yarn-error.log*
 next-env.d.ts
 
 supabase/.temp/
+
+# SQLite & local database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+dev.db
+prisma/*.db
+
+# WhatsApp auth session
+wa_auth*
+wa_auth_session/

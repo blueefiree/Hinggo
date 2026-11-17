@@ -623,6 +623,26 @@ tulis laporan: daftar uji, hasil, dan masalah yang tersisa.
 
 Selesai kalau: 5 uji berhasil dan 5 uji penolakan lolos.
 
+STEP 22: Tutup sisa celah. Kerjakan berurutan, bukti berupa permintaan/perintah nyata untuk tiap poin.
+
+1. KODE DEMO: kode DEMO_OTP_CODE tidak boleh berlaku untuk akun berperan ADMIN atau akun seed
+   (mis. admin@hingo.id) dan tidak boleh membuat/mengubah peran apa pun. Akun admin hanya boleh
+   masuk lewat jalur terpisah (OTP acak sungguhan atau mekanisme lain yang kamu usulkan di rencana).
+   Uji: login admin@hingo.id dengan kode demo harus ditolak; login akun pembeli demo harus berhasil.
+   Pastikan DEMO_OTP_CODE tidak berawalan NEXT_PUBLIC_ dan tidak ada di kode atau git.
+2. GIT: tampilkan hasil `git ls-files | grep -E "dev.db|\.env|wa_auth"`. Kalau ada yang ter-track,
+   `git rm --cached` dan tambahkan ke .gitignore. Laporkan juga apakah dev.db pernah berisi data
+   pengguna (jangan tampilkan isinya).
+3. WHATSAPP: pastikan src/lib/whatsapp-gateway.ts tidak berjalan di Vercel dan tidak menulis ke
+   disk di produksi (hanya aktif kalau variabel env khusus diset). Tunjukkan kondisinya.
+4. OTP: tunjukkan baris yang membuat kode OTP dan pastikan memakai crypto.randomInt, bukan Math.random.
+5. BUNDLE: setelah `npm run build`, jalankan `grep -r "SUPABASE_SERVICE_ROLE_KEY\|service_role" .next/static`
+   dan laporkan hasilnya (harus kosong).
+6. Deploy, lalu uji ulang di produksi: poin 1 (admin ditolak), cookie palsu 401, OTP salah ditolak,
+   anon ke tabel sensitif kosong, katalog 12 produk. Hapus semua data uji sesudahnya (tampilkan
+   SQL dan tunggu persetujuan).
+7. `npm run build`, lalu commit: "fix: tutup sisa celah demo otp dan git".
+
 
 ## Catatan
 

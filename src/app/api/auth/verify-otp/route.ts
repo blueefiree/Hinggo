@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken } from "@/lib/auth";
-import { verifyOtpInput } from "@/lib/otp";
+import { verifyOtpInput, isProtectedTarget, getDemoOtpCode } from "@/lib/otp";
 
 export async function POST(req: Request) {
   try {
@@ -17,8 +17,23 @@ export async function POST(req: Request) {
     const cleanOtp = otpCode.trim();
     const isEmail = cleanTarget.includes("@");
 
-    // 1. Validasi Kode OTP & Limit Percobaan
-    const verifyResult = verifyOtpInput(cleanTarget, cleanOtp);
+    // Cek apakah target terproteksi atau terdaftar sebagai ADMIN
+    let isAdmin = isProtectedTarget(cleanTarget);
+    if (!isAdmin) {
+      try {
+        const { data: matchedUsers } = await supabase
+          .from("users")
+          .select("role")
+          .or(`email.eq.${cleanTarget.toLowerCase()},phone.eq.${cleanTarget}`)
+          .limit(1);
+        if (matchedUsers && matchedUsers.length > 0 && matchedUsers[0].role === "ADMIN") {
+          isAdmin = true;
+        }
+      } catch {}
+    }
+
+    // 1. Validasi Kode OTP & Limit Percobaan (Admin dilarang keras pakai demo OTP)
+    const verifyResult = verifyOtpInput(cleanTarget, cleanOtp, { isAdmin });
     if (!verifyResult.valid) {
       return NextResponse.json(
         { error: verifyResult.error || "Kode verifikasi salah atau telah kedaluwarsa." },
@@ -65,6 +80,13 @@ export async function POST(req: Request) {
 
       if (existingUsers && existingUsers.length > 0) {
         const exUser = existingUsers[0];
+        // Proteksi sekunder: Tolak jika akun terdaftar memiliki peran ADMIN dan dicoba login via kode demo
+        if (exUser.role === "ADMIN" && getDemoOtpCode() && cleanOtp === getDemoOtpCode()) {
+          return NextResponse.json(
+            { error: "Kode demo tidak berlaku untuk akun administrator. Harap gunakan kode OTP resmi yang dikirimkan." },
+            { status: 403 }
+          );
+        }
         userId = exUser.id;
         const updatePayload: any = isEmail
           ? { email: userEmail, email_verified: true, updated_at: new Date().toISOString() }

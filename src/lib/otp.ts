@@ -9,7 +9,22 @@ export function isDemoMode(): boolean {
 }
 
 export function getDemoOtpCode(): string {
-  return process.env.DEMO_OTP_CODE || "123456";
+  return process.env.DEMO_OTP_CODE?.trim() || "";
+}
+
+/**
+ * Daftar akun terproteksi (Admin dan Seed) yang DILARANG menggunakan kode demo
+ */
+export const PROTECTED_ADMIN_TARGETS = new Set([
+  "admin@hingo.id",
+  "+6281200000001",
+  "081200000001",
+  "6281200000001",
+]);
+
+export function isProtectedTarget(target: string): boolean {
+  const clean = target.trim().toLowerCase();
+  return PROTECTED_ADMIN_TARGETS.has(clean);
 }
 
 interface OtpState {
@@ -47,7 +62,7 @@ export interface SendOtpResult {
   isDemo?: boolean;
 }
 
-export function prepareSendOtp(target: string): SendOtpResult {
+export function prepareSendOtp(target: string, options?: { isAdmin?: boolean }): SendOtpResult {
   const cleanTarget = target.trim().toLowerCase();
   const now = Date.now();
   const current = otpTracker.get(cleanTarget);
@@ -73,10 +88,14 @@ export function prepareSendOtp(target: string): SendOtpResult {
   }
 
   // 3. Tentukan kode OTP
-  const demoActive = isDemoMode();
-  const otpCode = demoActive
-    ? getDemoOtpCode()
-    : Math.floor(100000 + Math.random() * 900000).toString();
+  // Akun ADMIN atau target berstatus proteksi DILARANG menggunakan DEMO_OTP_CODE
+  const isTargetAdmin = Boolean(options?.isAdmin) || isProtectedTarget(cleanTarget);
+  const demoActive = isDemoMode() && !isTargetAdmin;
+  const demoCode = getDemoOtpCode();
+
+  const otpCode = demoActive && demoCode
+    ? demoCode
+    : crypto.randomInt(100000, 1000000).toString();
 
   const hashed = hashOtp(cleanTarget, otpCode);
   const expiresAt = now + 5 * 60 * 1000; // 5 menit
@@ -102,11 +121,17 @@ export interface VerifyOtpResult {
   statusCode?: number;
 }
 
-export function verifyOtpInput(target: string, inputCode: string): VerifyOtpResult {
+export function verifyOtpInput(
+  target: string,
+  inputCode: string,
+  options?: { isAdmin?: boolean }
+): VerifyOtpResult {
   const cleanTarget = target.trim().toLowerCase();
   const cleanCode = inputCode.trim();
   const now = Date.now();
   const current = otpTracker.get(cleanTarget);
+  const isTargetAdmin = Boolean(options?.isAdmin) || isProtectedTarget(cleanTarget);
+  const demoCode = getDemoOtpCode();
 
   // 1. Cek jika target sedang dikunci
   if (current && current.lockedUntil > now) {
@@ -118,8 +143,17 @@ export function verifyOtpInput(target: string, inputCode: string): VerifyOtpResu
     };
   }
 
-  // 2. Mode Demo: Kode demo valid jika DEMO_MODE aktif
-  if (isDemoMode() && cleanCode === getDemoOtpCode()) {
+  // 2. KEAMANAN ADMIN: KODE DEMO DITOLAK KERAS UNTUK AKUN ADMIN ATAU SEED ADMIN
+  if (demoCode && cleanCode === demoCode && isTargetAdmin) {
+    return {
+      valid: false,
+      statusCode: 403,
+      error: "Kode demo tidak berlaku untuk akun administrator. Harap gunakan kode OTP resmi yang dikirimkan.",
+    };
+  }
+
+  // 3. Mode Demo: Kode demo hanya berlaku untuk akun NON-ADMIN jika DEMO_MODE aktif
+  if (isDemoMode() && demoCode && cleanCode === demoCode && !isTargetAdmin) {
     if (current) {
       current.failedAttempts = 0;
       current.lockedUntil = 0;
@@ -127,7 +161,7 @@ export function verifyOtpInput(target: string, inputCode: string): VerifyOtpResu
     return { valid: true };
   }
 
-  // 3. Mode Normal: Cocokkan hash dan masa berlaku
+  // 4. Mode Normal / Verifikasi Nyata: Cocokkan hash HMAC-SHA256 dan masa berlaku
   const inputHash = hashOtp(cleanTarget, cleanCode);
   const isMatch = current && current.hash === inputHash && now <= current.expiresAt;
 
@@ -140,7 +174,7 @@ export function verifyOtpInput(target: string, inputCode: string): VerifyOtpResu
     return { valid: true };
   }
 
-  // 4. Gagal verifikasi: Hitung percobaan salah
+  // 5. Gagal verifikasi: Hitung percobaan salah
   const failedAttempts = (current?.failedAttempts || 0) + 1;
   const isLocked = failedAttempts >= 5;
   const lockedUntil = isLocked ? now + 15 * 60 * 1000 : 0;

@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { sendOtpEmail } from "@/lib/otp-sender";
 import { dispatchWhatsAppOtp } from "@/lib/whatsapp-gateway";
-import { prepareSendOtp, hashOtp } from "@/lib/otp";
+import { prepareSendOtp, hashOtp, isProtectedTarget } from "@/lib/otp";
 
 export async function POST(req: Request) {
   try {
@@ -16,8 +16,23 @@ export async function POST(req: Request) {
     const isEmail = cleanTarget.includes("@");
     const channel = isEmail ? "email" : "whatsapp";
 
-    // 1. Validasi Rate Limit, Lockout, & Persiapan OTP
-    const prep = prepareSendOtp(cleanTarget);
+    // Cek apakah target terproteksi atau terdaftar sebagai ADMIN
+    let isAdmin = isProtectedTarget(cleanTarget);
+    if (!isAdmin) {
+      try {
+        const { data: matchedUsers } = await supabase
+          .from("users")
+          .select("role")
+          .or(`email.eq.${cleanTarget.toLowerCase()},phone.eq.${cleanTarget}`)
+          .limit(1);
+        if (matchedUsers && matchedUsers.length > 0 && matchedUsers[0].role === "ADMIN") {
+          isAdmin = true;
+        }
+      } catch {}
+    }
+
+    // 1. Validasi Rate Limit, Lockout, & Persiapan OTP (Admin selalu gunakan randomInt cryptographically secure)
+    const prep = prepareSendOtp(cleanTarget, { isAdmin });
     if (!prep.allowed) {
       return NextResponse.json(
         { error: prep.error },

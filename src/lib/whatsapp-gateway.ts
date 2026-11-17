@@ -27,9 +27,33 @@ export const waState: WhatsAppState = globalForWhatsApp.waState || {
 globalForWhatsApp.waState = waState;
 
 /**
+ * Validasi apakah WhatsApp Gateway (Baileys) diizinkan berjalan:
+ * - DILARANG berjalan di Vercel (serverless read-only filesystem)
+ * - DILARANG menulis ke disk di produksi
+ * - Hanya aktif jika variabel khusus ENABLE_WHATSAPP_GATEWAY === "true" dan bukan di Vercel
+ */
+export function isWhatsAppGatewayEnabled(): boolean {
+  if (process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV) {
+    return false;
+  }
+  return process.env.ENABLE_WHATSAPP_GATEWAY === "true";
+}
+
+/**
  * Initializes Baileys WhatsApp Web QR Connection
  */
 export async function initializeWhatsApp(): Promise<{ qr: string | null; isConnected: boolean; message: string }> {
+  if (!isWhatsAppGatewayEnabled()) {
+    const disabledReason = (process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV)
+      ? "WhatsApp Baileys dinonaktifkan di Vercel (lingkungan serverless read-only)."
+      : "WhatsApp Gateway dinonaktifkan (ENABLE_WHATSAPP_GATEWAY belum diset true).";
+    return {
+      qr: null,
+      isConnected: false,
+      message: disabledReason,
+    };
+  }
+
   if (waState.isConnected && waState.socket) {
     return { qr: null, isConnected: true, message: "WhatsApp sudah terhubung" };
   }
@@ -120,8 +144,8 @@ export async function dispatchWhatsAppOtp(rawPhone: string, otpCode: string): Pr
   const normalized = normalizePhoneNumber(rawPhone);
   const message = `Halo! Kode OTP Hingo kamu adalah: *${otpCode}*.\n\nBerlaku selama 5 menit. Jangan berikan kode ini kepada siapa pun, termasuk pihak yang mengaku sebagai Hingo.`;
 
-  // 1. Coba kirim via Baileys WhatsApp Web QR jika sudah terhubung
-  if (waState.isConnected && waState.socket) {
+  // 1. Coba kirim via Baileys WhatsApp Web QR jika diizinkan dan sudah terhubung
+  if (isWhatsAppGatewayEnabled() && waState.isConnected && waState.socket) {
     try {
       const jid = `${normalized}@s.whatsapp.net`;
       await waState.socket.sendMessage(jid, { text: message });
