@@ -6,6 +6,49 @@ Dokumen ini menggantikan arah pengerjaan di `hinggo-antigravity-prompts.md` untu
 - **Perilaku dan aturan bisnis:** `docs/PRD.md` (salinan teks dari PRD tim).
 - **Tampilan:** Figma `xKNQ51VDVCSdk8qF8bUelM`. Kalau PRD dan Figma bertentangan, PRD menang, dan layar Figma disesuaikan.
 
+## ATURAN PROYEK (tempel sekali di awal)
+
+```
+Kamu bekerja di proyek "Hinggo", marketplace titip jual peripheral komputer preloved
+(admin Hinggo mengecek, menyimpan, memasarkan, dan mengirim barang milik penitip).
+Stack: Next.js App Router, TypeScript, Supabase, Vercel. Bahasa antarmuka: Indonesia.
+
+SUMBER DESAIN
+- File Figma: https://www.figma.com/design/xKNQ51VDVCSdk8qF8bUelM/Hinggo (fileKey: xKNQ51VDVCSdk8qF8bUelM)
+- Utamakan Figma MCP: baca frame lewat node ID yang disebut di tiap step.
+- Kalau Figma MCP gagal atau tidak mengembalikan data, pakai "Spesifikasi cadangan" yang ada di prompt.
+- Setiap layar punya versi Desktop (lebar 1440) dan Mobile (lebar 390). Bangun SATU codebase
+  responsif. Jangan membuat dua halaman terpisah. Breakpoint desktop mulai sekitar 1024px.
+
+ATURAN KERJA
+1. Kerjakan HANYA step yang sedang diminta. Jangan memperluas cakupan.
+2. Jangan menulis, mencetak, atau meng-commit nilai API key/secret. Jangan commit file .env.
+   Hanya sebut NAMA variabel environment.
+3. WAJIB minta persetujuan (tulis rencana dulu, lalu berhenti dan tunggu) sebelum:
+   - mengubah skema tabel Supabase (migration, kolom, tabel baru),
+   - menambah/mengubah/menghapus RLS policy,
+   - menghapus atau menimpa data di database,
+   - menambah dependency besar.
+4. Tampilan mengikuti Figma. Jangan mengarang warna, font, atau teks. Teks UI persis seperti di Figma.
+5. Gunakan komponen yang bisa dipakai ulang (Header, Footer, ProductCard, Chip, Button, dll).
+   Cek komponen yang sudah ada sebelum membuat yang baru.
+6. Setiap step ditutup dengan: jalankan `npm run build` (harus lolos tanpa error TypeScript),
+   lalu laporkan file apa saja yang berubah. Lakukan `git commit` dengan pesan yang jelas.
+7. Jangan klaim "berhasil" tanpa bukti. Sertakan output perintah atau hasil request yang kamu jalankan.
+8. Kalau ragu atau data tidak cukup, tanya. Jangan menebak.
+
+DESIGN TOKEN (perkiraan dari screenshot, VERIFIKASI ke Figma lalu pakai nilai Figma kalau berbeda)
+- Kuning utama (tombol, badge, logo): sekitar #FFC72C
+- Krem lembut (latar section/chip aktif): sekitar #FFFBE6 s.d. #FFF3C4
+- Hitam/arang (footer, teks utama): sekitar #1A1A1A
+- Hijau (ikon "Dicek tim"): hijau lembut
+- Kartu: putih, border tipis abu-abu muda, sudut membulat sedang
+- Tombol: sudut membulat; primer kuning teks hitam, sekunder putih dengan border
+- Font: sans-serif geometris (tampak seperti Plus Jakarta Sans). Konfirmasi nama font di Figma.
+```
+
+---
+
 ## Persiapan (kamu kerjakan sendiri, sebelum Step P0)
 
 1. Buat folder `docs` di proyek, lalu salin file `PRD_Hingo.md` ke `docs/PRD.md`.
@@ -143,6 +186,15 @@ Isi rencana:
 Setelah saya setujui: terapkan, lalu uji dengan query nyata (tabel ada, trigger menolak UPDATE
 status_history, transition_item_status menolak pasangan tidak valid). Commit: "feat(db): skema prd".
 ```
+TAMBAHAN P1 (situs live boleh rusak sementara, tidak ada data lama yang dipertahankan):
+- Saya sudah mengekspor tabel lama ke CSV. Boleh DROP tabel lama (users, otp_verifications,
+  kyc_documents, addresses, bank_accounts, products, wishlists, cart_items, consignments, orders,
+  chat_threads, chat_messages) dalam migration yang SAMA dengan pembuatan skema baru. Tulis urutan
+  DROP/CREATE secara eksplisit di rencana dan JANGAN menjalankan sebelum saya setujui.
+- Tidak ada data lama yang dimigrasikan. Data dummy dibuat ulang di Step P5 lewat skrip seed.
+- Setelah migrasi diterapkan, hapus Prisma (prisma/, src/lib/prisma.ts, @prisma/client, prisma) dan
+  semua referensinya. Pastikan `npm run build` lolos tanpa Prisma.
+- Tampilkan rencana SQL lengkap dulu dan berhenti.
 
 Selesai kalau: migration diterapkan, trigger append-only terbukti menolak UPDATE, dan fungsi transisi menolak pasangan tidak valid.
 
@@ -236,6 +288,20 @@ Tampilan: ikon kategori di Beranda (Figma 1:2, 48:2963) diganti menjadi RAM, SSD
    @hinggo-demo.local supaya mudah dihapus.
 5. Tampilkan hasil: jumlah barang per status. `npm run build`, commit: "feat: kategori ram ssd gpu dan seed".
 ```
+TAMBAHAN P5 (data dummy):
+- Seed minimal 24 barang: sekitar 14 berstatus Tayang (campuran RAM, SSD, GPU, harga di bawah dan di
+  atas Rp200.000 dan Rp500.000, kondisi bervariasi, sebagian punya laporan uji dengan checklist dan
+  tautan video contoh), dan sisanya tersebar di status lain (Diajukan, Disetujui menunggu kiriman,
+  Dalam perjalanan ke Hingo, Diterima sedang diuji, Ditahan menunggu pembayaran, Dibayar dikemas,
+  Dikirim ke pembeli, Diterima pembeli, Klaim diproses, Siap dibayar ke consignor, Masa penitipan
+  habis, Menunggu ongkir kembali), supaya semua antrean admin dan dasbor consignor tidak kosong.
+- Semua barang dibuat MELALUI fungsi transisi status agar riwayat valid, dengan harga minimum, harga
+  awal, dan tanggal first_listed_at yang bervariasi (ada yang mendekati hari ke-21, ke-30, dan ke-60
+  supaya penjadwal punya bahan uji).
+- Foto: jangan memakai tautan gambar dari internet. Buat gambar placeholder sederhana (SVG atau PNG)
+  untuk RAM, SSD, dan GPU, simpan di public/demo/, dan unggah ke bucket item-photos lewat skrip seed.
+- Semua pengguna dummy berakhiran @hinggo-demo.local dan memakai satu kata sandi demo yang dibaca dari
+  variabel environment SEED_DEMO_PASSWORD (jangan ditulis di kode atau di chat).
 
 ## Step P6 - Consignor: pengajuan, KTP, persetujuan syarat, resi (fitur 2, 3, 4, 6)
 

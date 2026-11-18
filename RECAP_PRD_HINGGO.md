@@ -211,3 +211,32 @@ Dokumen ini mencatat kronologi, audit, perubahan, dan verifikasi implementasi PR
 - **Rencana Pembersihan Tabel Lama:**
   - Tabel lama yang akan di-drop bertahap: `chat_messages`, `chat_threads`, `wishlists`, `otp_verifications`, `kyc_documents`, `bank_accounts`, `addresses`, `consignments`, `products`, `orders`, `cart_items`.
   - Penghapusan Prisma & SQLite setelah migrasi Supabase selesai dan diverifikasi.
+
+
+### Hasil Eksekusi & Uji Verifikasi Nyata Database (Step P1)
+- **Status Migrasi:** Sukses diterapkan ke Supabase PostgreSQL (`obdczozspvkdebhtyhoh.supabase.co`).
+- **Verifikasi Tabel:** Seluruh 18 tabel PRD terverifikasi ada dan aktif:
+  - `settings`: 21 baris terisi (fee, ambang batas, ongkir dummy, dll.)
+  - `status_transitions`: 29 baris aturan transisi PRD 4.2
+  - `users`: 11 pengguna (kolom password_hash, whatsapp, rekening, alamat aktif)
+  - `items`: 0 baris
+  - `identity_documents`: 0 baris
+  - `terms_acceptances`: 0 baris
+  - `test_reports`: 0 baris
+  - `carts` & `cart_items`: 0 baris
+  - `orders` & `order_items`: 0 baris
+  - `claims`: 0 baris
+  - `consignor_payouts`: 0 baris
+  - `item_returns`: 0 baris
+  - `price_proposals`: 0 baris
+  - `status_history` & `price_history`: 0 baris
+  - `notification_log`: 0 baris
+- **Uji Trigger Append-Only:**
+  - Baris riwayat status berhasil dibuat.
+  - Upaya UPDATE pada `status_history` **DITOLAK** oleh database trigger:
+    `Operasi UPDATE tidak diizinkan pada tabel ini: audit log bersifat append-only.`
+- **Uji RPC `transition_item_status`:**
+  - Uji transisi loncat tidak sah (`Diajukan` -> `Tayang`) oleh ADMIN: **DITOLAK** (`Transisi tidak valid: tidak ada aturan perpindahan dari "Diajukan" ke "Tayang" oleh peran "ADMIN".`).
+  - Uji peran salah (CONSIGNOR menyetujui screening): **DITOLAK** (`Transisi tidak valid: tidak ada aturan perpindahan dari "Diajukan" ke "Disetujui, menunggu kiriman" oleh peran "CONSIGNOR".`).
+  - Uji transisi sah (ADMIN memindahkan `Diajukan` -> `Disetujui, menunggu kiriman`): **BERHASIL** mencatat status baru dan `history_id`.
+- **Build Status:** `npm run build` lulus 100% (43 rute terkompilasi tanpa error).
