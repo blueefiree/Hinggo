@@ -92,9 +92,8 @@ ON CONFLICT (from_status, to_status, actor_role) DO NOTHING;
 -- ------------------------------------------------------------------------------
 -- 3. TABEL PENGGUNA (USERS) - SKEMA PRD 8.1
 -- ------------------------------------------------------------------------------
--- Perbarui tabel users jika sudah ada, atau buat baru
 CREATE TABLE IF NOT EXISTS public.users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name TEXT NOT NULL DEFAULT 'Pengguna Hingo',
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL DEFAULT '',
@@ -118,7 +117,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Pastikan kolom baru ada jika tabel users lama sudah dibuat
+-- Pastikan kolom baru ada jika tabel users sudah dibuat sebelumnya
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='password_hash') THEN
@@ -162,7 +161,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_code TEXT UNIQUE NOT NULL,
-  consignor_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  consignor_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   category TEXT NOT NULL CHECK (category IN ('RAM', 'SSD', 'GPU')),
   brand TEXT NOT NULL,
   model TEXT NOT NULL,
@@ -238,7 +237,7 @@ CREATE INDEX IF NOT EXISTS idx_items_first_listed_at ON public.items (first_list
 CREATE TABLE IF NOT EXISTS public.identity_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
-  consignor_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  consignor_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   ktp_file_url TEXT NOT NULL,
   ownership_proof_url TEXT NOT NULL,
   ownership_proof_type TEXT NOT NULL DEFAULT 'NOTA' CHECK (ownership_proof_type IN ('NOTA', 'DUS_ASLI', 'SERIAL_NUMBER')),
@@ -258,7 +257,7 @@ CREATE INDEX IF NOT EXISTS idx_identity_docs_consignor ON public.identity_docume
 CREATE TABLE IF NOT EXISTS public.terms_acceptances (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
-  consignor_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  consignor_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   fee_terms_accepted BOOLEAN NOT NULL DEFAULT TRUE,
   shipping_terms_accepted BOOLEAN NOT NULL DEFAULT TRUE,
   warranty_and_payout_accepted BOOLEAN NOT NULL DEFAULT TRUE,
@@ -278,7 +277,7 @@ CREATE INDEX IF NOT EXISTS idx_terms_acceptances_item ON public.terms_acceptance
 CREATE TABLE IF NOT EXISTS public.test_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
-  admin_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  admin_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   test_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   checklist_results JSONB NOT NULL DEFAULT '{}'::jsonb,
   test_photos JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -297,7 +296,7 @@ CREATE INDEX IF NOT EXISTS idx_test_reports_item ON public.test_reports (item_id
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.carts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID UNIQUE NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id TEXT UNIQUE NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -319,7 +318,7 @@ CREATE INDEX IF NOT EXISTS idx_cart_items_item ON public.cart_items (item_id);
 CREATE TABLE IF NOT EXISTS public.orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_code TEXT UNIQUE NOT NULL,
-  buyer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  buyer_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   recipient_name TEXT NOT NULL,
   recipient_phone TEXT NOT NULL,
   shipping_address TEXT NOT NULL,
@@ -335,7 +334,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   payment_proof_url TEXT,
   payment_proof_uploaded_at TIMESTAMPTZ,
   payment_verified_at TIMESTAMPTZ,
-  verified_by_admin_id UUID REFERENCES public.users(id),
+  verified_by_admin_id TEXT REFERENCES public.users(id),
   
   -- Pengiriman ke pembeli
   outbound_courier TEXT DEFAULT 'JNE REG',
@@ -356,7 +355,7 @@ CREATE TABLE IF NOT EXISTS public.order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE RESTRICT,
-  consignor_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  consignor_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   sale_price BIGINT NOT NULL,
   fee_amount BIGINT NOT NULL,
   consignor_amount BIGINT NOT NULL,
@@ -379,7 +378,7 @@ CREATE TABLE IF NOT EXISTS public.claims (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_item_id UUID NOT NULL REFERENCES public.order_items(id) ON DELETE RESTRICT,
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE RESTRICT,
-  buyer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  buyer_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   claim_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   reason TEXT NOT NULL,
   photo_proofs JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -393,7 +392,7 @@ CREATE TABLE IF NOT EXISTS public.claims (
   )),
   resolution_result TEXT,
   admin_notes TEXT,
-  resolved_by_admin_id UUID REFERENCES public.users(id),
+  resolved_by_admin_id TEXT REFERENCES public.users(id),
   resolved_at TIMESTAMPTZ,
   refund_amount BIGINT DEFAULT 0,
   refund_paid_at TIMESTAMPTZ,
@@ -411,7 +410,7 @@ CREATE TABLE IF NOT EXISTS public.consignor_payouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE RESTRICT,
   order_item_id UUID NOT NULL REFERENCES public.order_items(id) ON DELETE RESTRICT,
-  consignor_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  consignor_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   sale_price BIGINT NOT NULL,
   fee_amount BIGINT NOT NULL,
   net_amount BIGINT NOT NULL,
@@ -420,7 +419,7 @@ CREATE TABLE IF NOT EXISTS public.consignor_payouts (
   bank_account_holder TEXT NOT NULL,
   transfer_proof_url TEXT,
   transferred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  admin_id UUID NOT NULL REFERENCES public.users(id),
+  admin_id TEXT NOT NULL REFERENCES public.users(id),
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (item_id)
@@ -435,7 +434,7 @@ CREATE INDEX IF NOT EXISTS idx_payouts_item ON public.consignor_payouts (item_id
 CREATE TABLE IF NOT EXISTS public.item_returns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE RESTRICT,
-  consignor_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  consignor_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   reason TEXT NOT NULL CHECK (reason IN (
     'Ditolak saat screening',
     'Ditolak setelah pengecekan',
@@ -450,7 +449,7 @@ CREATE TABLE IF NOT EXISTS public.item_returns (
   payment_proof_url TEXT,
   payment_proof_uploaded_at TIMESTAMPTZ,
   payment_verified_at TIMESTAMPTZ,
-  verified_by_admin_id UUID REFERENCES public.users(id),
+  verified_by_admin_id TEXT REFERENCES public.users(id),
   return_courier TEXT,
   return_tracking_number TEXT,
   return_shipped_at TIMESTAMPTZ,
@@ -495,7 +494,7 @@ CREATE TABLE IF NOT EXISTS public.status_history (
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
   from_status TEXT NOT NULL,
   to_status TEXT NOT NULL,
-  actor_id UUID REFERENCES public.users(id),
+  actor_id TEXT REFERENCES public.users(id),
   actor_role TEXT NOT NULL CHECK (actor_role IN ('CONSIGNOR', 'BUYER', 'ADMIN', 'SYSTEM')),
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -518,7 +517,7 @@ CREATE TABLE IF NOT EXISTS public.price_history (
     'perubahan oleh admin atas permintaan consignor',
     'perpanjangan'
   )),
-  actor_id UUID REFERENCES public.users(id),
+  actor_id TEXT REFERENCES public.users(id),
   actor_role TEXT NOT NULL CHECK (actor_role IN ('ADMIN', 'CONSIGNOR', 'SYSTEM')),
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -532,7 +531,7 @@ CREATE INDEX IF NOT EXISTS idx_price_history_item ON public.price_history (item_
 CREATE TABLE IF NOT EXISTS public.notification_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_email TEXT NOT NULL,
-  recipient_user_id UUID REFERENCES public.users(id),
+  recipient_user_id TEXT REFERENCES public.users(id),
   event_name TEXT NOT NULL,
   subject TEXT NOT NULL,
   content_preview TEXT,
@@ -570,7 +569,7 @@ FOR EACH ROW EXECUTE FUNCTION public.prevent_update_or_delete();
 CREATE OR REPLACE FUNCTION public.transition_item_status(
   p_item_id UUID,
   p_to_status TEXT,
-  p_actor_id UUID,
+  p_actor_id TEXT,
   p_actor_role TEXT,
   p_note TEXT DEFAULT ''
 )
@@ -664,7 +663,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 19. FUNGSI SQL ATOMIK (RPC): CHECKOUT_HOLD_ITEMS
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.checkout_hold_items(
-  p_buyer_id UUID,
+  p_buyer_id TEXT,
   p_item_ids UUID[],
   p_recipient_name TEXT,
   p_recipient_phone TEXT,
@@ -850,7 +849,6 @@ CREATE POLICY "Public can view listed items"
 -- ------------------------------------------------------------------------------
 -- 21. BUCKET STORAGE
 -- ------------------------------------------------------------------------------
--- Buat bucket bila belum ada
 INSERT INTO storage.buckets (id, name, public)
 VALUES
   ('kyc-documents', 'kyc-documents', false),
