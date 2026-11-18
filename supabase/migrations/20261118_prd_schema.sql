@@ -158,6 +158,7 @@ END $$;
 -- ------------------------------------------------------------------------------
 -- 4. TABEL BARANG (ITEMS) - 20 STATUS ATOMIK PRD
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.items CASCADE;
 CREATE TABLE IF NOT EXISTS public.items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_code TEXT UNIQUE NOT NULL,
@@ -234,6 +235,7 @@ CREATE INDEX IF NOT EXISTS idx_items_first_listed_at ON public.items (first_list
 -- ------------------------------------------------------------------------------
 -- 5. TABEL DOKUMEN IDENTITAS & KEPEMILIKAN (IDENTITY_DOCUMENTS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.identity_documents CASCADE;
 CREATE TABLE IF NOT EXISTS public.identity_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
@@ -254,6 +256,7 @@ CREATE INDEX IF NOT EXISTS idx_identity_docs_consignor ON public.identity_docume
 -- ------------------------------------------------------------------------------
 -- 6. TABEL PERSETUJUAN SYARAT PENITIPAN (TERMS_ACCEPTANCES)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.terms_acceptances CASCADE;
 CREATE TABLE IF NOT EXISTS public.terms_acceptances (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
@@ -274,6 +277,7 @@ CREATE INDEX IF NOT EXISTS idx_terms_acceptances_item ON public.terms_acceptance
 -- ------------------------------------------------------------------------------
 -- 7. TABEL LAPORAN PENGUJIAN (TEST_REPORTS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.test_reports CASCADE;
 CREATE TABLE IF NOT EXISTS public.test_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
@@ -294,6 +298,9 @@ CREATE INDEX IF NOT EXISTS idx_test_reports_item ON public.test_reports (item_id
 -- ------------------------------------------------------------------------------
 -- 8. TABEL KERANJANG (CARTS & CART_ITEMS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.cart_items CASCADE;
+DROP TABLE IF EXISTS public.carts CASCADE;
+
 CREATE TABLE IF NOT EXISTS public.carts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT UNIQUE NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -315,6 +322,9 @@ CREATE INDEX IF NOT EXISTS idx_cart_items_item ON public.cart_items (item_id);
 -- ------------------------------------------------------------------------------
 -- 9. TABEL PESANAN (ORDERS) & PENJUALAN PER BARANG (ORDER_ITEMS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.order_items CASCADE;
+DROP TABLE IF EXISTS public.orders CASCADE;
+
 CREATE TABLE IF NOT EXISTS public.orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_code TEXT UNIQUE NOT NULL,
@@ -374,6 +384,7 @@ CREATE INDEX IF NOT EXISTS idx_order_items_warranty ON public.order_items (warra
 -- ------------------------------------------------------------------------------
 -- 10. TABEL KLAIM GARANSI (CLAIMS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.claims CASCADE;
 CREATE TABLE IF NOT EXISTS public.claims (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_item_id UUID NOT NULL REFERENCES public.order_items(id) ON DELETE RESTRICT,
@@ -406,6 +417,7 @@ CREATE INDEX IF NOT EXISTS idx_claims_status ON public.claims (status);
 -- ------------------------------------------------------------------------------
 -- 11. TABEL PEMBAYARAN KE CONSIGNOR (CONSIGNOR_PAYOUTS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.consignor_payouts CASCADE;
 CREATE TABLE IF NOT EXISTS public.consignor_payouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE RESTRICT,
@@ -431,6 +443,7 @@ CREATE INDEX IF NOT EXISTS idx_payouts_item ON public.consignor_payouts (item_id
 -- ------------------------------------------------------------------------------
 -- 12. TABEL PENGEMBALIAN BARANG (ITEM_RETURNS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.item_returns CASCADE;
 CREATE TABLE IF NOT EXISTS public.item_returns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE RESTRICT,
@@ -465,6 +478,7 @@ CREATE INDEX IF NOT EXISTS idx_returns_consignor ON public.item_returns (consign
 -- ------------------------------------------------------------------------------
 -- 13. TABEL USULAN PENURUNAN HARGA (PRICE_PROPOSALS)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.price_proposals CASCADE;
 CREATE TABLE IF NOT EXISTS public.price_proposals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
@@ -489,6 +503,7 @@ CREATE INDEX IF NOT EXISTS idx_proposals_status ON public.price_proposals (answe
 -- ------------------------------------------------------------------------------
 -- 14. TABEL RIWAYAT STATUS (STATUS_HISTORY) - APPEND-ONLY
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.status_history CASCADE;
 CREATE TABLE IF NOT EXISTS public.status_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
@@ -506,6 +521,7 @@ CREATE INDEX IF NOT EXISTS idx_status_history_created ON public.status_history (
 -- ------------------------------------------------------------------------------
 -- 15. TABEL RIWAYAT HARGA (PRICE_HISTORY) - APPEND-ONLY
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.price_history CASCADE;
 CREATE TABLE IF NOT EXISTS public.price_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
@@ -528,6 +544,7 @@ CREATE INDEX IF NOT EXISTS idx_price_history_item ON public.price_history (item_
 -- ------------------------------------------------------------------------------
 -- 16. TABEL LOG NOTIFIKASI (NOTIFICATION_LOG)
 -- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.notification_log CASCADE;
 CREATE TABLE IF NOT EXISTS public.notification_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_email TEXT NOT NULL,
