@@ -1,78 +1,34 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
-@layer base {
-  :root {
-    --brand-yellow: #FFC629;
-    --brand-yellow-hover: #FFC420;
-    --brand-yellow-border: #FFE58A;
-    --warm-cream: #FFFBEB;
-    --warm-cream-alt: #FFF3C4;
-    --warm-cream-border: #FFE58A;
-    --surface-dark: #1A1A1A;
-    --surface-neutral: #F6F6F4;
-    --surface-card-border: #EBEBEB;
-    --text-primary: #1A1A1A;
-    --text-secondary: #4B4B4B;
-    --text-muted: #8A8A8A;
-    --verified-green: #1F9D55;
-    --verified-green-bg: #E8F8EE;
-  }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  html,
-  body {
-    background-color: #FFFFFF;
-    color: #1A1A1A;
-    font-family: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-    max-width: 100vw;
-  }
+:root {
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --font-plus-jakarta: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Custom utilities matching Hingo Design System tokens from Figma */
-.bg-hingo-yellow {
-  background-color: #FFC629;
-}
-.bg-hingo-yellow:hover {
-  background-color: #FFC420;
-}
-.border-hingo-yellow {
-  border-color: #FFC629;
-}
-.border-hingo-border {
-  border-color: #FFE58A;
-}
-.text-hingo-yellow {
-  color: #D97706;
-}
-.bg-warm-cream {
-  background-color: #FFFBEB;
-}
-.border-warm-cream {
-  border-color: #FFE58A;
-}
-.bg-surface-neutral {
-  background-color: #F6F6F4;
-}
-.bg-surface-dark {
-  background-color: #1A1A1A;
-}
-.border-surface-card {
-  border-color: #EBEBEB;
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-plus-jakarta);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbars */
+/* Custom scrollbars and utility styling */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #f6f6f4;
 }
 ::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 9999px;
+  background: #d9d9d9;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
+  background: #8a8a8a;
 }

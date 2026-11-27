@@ -1,49 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { supabase } from "@/lib/supabase";
+import { getSessionCookieOptions } from "@/lib/auth";
 
 export async function POST() {
-  try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get("hingo_session")?.value;
-    const userId = cookieStore.get("hingo_user_id")?.value;
-
-    if (sessionToken) {
-      await prisma.session.deleteMany({
-        where: { token: sessionToken },
-      }).catch(() => {});
-    }
-
-    if (userId) {
-      await prisma.session.deleteMany({
-        where: { userId },
-      }).catch(() => {});
-    }
-
-    // Call Supabase signOut
-    await supabase.auth.signOut().catch(() => {});
-
-    // Delete cookies properly with clear maxAge 0 and options
-    cookieStore.set("hingo_session", "", {
-      path: "/",
-      maxAge: 0,
-      expires: new Date(0),
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-    });
-    cookieStore.set("hingo_user_id", "", { path: "/", maxAge: 0, expires: new Date(0) });
-    cookieStore.set("hingo_user_email", "", { path: "/", maxAge: 0, expires: new Date(0) });
-
-    return NextResponse.json({ success: true, message: "Berhasil keluar dari akun" });
-  } catch (error: any) {
-    console.error("Logout error:", error);
-    return NextResponse.json({ success: true, message: "Logged out" });
-  }
+  const cookieOptions = getSessionCookieOptions();
+  const response = NextResponse.json({ success: true });
+  response.cookies.set(cookieOptions.name, "", {
+    ...cookieOptions,
+    maxAge: 0,
+  });
+  return response;
 }
-
-export async function GET() {
-  return POST();
-}
-

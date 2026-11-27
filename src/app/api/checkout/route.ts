@@ -1,232 +1,121 @@
 import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
-import { prisma } from "@/lib/prisma";
+import { calculateConsignmentFee, calculateOrderBreakdown } from "@/lib/fee-calculator";
+import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Silakan masuk terlebih dahulu" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Silakan masuk terlebih dahulu untuk menyelesaikan pesanan." },
+        { status: 401 }
+      );
     }
 
-    const {
-      productId,
-      addressId,
-      shippingCourier = "JNE REG",
-      shippingCost = 18000,
-      paymentMethod = "BCA_VA",
-      buyerNote = "",
-    } = await req.json();
+    const { itemIds, shippingDetails } = await req.json();
 
-    // 1. Fetch product - Supabase adalah Single Source of Truth
-    let targetProductId = productId;
-    if (!targetProductId) {
-      const { data: firstCart } = await supabase
-        .from("cart_items")
-        .select("product_id")
-        .eq("user_id", user.id)
-        .limit(1);
-      targetProductId = firstCart && firstCart[0] ? firstCart[0].product_id : null;
+    if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+      return NextResponse.json({ error: "Keranjang belanja kosong." }, { status: 400 });
     }
 
-    if (!targetProductId) {
-      return NextResponse.json({ error: "Pilih produk yang ingin di-checkout" }, { status: 400 });
+    if (!shippingDetails?.recipient_name || !shippingDetails?.recipient_phone || !shippingDetails?.shipping_address) {
+      return NextResponse.json({ error: "Alamat pengiriman dan nama penerima wajib diisi lengkap." }, { status: 400 });
     }
 
-    // Ambil data produk langsung dari Supabase
-    const { data: product, error: prodErr } = await supabase
-      .from("products")
+    // 1. Lock and verify items availability
+    // Query items that are in 'Tayang' status
+    const { data: items, error: fetchError } = await supabaseAdmin
+      .from("items")
       .select("*")
-      .eq("id", targetProductId)
-      .single();
+      .in("id", itemIds);
 
-    if (prodErr || !product) {
-      return NextResponse.json({ error: "Produk tidak ditemukan di katalog" }, { status: 404 });
+    if (fetchError || !items || items.length === 0) {
+      return NextResponse.json({ error: "Gagal mengambil data barang." }, { status: 500 });
     }
 
-    if (product.stock <= 0 || product.status !== "AVAILABLE") {
+    // Check if ANY item is no longer 'Tayang'
+    const unavailable = items.filter((i) => i.status !== "Tayang");
+    if (unavailable.length > 0) {
       return NextResponse.json(
-        { error: "Gear sudah terjual atau tidak tersedia" },
-        { status: 400 }
+        {
+          error: `Barang "${unavailable.map((u) => u.model).join(", ")}" sudah tidak tersedia atau sedang dipesan pembeli lain.`,
+        },
+        { status: 409 }
       );
     }
 
-    // 2. Fetch or create default address in Supabase
-    let address: any = null;
-    if (addressId) {
-      const { data: addr } = await supabase
-        .from("addresses")
-        .select("*")
-        .eq("id", addressId)
-        .single();
-      address = addr;
+    // 2. Calculate breakdown
+    const breakdown = calculateOrderBreakdown(items);
+
+    const now = new Date();
+    const holdExpiresAt = new Date(now.getTime() + 24 * 3600 * 1000).toISOString();
+    const orderCode = `HNG-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
+
+    const newOrder = {
+      id: randomUUID(),
+      order_code: orderCode,
+      buyer_id: user.id,
+      recipient_name: shippingDetails.recipient_name,
+      recipient_phone: shippingDetails.recipient_phone,
+      shipping_address: shippingDetails.shipping_address,
+      shipping_city: shippingDetails.shipping_city || "Jakarta",
+      shipping_postal_code: shippingDetails.shipping_postal_code || "10000",
+      shipping_cost: breakdown.shippingCost,
+      insurance_cost: breakdown.insuranceCost,
+      total_items_price: breakdown.itemsTotal,
+      total_amount: breakdown.totalPayment,
+      hold_expires_at: holdExpiresAt,
+      order_status: "Ditahan menunggu pembayaran",
+      created_at: now.toISOString(),
+    };
+
+    // 3. Insert Order
+    const { error: orderError } = await supabaseAdmin.from("orders").insert(newOrder);
+    if (orderError) {
+      return NextResponse.json({ error: orderError.message }, { status: 500 });
     }
 
-    if (!address) {
-      const { data: addrs } = await supabase
-        .from("addresses")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_primary", true)
-        .limit(1);
-      address = addrs && addrs[0] ? addrs[0] : null;
-    }
+    // 4. Create Order Items & Lock Item status to 'Ditahan menunggu pembayaran'
+    for (const item of items) {
+      const price = item.current_listing_price || item.expected_price;
+      const feeCalc = calculateConsignmentFee(price);
 
-    if (!address) {
-      const { data: addrs } = await supabase
-        .from("addresses")
-        .select("*")
-        .eq("user_id", user.id)
-        .limit(1);
-      address = addrs && addrs[0] ? addrs[0] : null;
-    }
-
-    if (!address) {
-      const newAddrId = `addr-${Date.now()}`;
-      const { data: createdAddr } = await supabase
-        .from("addresses")
-        .insert({
-          id: newAddrId,
-          user_id: user.id,
-          label: "Rumah",
-          recipient_name: user.name || "Pembeli Hingo",
-          phone: user.phone || "081234567890",
-          full_address: "Jl. Sudirman No. 45, Kebayoran Baru, Jakarta Selatan",
-          city: "Jakarta Selatan",
-          postal_code: "12190",
-          is_primary: true,
-        })
-        .select()
-        .single();
-      address = createdAddr || { id: newAddrId };
-    }
-
-    const itemPrice = Number(product.price);
-    const shippingProtection = 5000;
-    const serviceFee = 2500;
-    const totalAmount = itemPrice + Number(shippingCost) + shippingProtection + serviceFee;
-
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
-    const orderCode = `GRL-${dateStr}-${randomSuffix}`;
-    const orderId = `ord-${dateStr}-${randomSuffix}`;
-    const vaNumber = `8801 ${(user.phone || "081234567890").replace(/\D/g, "").slice(-8)}`;
-    const trackingNumber = `JNE${dateStr.slice(2)}${randomSuffix}`;
-
-    // 3. Simpan Pesanan ke Supabase
-    const { data: newOrder, error: orderErr } = await supabase
-      .from("orders")
-      .insert({
-        id: orderId,
-        order_code: orderCode,
-        buyer_id: user.id,
-        product_id: product.id,
-        address_id: address?.id || null,
-        item_price: itemPrice,
-        shipping_courier: shippingCourier,
-        shipping_cost: Number(shippingCost),
-        shipping_protection: shippingProtection,
-        service_fee: serviceFee,
-        total_amount: totalAmount,
-        payment_method: paymentMethod,
-        va_number: vaNumber,
-        buyer_note: buyerNote || "",
-        tracking_number: trackingNumber,
-        escrow_status: "WAITING_PAYMENT",
-        order_status: "WAITING_PAYMENT",
-        inspection_deadline: "48 jam setelah paket tiba",
-      })
-      .select()
-      .single();
-
-    if (orderErr) {
-      console.error("Gagal menyimpan pesanan ke Supabase:", orderErr);
-      return NextResponse.json(
-        { error: `Gagal membuat pesanan di database: ${orderErr.message}` },
-        { status: 500 }
-      );
-    }
-
-    // 4. Update status produk menjadi SOLD di Supabase
-    await supabase
-      .from("products")
-      .update({ stock: 0, status: "SOLD" })
-      .eq("id", product.id);
-
-    // 5. Bersihkan item keranjang di Supabase
-    await supabase
-      .from("cart_items")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("product_id", product.id);
-
-    // Best-effort sinkronisasi ke Prisma lokal untuk testing offline
-    try {
-      await prisma.product.upsert({
-        where: { id: product.id },
-        update: { stock: 0, status: "SOLD" },
-        create: {
-          id: product.id,
-          code: product.code || `PRD-${randomSuffix}`,
-          slug: product.slug || `prod-${product.id}`,
-          name: product.name,
-          subtitle: product.subtitle || "",
-          brand: product.brand,
-          category: product.category,
-          price: itemPrice,
-          originalNewPrice: Number(product.original_new_price || product.price),
-          condition: product.condition || "Bekas",
-          usageDuration: product.usage_duration || "Pemakaian normal",
-          switchOrVariant: product.switch_or_variant || "",
-          location: product.location || "Jakarta Selatan",
-          images: typeof product.images === "string" ? product.images : JSON.stringify(product.images || []),
-          rating: Number(product.rating || 5.0),
-          soldCount: Number(product.sold_count || 0),
-          stock: 0,
-          status: "SOLD",
-          description: product.description || "",
-          defectNotes: product.defect_notes || "",
-          completeness: product.completeness || "",
-        },
+      await supabaseAdmin.from("order_items").insert({
+        id: randomUUID(),
+        order_id: newOrder.id,
+        item_id: item.id,
+        consignor_id: item.consignor_id,
+        sale_price: price,
+        fee_amount: feeCalc.feeAmount,
+        consignor_amount: feeCalc.consignorAmount,
+        is_paid_to_consignor: false,
+        created_at: now.toISOString(),
       });
 
-      await prisma.order.create({
-        data: {
-          id: newOrder.id,
-          orderCode: newOrder.order_code,
-          buyerId: user.id,
-          buyerEmail: user.email?.trim()?.toLowerCase() || null,
-          productId: product.id,
-          addressId: address?.id || `addr-${randomSuffix}`,
-          itemPrice,
-          shippingCourier,
-          shippingCost: Number(shippingCost),
-          shippingProtection,
-          serviceFee,
-          totalAmount,
-          paymentMethod,
-          vaNumber,
-          buyerNote,
-          trackingNumber,
-          escrowStatus: "WAITING_PAYMENT",
-          orderStatus: "WAITING_PAYMENT",
-          inspectionDeadline: "48 jam setelah paket tiba",
-        },
+      // Update item status
+      await supabaseAdmin
+        .from("items")
+        .update({ status: "Ditahan menunggu pembayaran" })
+        .eq("id", item.id);
+
+      // Audit status history
+      await supabaseAdmin.from("status_history").insert({
+        item_id: item.id,
+        from_status: "Tayang",
+        to_status: "Ditahan menunggu pembayaran",
+        actor_id: user.id,
+        actor_role: "USER",
+        notes: `Checkout oleh ${user.name} (Order: ${orderCode}). Ditahan 24 jam.`,
       });
-    } catch (e) {
-      // Abaikan jika prisma lokal gagal, Supabase tetap sukses
     }
 
     return NextResponse.json({
       success: true,
-      orderCode: newOrder.order_code,
-      orderId: newOrder.id,
-      redirectTo: `/checkout/payment/${newOrder.order_code}?method=${paymentMethod.toLowerCase()}`,
+      order: newOrder,
     });
-  } catch (error: any) {
-    console.error("Checkout transaction error:", error);
-    return NextResponse.json({ error: error.message || "Gagal membuat pesanan" }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Gagal memproses checkout." }, { status: 500 });
   }
 }
-
