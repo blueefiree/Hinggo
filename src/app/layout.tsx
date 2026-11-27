@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 export const metadata: Metadata = {
   title: "Hinggo — Platform Consignment Komponen & Periferal PC Bekas Teruji",
@@ -14,8 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className="antialiased min-h-screen flex flex-col bg-white text-ink font-sans">
+      <body className="antialiased min-h-screen flex flex-col bg-white text-ink font-sans pb-16 md:pb-0">
         {children}
+        <MobileBottomNav />
       </body>
     </html>
   );
