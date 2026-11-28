@@ -3,17 +3,17 @@ import { ShieldCheck, Truck, Clock, RefreshCcw } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="bg-ink text-white mt-auto border-t border-gray-700">
+    <footer className="bg-[#1a1a1a] text-white mt-auto">
       {/* Guarantees Strip */}
-      <div className="border-b border-gray-700/60 bg-black/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+      <div className="border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center shrink-0">
               <ShieldCheck className="size-5" />
             </div>
             <div>
               <p className="font-bold text-white">Garansi Toko 7 Hari</p>
-              <p className="text-gray-300 text-xs">Uji coba langsung, retur jika bermasalah</p>
+              <p className="text-[#a0a0a0] text-xs mt-0.5">Uji coba langsung, retur jika bermasalah</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -22,7 +22,7 @@ export default function Footer() {
             </div>
             <div>
               <p className="font-bold text-white">Uji Teknis Ketat</p>
-              <p className="text-gray-300 text-xs">Lolos tes Furmark, MemTest86, & CrystalDisk</p>
+              <p className="text-[#a0a0a0] text-xs mt-0.5">Lolos tes Furmark, MemTest86, & CrystalDisk</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -31,7 +31,7 @@ export default function Footer() {
             </div>
             <div>
               <p className="font-bold text-white">Titip Jual Transparan</p>
-              <p className="text-gray-300 text-xs">Fee jelas hanya 5% / Rp 10.000 flat</p>
+              <p className="text-[#a0a0a0] text-xs mt-0.5">Fee jelas hanya 5% / Rp 10.000 flat</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -40,34 +40,32 @@ export default function Footer() {
             </div>
             <div>
               <p className="font-bold text-white">Packing Ekstra Aman</p>
-              <p className="text-gray-300 text-xs">Bubble wrap tebal & asuransi pengiriman</p>
+              <p className="text-[#a0a0a0] text-xs mt-0.5">Bubble wrap tebal & asuransi pengiriman</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Footer Links */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-10 text-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20 py-14 grid grid-cols-1 md:grid-cols-4 gap-10 text-sm">
         {/* Brand */}
         <div className="space-y-4">
           <div className="flex items-center gap-2.5">
             <div className="size-9 rounded-[10px] bg-yellow-500 flex items-center justify-center font-extrabold text-xl text-ink">
               H
             </div>
-            <span className="font-extrabold text-2xl tracking-tight text-white">
-              Hinggo
-            </span>
+            <span className="font-extrabold text-2xl tracking-tight text-white">Hinggo</span>
           </div>
-          <p className="text-gray-300 text-xs leading-relaxed max-w-sm">
-            Platform konsinyasi dan marketplace komponen komputer bekas teruji fisik nomor 1 di Indonesia.
+          <p className="text-[#a0a0a0] text-xs leading-relaxed max-w-sm">
+            Platform konsinyasi dan marketplace komponen komputer bekas teruji fisik.
             Setiap komponen diuji menyeluruh oleh teknisi sebelum tayang ke pembeli.
           </p>
         </div>
 
         {/* Belanja */}
         <div>
-          <h4 className="font-bold text-yellow-500 mb-3 text-sm">Kategori Komponen</h4>
-          <ul className="space-y-2 text-xs text-gray-300">
+          <h4 className="font-bold text-yellow-500 mb-4 text-sm">Belanja</h4>
+          <ul className="space-y-3 text-xs text-[#a0a0a0]">
             <li><Link href="/katalog?kategori=RAM" className="hover:text-white transition-colors">RAM DDR4 & DDR5</Link></li>
             <li><Link href="/katalog?kategori=SSD" className="hover:text-white transition-colors">SSD NVMe & SATA</Link></li>
             <li><Link href="/katalog?kategori=GPU" className="hover:text-white transition-colors">VGA / GPU Card</Link></li>
@@ -75,33 +73,31 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Konsinyasi */}
+        {/* Bantuan */}
         <div>
-          <h4 className="font-bold text-yellow-500 mb-3 text-sm">Titip Jual (Consignor)</h4>
-          <ul className="space-y-2 text-xs text-gray-300">
-            <li><Link href="/titip-jual" className="hover:text-white transition-colors">Ajukan Barang Titipan</Link></li>
-            <li><Link href="/consignor/dasbor" className="hover:text-white transition-colors">Dasbor Barang Saya</Link></li>
-            <li><Link href="/kebijakan#alur-titip" className="hover:text-white transition-colors">Alur & Syarat Penitipan</Link></li>
-            <li><Link href="/kebijakan#skema-fee" className="hover:text-white transition-colors">Kalkulator Fee Hinggo</Link></li>
+          <h4 className="font-bold text-yellow-500 mb-4 text-sm">Bantuan</h4>
+          <ul className="space-y-3 text-xs text-[#a0a0a0]">
+            <li><Link href="/kebijakan" className="hover:text-white transition-colors">Pusat Bantuan</Link></li>
+            <li><Link href="/kebijakan" className="hover:text-white transition-colors">Chat CS</Link></li>
+            <li><Link href="/kebijakan#rekber" className="hover:text-white transition-colors">Cara Rekber</Link></li>
+            <li><Link href="/kebijakan#retur" className="hover:text-white transition-colors">Pengembalian</Link></li>
           </ul>
         </div>
 
-        {/* Bantuan & Kebijakan */}
+        {/* Hinggo */}
         <div>
-          <h4 className="font-bold text-yellow-500 mb-3 text-sm">Bantuan & Kebijakan</h4>
-          <ul className="space-y-2 text-xs text-gray-300">
-            <li><Link href="/kebijakan" className="hover:text-white transition-colors">Ketentuan Garansi 7 Hari</Link></li>
-            <li><Link href="/kebijakan#retur" className="hover:text-white transition-colors">Prosedur Klaim Retur</Link></li>
-            <li><Link href="/kebijakan#privasi" className="hover:text-white transition-colors">Kebijakan Privasi & Dokumen KTP</Link></li>
-            <li>
-              <span className="text-gray-400">Gudang: Jl. Tebet Raya No. 42, Jakarta Selatan</span>
-            </li>
+          <h4 className="font-bold text-yellow-500 mb-4 text-sm">Hinggo</h4>
+          <ul className="space-y-3 text-xs text-[#a0a0a0]">
+            <li><Link href="/kebijakan" className="hover:text-white transition-colors">Tentang Kami</Link></li>
+            <li><Link href="/titip-jual" className="hover:text-white transition-colors">Titip jual di Hinggo</Link></li>
+            <li><Link href="/kebijakan#privasi" className="hover:text-white transition-colors">Kebijakan Privasi</Link></li>
+            <li><Link href="/kebijakan" className="hover:text-white transition-colors">Syarat & Ketentuan</Link></li>
           </ul>
         </div>
       </div>
 
-      <div className="border-t border-gray-700/60 py-6 text-center text-xs text-gray-400">
-        <p>&copy; {new Date().getFullYear()} Hinggo MVP. Seluruh hak cipta dilindungi.</p>
+      <div className="border-t border-white/10 py-6 text-center text-xs text-[#6a6a6a]">
+        <p>&copy; {new Date().getFullYear()} Hinggo. Seluruh hak cipta dilindungi.</p>
       </div>
     </footer>
   );

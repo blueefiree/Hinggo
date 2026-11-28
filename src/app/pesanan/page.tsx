@@ -32,25 +32,31 @@ export default function BuyerOrdersPage() {
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20 py-8 flex-1 w-full space-y-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-[#8a8a8a] mb-1">
+            <Link href="/" className="hover:underline">Beranda</Link>
+            <span>/</span>
+            <span className="text-ink font-semibold">Pesanan Saya</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink flex items-center gap-2.5">
             <ShoppingBag className="size-7 text-yellow-600" />
             Pesanan Saya
           </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Riwayat pesanan, status pembayaran, nomor resi pengiriman, dan klaim garansi 7 hari.
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Riwayat pesanan, status verifikasi rekber, resi pengiriman, dan klaim garansi toko 7 hari.
           </p>
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500 text-xs">Memuat pesanan...</div>
+          <div className="text-center py-16 text-[#8a8a8a] text-xs">Memuat daftar pesanan...</div>
         ) : orders.length === 0 ? (
-          <div className="text-center py-16 bg-gray-50 rounded-card border border-dashed border-gray-300 space-y-3">
-            <p className="font-semibold text-gray-700 text-sm">Belum ada riwayat pesanan.</p>
+          <div className="text-center py-16 bg-[#f6f6f4] rounded-[20px] border border-dashed border-[#ebebeb] space-y-4">
+            <p className="font-bold text-ink text-sm sm:text-base">Belum ada riwayat pesanan.</p>
+            <p className="text-xs text-[#8a8a8a]">Jelajahi ratusan komponen teruji siap kirim dengan garansi 7 hari.</p>
             <Link
               href="/katalog"
-              className="inline-block px-4 py-2 bg-yellow-500 text-ink font-bold text-xs rounded-btn"
+              className="inline-block px-5 py-2.5 bg-yellow-500 text-ink font-bold text-xs rounded-[12px] shadow-sm hover:bg-yellow-600 transition-all"
             >
               Belanja Sekarang
             </Link>
@@ -58,31 +64,41 @@ export default function BuyerOrdersPage() {
         ) : (
           <div className="space-y-4">
             {orders.map((o) => (
-              <Link
+              <div
                 key={o.id}
-                href={`/pesanan/${o.id}`}
-                className="block bg-white p-5 rounded-card border border-gray-200 hover:border-yellow-500 hover:shadow-xs transition-all"
+                className="bg-white p-5 sm:p-6 rounded-[20px] border border-[#ebebeb] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-yellow-500/60 transition-all"
               >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono font-bold text-xs text-ink">{o.order_code}</span>
-                      <span className="text-xs text-gray-400">&bull; {new Date(o.created_at || "").toLocaleDateString("id-ID")}</span>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      Tujuan: <strong>{o.recipient_name}</strong> ({o.shipping_city})
-                    </p>
-                    <p className="text-sm font-extrabold text-ink mt-1">
-                      Rp {Number(o.total_amount).toLocaleString("id-ID")}
-                    </p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-xs sm:text-sm text-ink">{o.order_code}</span>
+                    <span className="text-xs text-[#8a8a8a]">&bull;</span>
+                    <span className="text-xs text-[#8a8a8a]">
+                      {new Date(o.created_at || "").toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <StatusBadge status={o.order_status} size="md" />
-                    <ChevronRight className="size-4 text-gray-400" />
-                  </div>
+                  <p className="text-sm font-extrabold text-ink">
+                    Rp {Number(o.total_amount).toLocaleString("id-ID")}
+                  </p>
+                  <p className="text-xs text-[#8a8a8a]">
+                    Penerima: {o.recipient_name} ({o.shipping_city})
+                  </p>
                 </div>
-              </Link>
+
+                <div className="flex items-center gap-3 self-end sm:self-center">
+                  <StatusBadge status={o.order_status} size="sm" />
+                  <Link
+                    href={`/pesanan/${o.id}`}
+                    className="px-4 py-2 bg-[#f6f6f4] hover:bg-yellow-500 hover:text-ink text-xs font-bold text-ink rounded-[10px] transition-all flex items-center gap-1"
+                  >
+                    Detail
+                    <ChevronRight className="size-3.5" />
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         )}

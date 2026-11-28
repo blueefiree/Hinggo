@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import StatusBadge from "@/components/StatusBadge";
 import { supabaseAdmin } from "@/lib/supabase";
 import { Order, OrderItem } from "@/types";
-import { Clock, CheckCircle2, Copy, AlertCircle, ShieldCheck } from "lucide-react";
+import { Clock, CheckCircle2, ShieldCheck, Lock } from "lucide-react";
 import PaymentProofUploader from "./PaymentProofUploader";
 
 export const revalidate = 0;
@@ -46,16 +46,25 @@ export default async function OrderDetailPage({ params }: OrderDetailProps) {
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20 py-8 flex-1 w-full">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1.5 text-xs text-[#8a8a8a] mb-6">
+          <Link href="/" className="hover:underline">Beranda</Link>
+          <span>/</span>
+          <Link href="/pesanan" className="hover:underline">Pesanan Saya</Link>
+          <span>/</span>
+          <span className="text-ink font-semibold">{order.order_code}</span>
+        </div>
+
         {/* Header */}
-        <div className="bg-white p-6 rounded-card border border-gray-200 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white p-6 sm:p-7 rounded-[20px] border border-[#ebebeb] shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-gray-500">Nomor Pesanan:</span>
-              <span className="font-mono font-bold text-ink text-sm">{order.order_code}</span>
+              <span className="text-xs text-[#8a8a8a]">Nomor Pesanan:</span>
+              <span className="font-mono font-bold text-ink text-sm sm:text-base">{order.order_code}</span>
             </div>
-            <h1 className="text-2xl font-extrabold text-ink">Detail Pesanan</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">Detail Transaksi</h1>
+            <p className="text-xs text-[#8a8a8a] mt-0.5">
               Dibuat pada {new Date(order.created_at || "").toLocaleString("id-ID")}
             </p>
           </div>
@@ -67,14 +76,14 @@ export default async function OrderDetailPage({ params }: OrderDetailProps) {
 
         {/* 24-Hour Hold Banner & Payment Instructions */}
         {isAwaitingPayment && (
-          <div className="bg-amber-50 p-6 rounded-card border border-amber-200 mb-6 space-y-4">
+          <div className="bg-[#fffbeb] p-6 rounded-[20px] border border-[#ffe58a] mb-6 space-y-4">
             <div className="flex items-start gap-3">
-              <Clock className="size-6 text-amber-600 shrink-0 mt-0.5" />
+              <Clock className="size-6 text-yellow-600 shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-bold text-amber-900 text-base">
+                <h3 className="font-bold text-ink text-base">
                   Batas Pembayaran: 24 Jam
                 </h3>
-                <p className="text-xs text-amber-800 leading-relaxed mt-1">
+                <p className="text-xs text-[#4b4b4b] leading-relaxed mt-1">
                   Barang pesanan Anda saat ini dikunci selama 24 jam (hingga{" "}
                   <strong>{new Date(order.hold_expires_at || "").toLocaleString("id-ID")}</strong>).
                   Jika belum mengunggah bukti transfer dalam 24 jam, pesanan akan dibatalkan otomatis dan barang kembali Tayang.
@@ -83,107 +92,140 @@ export default async function OrderDetailPage({ params }: OrderDetailProps) {
             </div>
 
             {/* Rekening Transfer Hinggo */}
-            <div className="bg-white p-5 rounded-btn border border-amber-200 space-y-3">
-              <p className="text-xs font-semibold text-gray-700">Silakan Transfer Tepat ke Rekening Resmi Hinggo:</p>
+            <div className="bg-white p-5 rounded-[12px] border border-[#ffe58a] space-y-3">
+              <p className="text-xs font-bold text-ink">Silakan Transfer Tepat ke Rekening Resmi Hinggo:</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <span className="text-gray-500 block">Bank Tujuan:</span>
+                  <span className="text-[#8a8a8a] block">Bank Tujuan:</span>
                   <strong className="text-ink text-sm">BCA (Bank Central Asia)</strong>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Nomor Rekening:</span>
+                  <span className="text-[#8a8a8a] block">Nomor Rekening:</span>
                   <strong className="text-ink text-sm font-mono">8830-1928-0012</strong>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Atas Nama:</span>
+                  <span className="text-[#8a8a8a] block">Atas Nama:</span>
                   <strong className="text-ink text-sm">PT Hinggo Komputer Jaya</strong>
                 </div>
               </div>
-
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-xs text-gray-600">Total Nominal Transfer:</span>
-                <span className="text-lg font-black text-yellow-600">
-                  Rp {order.total_amount.toLocaleString("id-ID")}
+              <div className="pt-2 border-t border-[#ebebeb] flex justify-between items-center text-xs">
+                <span className="text-[#4b4b4b]">Jumlah yang Harus Ditransfer:</span>
+                <span className="text-base font-extrabold text-yellow-600">
+                  Rp {Number(order.total_amount).toLocaleString("id-ID")}
                 </span>
               </div>
             </div>
 
-            {/* Upload Payment Proof Component */}
+            {/* Upload Proof Component */}
             <PaymentProofUploader orderId={order.id} existingProof={order.payment_proof_url} />
           </div>
         )}
 
-        {/* If Paid / Shipped */}
+        {/* If paid banner */}
         {isPaid && (
-          <div className="bg-emerald-50 p-6 rounded-card border border-emerald-200 mb-6 flex items-start gap-3">
-            <CheckCircle2 className="size-6 text-success shrink-0 mt-0.5" />
+          <div className="bg-[#e6f6ec] p-5 rounded-[16px] border border-emerald-200 mb-6 flex items-center gap-3 text-xs text-[#1f9d55]">
+            <CheckCircle2 className="size-5 shrink-0" />
             <div>
-              <h3 className="font-bold text-emerald-900 text-base">Pembayaran Berhasil Diverifikasi</h3>
-              <p className="text-xs text-emerald-800 mt-1">
-                {order.outbound_tracking_number
-                  ? `Barang telah dikirim dengan nomor resi: ${order.outbound_tracking_number} (${order.outbound_courier || "Kurir Reguler"})`
-                  : "Barang sedang dikemas oleh tim gudang Hinggo untuk segera dikirimkan."}
-              </p>
+              <strong className="text-sm font-bold block">Pembayaran Terverifikasi</strong>
+              Pesanan Anda sedang diproses dan dikemas dengan bubble wrap tebal untuk pengiriman aman.
             </div>
           </div>
         )}
 
-        {/* Items in Order */}
-        <div className="bg-white p-6 rounded-card border border-gray-200 space-y-4 mb-6">
-          <h3 className="font-bold text-base text-ink">Daftar Barang Pesanan</h3>
-          <div className="divide-y divide-gray-100">
-            {orderItems.map((oi) => (
-              <div key={oi.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={oi.item?.photos?.[0] || "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=200&q=80"}
-                    alt=""
-                    className="size-14 rounded-btn object-cover bg-gray-100"
-                  />
-                  <div>
-                    <span className="text-[10px] font-bold text-yellow-700 uppercase">{oi.item?.category}</span>
-                    <h4 className="font-bold text-sm text-ink">{oi.item?.model}</h4>
-                    <p className="text-xs text-gray-500">Status Item: {oi.item?.status}</p>
+        {/* Order Details & Summary Columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Items List (7 cols) */}
+          <div className="lg:col-span-7 bg-white p-6 sm:p-7 rounded-[20px] border border-[#ebebeb] shadow-xs space-y-4">
+            <h3 className="font-bold text-base text-ink pb-3 border-b border-[#ebebeb]">
+              Daftar Barang ({orderItems.length})
+            </h3>
+
+            <div className="space-y-4">
+              {orderItems.map((oi) => (
+                <div key={oi.id} className="p-4 rounded-[12px] bg-[#f6f6f4] flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <img
+                      src={oi.item?.photos?.[0] || "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=150&q=80"}
+                      alt=""
+                      className="size-16 rounded-[10px] object-cover bg-[#fffbeb] border border-[#ebebeb] shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wider block">
+                        {oi.item?.brand}
+                      </span>
+                      <h4 className="font-bold text-xs sm:text-sm text-ink truncate mt-0.5">
+                        {oi.item?.model}
+                      </h4>
+                      <p className="text-xs font-extrabold text-ink mt-1">
+                        Rp {Number(oi.sale_price).toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="text-[11px] font-bold text-[#1f9d55] bg-white px-2 py-1 rounded-full border border-emerald-200 inline-block">
+                      {oi.item?.status}
+                    </span>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="text-right">
-                  <span className="font-bold text-sm text-ink">
-                    Rp {Number(oi.sale_price).toLocaleString("id-ID")}
+            {/* Shipping Address */}
+            <div className="pt-4 border-t border-[#ebebeb] space-y-1.5 text-xs">
+              <span className="font-bold text-ink block">Alamat Tujuan Pengiriman:</span>
+              <p className="text-[#4b4b4b] leading-relaxed">
+                <strong>{order.recipient_name}</strong> ({order.recipient_phone})<br />
+                {order.shipping_address}, {order.shipping_city} {order.shipping_postal_code}
+              </p>
+            </div>
+          </div>
+
+          {/* Payment Breakdown (5 cols) */}
+          <div className="lg:col-span-5 bg-white p-6 sm:p-7 rounded-[20px] border border-[#ebebeb] shadow-xs space-y-4">
+            <h3 className="font-bold text-base text-ink pb-3 border-b border-[#ebebeb]">
+              Rincian Pembayaran
+            </h3>
+
+            <div className="space-y-3 text-xs text-[#4b4b4b]">
+              <div className="flex justify-between">
+                <span>Subtotal Barang:</span>
+                <span className="font-semibold text-ink">
+                  Rp {Number(order.total_items_price).toLocaleString("id-ID")}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Ongkos Kirim Flat:</span>
+                <span className="font-semibold text-ink">
+                  Rp {Number(order.shipping_cost).toLocaleString("id-ID")}
+                </span>
+              </div>
+              {order.insurance_cost > 0 && (
+                <div className="flex justify-between text-yellow-800">
+                  <span>Asuransi Pengiriman:</span>
+                  <span className="font-semibold">
+                    Rp {Number(order.insurance_cost).toLocaleString("id-ID")}
                   </span>
                 </div>
+              )}
+              <div className="flex justify-between pt-3 border-t border-[#ebebeb] text-sm font-extrabold text-ink">
+                <span>Total Ditransfer:</span>
+                <span className="text-yellow-600 text-lg">
+                  Rp {Number(order.total_amount).toLocaleString("id-ID")}
+                </span>
               </div>
-            ))}
-          </div>
+            </div>
 
-          {/* Breakdown summary */}
-          <div className="pt-4 border-t border-gray-100 space-y-2 text-xs text-gray-600">
-            <div className="flex justify-between">
-              <span>Total Harga Barang:</span>
-              <span className="font-semibold text-ink">Rp {order.total_items_price.toLocaleString("id-ID")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Ongkos Kirim:</span>
-              <span className="font-semibold text-ink">Rp {order.shipping_cost.toLocaleString("id-ID")}</span>
-            </div>
-            {order.insurance_cost > 0 && (
-              <div className="flex justify-between text-yellow-800">
-                <span>Asuransi Dummy:</span>
-                <span className="font-semibold">Rp {order.insurance_cost.toLocaleString("id-ID")}</span>
+            <div className="p-4 rounded-[12px] bg-[#f6f6f4] border border-[#ebebeb] space-y-2 text-xs text-[#4b4b4b]">
+              <div className="flex items-center gap-2 text-ink font-bold">
+                <Lock className="size-4 text-yellow-600" />
+                <span>Garansi Rekber Hinggo</span>
               </div>
-            )}
-            <div className="flex justify-between pt-2 border-t border-gray-100 text-sm font-extrabold text-ink">
-              <span>Total Pembayaran:</span>
-              <span className="text-yellow-600">Rp {order.total_amount.toLocaleString("id-ID")}</span>
+              <p className="text-[11px] text-[#8a8a8a] leading-relaxed">
+                Uang Anda aman bersama Hinggo sampai barang tiba dan melewati garansi toko 7 hari tanpa komplain.
+              </p>
             </div>
           </div>
-        </div>
-
-        {/* Shipping Address */}
-        <div className="bg-white p-6 rounded-card border border-gray-200 space-y-2 text-xs">
-          <h3 className="font-bold text-sm text-ink mb-2">Tujuan Pengiriman</h3>
-          <p className="font-bold text-ink">{order.recipient_name} ({order.recipient_phone})</p>
-          <p className="text-gray-600">{order.shipping_address}, {order.shipping_city} {order.shipping_postal_code}</p>
         </div>
       </main>
 

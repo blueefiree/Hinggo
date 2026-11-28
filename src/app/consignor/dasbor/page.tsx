@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StatusBadge from "@/components/StatusBadge";
 import { Item } from "@/types";
-import { Package, Truck, ArrowRight, PlusCircle, RefreshCw } from "lucide-react";
+import { Package, Truck, PlusCircle } from "lucide-react";
 
 export default function ConsignorDashboard() {
   const [user, setUser] = useState<any>(null);
@@ -72,19 +72,24 @@ export default function ConsignorDashboard() {
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20 py-8 flex-1 w-full space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">Dasbor Barang Saya (Consignor)</h1>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="flex items-center gap-1.5 text-xs text-[#8a8a8a] mb-1">
+              <Link href="/" className="hover:underline">Beranda</Link>
+              <span>/</span>
+              <span className="text-ink font-semibold">Dasbor Consignor</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">Dasbor Barang Saya</h1>
+            <p className="text-xs text-[#8a8a8a] mt-1">
               Pantau status 20 tahapan barang titipan Anda dari screening hingga pencairan dana.
             </p>
           </div>
 
           <Link
             href="/titip-jual"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-ink font-bold text-xs rounded-btn shadow-xs transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-ink font-bold text-xs sm:text-sm rounded-[12px] shadow-sm transition-all shrink-0"
           >
             <PlusCircle className="size-4" />
             Ajukan Barang Baru
@@ -93,14 +98,15 @@ export default function ConsignorDashboard() {
 
         {/* Items List */}
         {loading ? (
-          <div className="text-center py-12 text-gray-500 text-xs">Memuat daftar barang titipan...</div>
+          <div className="text-center py-16 text-[#8a8a8a] text-xs">Memuat daftar barang titipan...</div>
         ) : items.length === 0 ? (
-          <div className="text-center py-16 bg-gray-50 rounded-card border border-dashed border-gray-300 space-y-3">
-            <Package className="size-8 text-gray-400 mx-auto" />
-            <p className="font-semibold text-gray-700 text-sm">Anda belum memiliki barang titip jual.</p>
+          <div className="text-center py-16 bg-[#f6f6f4] rounded-[20px] border border-dashed border-[#ebebeb] space-y-4">
+            <Package className="size-10 text-[#8a8a8a] mx-auto" />
+            <p className="font-bold text-ink text-sm sm:text-base">Anda belum memiliki barang titip jual.</p>
+            <p className="text-xs text-[#8a8a8a]">Titipkan RAM, SSD, atau GPU bekas Anda dengan fee terjangkau dan penanganan teknis profesional.</p>
             <Link
               href="/titip-jual"
-              className="inline-block px-4 py-2 bg-yellow-500 text-ink font-bold text-xs rounded-btn"
+              className="inline-block px-5 py-2.5 bg-yellow-500 text-ink font-bold text-xs rounded-[12px] shadow-sm hover:bg-yellow-600 transition-all"
             >
               Ajukan Sekarang
             </Link>
@@ -110,24 +116,24 @@ export default function ConsignorDashboard() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white p-5 rounded-card border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="bg-white p-5 sm:p-6 rounded-[20px] border border-[#ebebeb] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-yellow-500/60 transition-all"
               >
                 <div className="flex items-center gap-4">
                   <img
                     src={item.photos?.[0] || "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=200&q=80"}
                     alt=""
-                    className="size-16 rounded-btn object-cover bg-gray-100"
+                    className="size-16 sm:size-20 rounded-[12px] object-cover bg-[#fffbeb] border border-[#ebebeb] shrink-0"
                   />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold text-yellow-700 uppercase">{item.category}</span>
-                      <span className="text-xs font-mono text-gray-400">&bull; {item.item_code}</span>
+                      <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wider">{item.category}</span>
+                      <span className="text-xs font-mono text-[#8a8a8a]">&bull; {item.item_code}</span>
                     </div>
-                    <h4 className="font-bold text-sm text-ink">{item.model}</h4>
-                    <p className="text-xs text-gray-500">
-                      Harga Harapan: <strong>Rp {Number(item.expected_price).toLocaleString("id-ID")}</strong>
+                    <h4 className="font-bold text-sm sm:text-base text-ink">{item.model}</h4>
+                    <p className="text-xs text-[#8a8a8a] mt-0.5">
+                      Harga Harapan: <strong className="text-ink">Rp {Number(item.expected_price).toLocaleString("id-ID")}</strong>
                       {item.current_listing_price && (
-                        <span> &bull; Harga Tayang: <strong>Rp {Number(item.current_listing_price).toLocaleString("id-ID")}</strong></span>
+                        <span> &bull; Harga Tayang: <strong className="text-ink">Rp {Number(item.current_listing_price).toLocaleString("id-ID")}</strong></span>
                       )}
                     </p>
                   </div>
@@ -141,7 +147,7 @@ export default function ConsignorDashboard() {
                   {item.status === "Disetujui, menunggu kiriman" && (
                     <button
                       onClick={() => setTrackingModalItem(item)}
-                      className="px-3.5 py-2 rounded-btn bg-yellow-500 hover:bg-yellow-600 text-ink text-xs font-bold shadow-xs flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-[10px] bg-yellow-500 hover:bg-yellow-600 text-ink text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all"
                     >
                       <Truck className="size-3.5" />
                       Isi Resi Pengiriman
@@ -151,7 +157,7 @@ export default function ConsignorDashboard() {
                   {item.status === "Tayang" && (
                     <Link
                       href={`/produk/${item.id}`}
-                      className="px-3 py-1.5 rounded-btn bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-800"
+                      className="px-4 py-2 rounded-[10px] bg-[#f6f6f4] hover:bg-yellow-500 hover:text-ink text-xs font-bold text-ink transition-all"
                     >
                       Lihat di Web
                     </Link>
@@ -164,42 +170,40 @@ export default function ConsignorDashboard() {
 
         {/* Modal Isi Resi */}
         {trackingModalItem && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-card p-6 max-w-md w-full border border-gray-200 shadow-card space-y-4">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-[20px] p-6 max-w-md w-full border border-[#ebebeb] shadow-card space-y-4">
               <h3 className="font-bold text-base text-ink">Input Nomor Resi ke Gudang Hinggo</h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                Kirimkan barang <strong>{trackingModalItem.model}</strong> ke alamat:
-                <br />
-                <span className="font-semibold text-ink">Gudang Hinggo, Jl. Tebet Raya No. 42, Jakarta Selatan 12810</span>
+              <p className="text-xs text-[#4b4b4b] leading-relaxed">
+                Silakan kirimkan unit <strong>{trackingModalItem.model}</strong> ke gudang Hinggo di Jakarta Selatan, lalu masukkan kurir dan nomor resi di bawah:
               </p>
 
-              <form onSubmit={handleSendTracking} className="space-y-4">
+              <form onSubmit={handleSendTracking} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Nomor Resi Pengiriman</label>
+                  <label className="block text-xs font-semibold text-ink mb-1">Kurir & Nomor Resi</label>
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: JNE / J&T: JP8829102910"
+                    placeholder="Contoh: JNE Reguler - 0123456789"
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
-                    className="w-full h-10 px-3 border border-gray-300 rounded-btn text-xs text-ink focus:border-yellow-500 focus:outline-none"
+                    className="w-full h-11 px-3.5 border border-[#ebebeb] rounded-[12px] text-xs text-ink focus:border-yellow-500 focus:outline-none"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2">
+                <div className="flex gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setTrackingModalItem(null)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold rounded-btn"
+                    className="flex-1 py-2.5 bg-[#f6f6f4] hover:bg-gray-200 text-ink text-xs font-semibold rounded-[10px]"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={submittingTracking}
-                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-ink text-xs font-bold rounded-btn"
+                    className="flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-ink text-xs font-bold rounded-[10px] shadow-xs"
                   >
-                    {submittingTracking ? "Menyimpan..." : "Simpan & Ubah ke Dalam Perjalanan"}
+                    {submittingTracking ? "Menyimpan..." : "Kirim Resi"}
                   </button>
                 </div>
               </form>

@@ -47,7 +47,7 @@ export default function MobileBottomNav() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 px-2 py-1 shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-[#ebebeb] px-2 py-1 shadow-lg pb-safe">
       <div className="flex items-center justify-around h-14">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -57,13 +57,13 @@ export default function MobileBottomNav() {
               key={item.label}
               href={item.href}
               className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors relative ${
-                isActive ? "text-yellow-600 font-bold" : "text-gray-500 hover:text-ink font-medium"
+                isActive ? "text-yellow-600 font-bold" : "text-[#8a8a8a] hover:text-ink font-medium"
               }`}
             >
               <div className="relative">
                 <Icon className={`size-5 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
                 {Boolean(item.badge && item.badge > 0) && (
-                  <span className="absolute -top-1.5 -right-2 bg-yellow-500 text-ink text-[10px] font-black size-4 rounded-full flex items-center justify-center border border-white">
+                  <span className="absolute -top-1.5 -right-2.5 bg-yellow-500 text-ink text-[10px] font-extrabold size-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
                     {item.badge}
                   </span>
                 )}
@@ -73,6 +73,6 @@ export default function MobileBottomNav() {
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }

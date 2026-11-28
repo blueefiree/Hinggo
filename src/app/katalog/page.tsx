@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { supabaseAdmin } from "@/lib/supabase";
 import { Item, ItemCategory } from "@/types";
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 
 export const revalidate = 0;
 
@@ -49,79 +49,96 @@ export default async function CatalogPage({ searchParams }: CatalogProps) {
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20 py-6 sm:py-8 flex-1 w-full">
         {/* Header Breadcrumbs & Title */}
-        <div className="mb-4 sm:mb-6">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
-            <Link href="/" className="hover:underline">Beranda</Link>
-            <span>/</span>
-            <span className="text-ink font-semibold">Katalog</span>
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs text-[#8a8a8a] mb-1">
+              <Link href="/" className="hover:underline">Beranda</Link>
+              <span>/</span>
+              <span className="text-ink font-semibold">Katalog</span>
+              {category && (
+                <>
+                  <span>/</span>
+                  <span className="text-yellow-600 font-semibold">{category}</span>
+                </>
+              )}
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">
+              Katalog Komponen PC Teruji
+            </h1>
+            <p className="text-xs sm:text-sm text-[#8a8a8a] mt-0.5">
+              Menampilkan {items.length} hardware PC siap kirim bergaransi toko 7 hari.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">
-            Katalog Komponen PC Teruji
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Menampilkan RAM, SSD, dan GPU bergaransi toko 7 hari.
-          </p>
+
+          {/* Trust Banner on top right — Figma style */}
+          <div className="hidden sm:flex items-center gap-2.5 p-3 rounded-[12px] bg-[#fffbeb] border border-[#ffe58a] text-xs text-[#4b4b4b] shrink-0">
+            <ShieldCheck className="size-5 text-[#1f9d55] shrink-0" />
+            <div>
+              <p className="font-bold text-ink">100% Teruji Fisik</p>
+              <p className="text-[11px] text-[#8a8a8a]">Lolos tes stres beban & garansi 7 hari</p>
+            </div>
+          </div>
         </div>
 
         {/* Filter & Search Bar */}
-        <div className="bg-gray-50 p-3 sm:p-4 rounded-card border border-gray-200 mb-6 flex flex-col md:flex-row gap-3 justify-between items-center">
+        <div className="bg-[#f6f6f4] p-3 sm:p-4 rounded-[16px] border border-[#ebebeb] mb-8 flex flex-col md:flex-row gap-3 justify-between items-center">
           {/* Category Tabs - Scrollable on Mobile */}
           <div className="w-full md:w-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
             <Link
               href="/katalog"
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-btn text-xs font-bold transition-all shrink-0 ${
+              className={`px-4 py-2 rounded-[12px] text-xs font-bold transition-all shrink-0 ${
                 !category
                   ? "bg-yellow-500 text-ink shadow-xs"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                  : "bg-white text-[#4b4b4b] hover:bg-gray-100 border border-[#ebebeb]"
               }`}
             >
               Semua
             </Link>
             <Link
               href="/katalog?kategori=RAM"
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-btn text-xs font-bold transition-all shrink-0 ${
+              className={`px-4 py-2 rounded-[12px] text-xs font-bold transition-all shrink-0 ${
                 category === "RAM"
                   ? "bg-yellow-500 text-ink shadow-xs"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                  : "bg-white text-[#4b4b4b] hover:bg-gray-100 border border-[#ebebeb]"
               }`}
             >
-              RAM
+              RAM DDR4/5
             </Link>
             <Link
               href="/katalog?kategori=SSD"
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-btn text-xs font-bold transition-all shrink-0 ${
+              className={`px-4 py-2 rounded-[12px] text-xs font-bold transition-all shrink-0 ${
                 category === "SSD"
                   ? "bg-yellow-500 text-ink shadow-xs"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                  : "bg-white text-[#4b4b4b] hover:bg-gray-100 border border-[#ebebeb]"
               }`}
             >
-              SSD
+              SSD NVMe
             </Link>
             <Link
               href="/katalog?kategori=GPU"
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-btn text-xs font-bold transition-all shrink-0 ${
+              className={`px-4 py-2 rounded-[12px] text-xs font-bold transition-all shrink-0 ${
                 category === "GPU"
                   ? "bg-yellow-500 text-ink shadow-xs"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                  : "bg-white text-[#4b4b4b] hover:bg-gray-100 border border-[#ebebeb]"
               }`}
             >
-              GPU
+              VGA / GPU
             </Link>
           </div>
 
           {/* Search & Sort Controls */}
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <form action="/katalog" method="GET" className="relative flex-1 md:w-64">
+            <form action="/katalog" method="GET" className="relative flex-1 md:w-72">
               {category && <input type="hidden" name="kategori" value={category} />}
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 sm:size-4 text-gray-500" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#8a8a8a]" />
               <input
                 type="text"
                 name="q"
                 defaultValue={query}
-                placeholder="Cari model..."
-                className="w-full h-9 sm:h-10 pl-8 sm:pl-9 pr-3 bg-white border border-gray-300 rounded-btn text-xs text-ink focus:outline-none focus:border-yellow-500"
+                placeholder="Cari merek, model..."
+                className="w-full h-10 pl-9 pr-3 bg-white border border-[#ebebeb] rounded-[12px] text-xs text-ink placeholder-[#8a8a8a] focus:outline-none focus:border-yellow-500"
               />
             </form>
 
@@ -133,7 +150,7 @@ export default async function CatalogPage({ searchParams }: CatalogProps) {
                 name="sort"
                 defaultValue={sort}
                 onChange={(e) => (e.target as HTMLSelectElement).form?.submit()}
-                className="h-9 sm:h-10 px-2 sm:px-3 bg-white border border-gray-300 rounded-btn text-xs text-ink font-medium focus:outline-none focus:border-yellow-500"
+                className="h-10 px-3 bg-white border border-[#ebebeb] rounded-[12px] text-xs text-ink font-medium focus:outline-none focus:border-yellow-500"
               >
                 <option value="newest">Terbaru</option>
                 <option value="price_asc">Harga Terendah</option>
@@ -145,12 +162,12 @@ export default async function CatalogPage({ searchParams }: CatalogProps) {
 
         {/* Product Grid - 2 Columns on Mobile, 4 Columns on Desktop */}
         {items.length === 0 ? (
-          <div className="text-center py-16 bg-gray-50 rounded-card border border-dashed border-gray-300 space-y-3">
-            <p className="text-gray-700 font-semibold text-sm">Tidak ditemukan barang yang sesuai filter.</p>
-            <p className="text-xs text-gray-500">Silakan ubah kata kunci pencarian atau pilih kategori lain.</p>
+          <div className="text-center py-16 bg-[#f6f6f4] rounded-[16px] border border-dashed border-[#ebebeb] space-y-3">
+            <p className="text-ink font-semibold text-sm">Tidak ditemukan barang yang sesuai filter.</p>
+            <p className="text-xs text-[#8a8a8a]">Silakan ubah kata kunci pencarian atau pilih kategori lain.</p>
             <Link
               href="/katalog"
-              className="inline-block px-4 py-2 bg-yellow-500 text-ink text-xs font-bold rounded-btn mt-2"
+              className="inline-block px-5 py-2.5 bg-yellow-500 text-ink text-xs font-bold rounded-[12px] mt-2 shadow-xs hover:bg-yellow-600"
             >
               Reset Filter
             </Link>
